@@ -4,3 +4,15 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+heapless = "0.9.1"
+palette = { version = "0.7.6", default-features = false, features = ["libm"] }
+
+[features]
+default = []
+std = ["palette/std"]
+
+[profile.release]
+opt-level = "z"     # Optimize for size
+lto = true          # Enable link-time optimization
+codegen-units = 1   # Better optimization
+strip = true        # Strip symbols
