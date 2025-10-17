@@ -1,8 +1,4 @@
 /// Abstracts over duration types from different embedded time libraries.
-///
-/// Allows the sequencer to work with Embassy's `Duration`, `std::time::Duration`,
-/// fugit durations, or custom implementations. All implementations must be `Copy`
-/// and provide millisecond conversions for internal calculations.
 pub trait TimeDuration: Copy {
     /// A duration of zero length, used for initialization.
     const ZERO: Self;
@@ -20,15 +16,24 @@ pub trait TimeDuration: Copy {
 }
 
 /// Abstracts over instant types from different embedded time libraries.
-///
-/// Allows the sequencer to work with Embassy's `Instant`, `std::time::Instant`,
-/// fugit instants, or custom implementations. All implementations must be `Copy`.
 pub trait TimeInstant: Copy {
     /// The duration type produced when calculating time differences.
     type Duration: TimeDuration;
 
     /// Returns the duration elapsed from `earlier` to `self`.
     ///
+    /// # Panics
     /// Panics if `earlier` is after `self` (implementation-defined).
     fn duration_since(&self, earlier: Self) -> Self::Duration;
+
+    /// Adds a duration to this instant.
+    ///
+    /// Returns `None` if the resulting instant would overflow.
+    fn checked_add(self, duration: Self::Duration) -> Option<Self>;
+
+    /// Subtracts a duration from this instant.
+    ///
+    /// Returns `None` if the resulting instant would be before the epoch
+    /// or would underflow.
+    fn checked_sub(self, duration: Self::Duration) -> Option<Self>;
 }

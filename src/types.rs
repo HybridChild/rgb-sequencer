@@ -1,5 +1,5 @@
 use crate::time::TimeDuration;
-use palette::rgb::Rgb;
+use palette::Srgb;
 
 /// Defines how a sequence step transitions to its target color.
 ///
@@ -45,13 +45,13 @@ impl Default for LoopCount {
 /// A single step in an RGB sequence.
 ///
 /// Each step defines a target color, how long the step lasts, and how to transition
-/// to that color from the previous state.
+/// to that color from the previous step.
 #[derive(Debug, Clone, Copy)]
 pub struct SequenceStep<D: TimeDuration> {
     /// The target RGB color for this step.
-    pub color: Rgb<u8>,
+    pub color: Srgb,
 
-    /// How long this step lasts, including transition time.
+    /// How long this step lasts.
     ///
     /// For `Step` transitions, this is how long to hold the color.
     /// For `Linear` transitions, this is how long to spend interpolating to the color.
@@ -69,7 +69,7 @@ impl<D: TimeDuration> SequenceStep<D> {
     /// * `color` - The target RGB color for this step
     /// * `duration` - How long this step lasts
     /// * `transition` - How to transition to this color
-    pub fn new(color: Rgb<u8>, duration: D, transition: TransitionStyle) -> Self {
+    pub fn new(color: Srgb, duration: D, transition: TransitionStyle) -> Self {
         Self {
             color,
             duration,
@@ -98,10 +98,7 @@ impl core::fmt::Display for SequenceError {
                 write!(f, "sequence must have at least one step")
             }
             SequenceError::ZeroDurationWithLinear => {
-                write!(
-                    f,
-                    "zero-duration steps must use Step transition, not Linear"
-                )
+                write!(f, "zero-duration steps must use Step transition" )
             }
         }
     }
