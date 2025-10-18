@@ -28,39 +28,44 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
         SequenceBuilder::new()
     }
 
+    /// Returns true if a finite sequence has completed at the given elapsed time.
+    /// Always returns false for infinite sequences.
+    pub fn is_complete(&self, elapsed: D) -> bool {
+        if let LoopCount::Finite(count) = self.loop_count {
+            let loop_duration = self.total_duration().as_millis();
+            if loop_duration == 0 {
+                return elapsed.as_millis() > 0;
+            }
+            let total_duration = loop_duration * (count as u64);
+            elapsed.as_millis() >= total_duration
+        } else {
+            false
+        }
+    }
+
     /// Calculates the color at a given elapsed time since the sequence started.
     ///
     /// Returns the interpolated color based on current position in the sequence,
-    /// handling step progression, looping, and transitions.
-    ///
-    /// # Returns
-    /// * `Some(color)` - The color to display at this time
-    /// * `None` - Sequence has completed (only for finite loops)
-    pub fn color_at(&self, elapsed: D) -> Option<Srgb> {
+    /// handling step progression, looping, and transitions. For finite sequences
+    /// that have completed, returns the landing color (or last step color if no
+    /// landing color was specified).
+    pub fn color_at(&self, elapsed: D) -> Srgb {
         let loop_millis = self.total_duration().as_millis();
         
         // Handle edge case: all steps have zero duration
         if loop_millis == 0 {
             if elapsed.as_millis() == 0 {
-                return Some(self.steps[0].color);
+                return self.steps[0].color;
             }
-            return Some(
-                self.landing_color
-                    .unwrap_or(self.steps.last().unwrap().color),
-            );
+            return self.landing_color
+                .unwrap_or(self.steps.last().unwrap().color);
         }
 
         let elapsed_millis = elapsed.as_millis();
         
-        // Check if finite sequence has completed
-        if let LoopCount::Finite(count) = self.loop_count {
-            let total_duration_millis = loop_millis * (count as u64);
-            if elapsed_millis >= total_duration_millis {
-                return Some(
-                    self.landing_color
-                        .unwrap_or(self.steps.last().unwrap().color),
-                );
-            }
+        if self.is_complete(elapsed) {
+            return self.landing_color
+                .unwrap_or(self.steps.last().unwrap().color);
         }
         
         // Calculate time within current loop
@@ -77,14 +82,14 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
                 let time_in_step = D::from_millis(
                     time_in_loop.as_millis() - accumulated_time.as_millis(),
                 );
-                return Some(self.calculate_step_color(step_idx, time_in_step));
+                return self.calculate_step_color(step_idx, time_in_step);
             }
 
             accumulated_time = step_end_time;
         }
 
         // Fallback: return last color (should not reach here)
-        Some(self.steps.last().unwrap().color)
+        self.steps.last().unwrap().color
     }
 
     /// Calculates the color for a specific step at a given time within that step.
@@ -292,13 +297,13 @@ mod tests {
             .unwrap();
 
         // At start
-        assert!(colors_equal(sequence.color_at(TestDuration(0)).unwrap(), RED));
+        assert!(colors_equal(sequence.color_at(TestDuration(0)), RED));
         
         // At middle
-        assert!(colors_equal(sequence.color_at(TestDuration(500)).unwrap(), RED));
+        assert!(colors_equal(sequence.color_at(TestDuration(500)), RED));
         
         // At end
-        assert!(colors_equal(sequence.color_at(TestDuration(999)).unwrap(), RED));
+        assert!(colors_equal(sequence.color_at(TestDuration(999)), RED));
     }
 
     #[test]
@@ -310,16 +315,16 @@ mod tests {
             .unwrap();
 
         // At start of linear step (just after red step ends)
-        let color_at_start = sequence.color_at(TestDuration(100)).unwrap();
+        let color_at_start = sequence.color_at(TestDuration(100));
         assert!(colors_equal(color_at_start, RED));
 
         // At 50% through linear transition
-        let color_at_middle = sequence.color_at(TestDuration(600)).unwrap();
+        let color_at_middle = sequence.color_at(TestDuration(600));
         let expected_middle = RED.mix(BLUE, 0.5);
         assert!(colors_equal(color_at_middle, expected_middle));
 
         // At end of linear step
-        let color_at_end = sequence.color_at(TestDuration(1099)).unwrap();
+        let color_at_end = sequence.color_at(TestDuration(1099));
         assert!(colors_equal(color_at_end, BLUE));
     }
 
@@ -336,16 +341,16 @@ mod tests {
         let expected_middle = BLUE.mix(RED, 0.5);
 
         // First loop's first step
-        assert!(colors_equal(sequence.color_at(TestDuration(0)).unwrap(), BLUE));
-        let color_at_middle = sequence.color_at(TestDuration(500)).unwrap();
+        assert!(colors_equal(sequence.color_at(TestDuration(0)), BLUE));
+        let color_at_middle = sequence.color_at(TestDuration(500));
         assert!(colors_equal(color_at_middle, expected_middle));
-        assert!(colors_equal(sequence.color_at(TestDuration(999)).unwrap(), RED));
+        assert!(colors_equal(sequence.color_at(TestDuration(999)), RED));
         
         // Second loop's first step
-        assert!(colors_equal(sequence.color_at(TestDuration(3000)).unwrap(), BLUE));
-        let color_at_middle = sequence.color_at(TestDuration(3500)).unwrap();
+        assert!(colors_equal(sequence.color_at(TestDuration(3000)), BLUE));
+        let color_at_middle = sequence.color_at(TestDuration(3500));
         assert!(colors_equal(color_at_middle, expected_middle));
-        assert!(colors_equal(sequence.color_at(TestDuration(3999)).unwrap(), RED));
+        assert!(colors_equal(sequence.color_at(TestDuration(3999)), RED));
     }
 
     #[test]
@@ -357,9 +362,9 @@ mod tests {
             .build()
             .unwrap();
 
-        assert!(colors_equal(sequence.color_at(TestDuration(50)).unwrap(), RED));
-        assert!(colors_equal(sequence.color_at(TestDuration(150)).unwrap(), GREEN));
-        assert!(colors_equal(sequence.color_at(TestDuration(250)).unwrap(), BLUE));
+        assert!(colors_equal(sequence.color_at(TestDuration(50)), RED));
+        assert!(colors_equal(sequence.color_at(TestDuration(150)), GREEN));
+        assert!(colors_equal(sequence.color_at(TestDuration(250)), BLUE));
     }
 
     #[test]
@@ -373,14 +378,14 @@ mod tests {
             .unwrap();
         
         // During first loop
-        assert!(colors_equal(sequence.color_at(TestDuration(50)).unwrap(), RED));
+        assert!(colors_equal(sequence.color_at(TestDuration(50)), RED));
         
         // During second loop
-        assert!(colors_equal(sequence.color_at(TestDuration(350)).unwrap(), GREEN));
+        assert!(colors_equal(sequence.color_at(TestDuration(350)), GREEN));
         
         // After completion - should show landing color
-        assert!(colors_equal(sequence.color_at(TestDuration(400)).unwrap(), BLACK));
-        assert!(colors_equal(sequence.color_at(TestDuration(1000)).unwrap(), BLACK));
+        assert!(colors_equal(sequence.color_at(TestDuration(400)), BLACK));
+        assert!(colors_equal(sequence.color_at(TestDuration(1000)), BLACK));
     }
 
     #[test]
@@ -395,12 +400,12 @@ mod tests {
             .unwrap();
 
         // During loops - normal behavior
-        assert!(colors_equal(sequence.color_at(TestDuration(50)).unwrap(), RED));
-        assert!(colors_equal(sequence.color_at(TestDuration(450)).unwrap(), GREEN));
+        assert!(colors_equal(sequence.color_at(TestDuration(50)), RED));
+        assert!(colors_equal(sequence.color_at(TestDuration(450)), GREEN));
         
         // After completion - should show BLUE (the last step's color)
-        assert!(colors_equal(sequence.color_at(TestDuration(600)).unwrap(), BLUE));
-        assert!(colors_equal(sequence.color_at(TestDuration(1000)).unwrap(), BLUE));
+        assert!(colors_equal(sequence.color_at(TestDuration(600)), BLUE));
+        assert!(colors_equal(sequence.color_at(TestDuration(1000)), BLUE));
     }
     
     #[test]
@@ -414,14 +419,13 @@ mod tests {
             .unwrap();
 
         // First loop
-        assert!(colors_equal(sequence.color_at(TestDuration(50)).unwrap(), RED));
+        assert!(colors_equal(sequence.color_at(TestDuration(50)), RED));
         
         // Second loop
-        assert!(colors_equal(sequence.color_at(TestDuration(350)).unwrap(), GREEN));
+        assert!(colors_equal(sequence.color_at(TestDuration(350)), GREEN));
         
         // Many loops later - still cycling
-        assert!(colors_equal(sequence.color_at(TestDuration(10050)).unwrap(), RED));
-        assert!(sequence.color_at(TestDuration(100000)).is_some());
+        assert!(colors_equal(sequence.color_at(TestDuration(10050)), RED));
     }
 
     #[test]
@@ -435,10 +439,10 @@ mod tests {
             .unwrap();
 
         // At time zero, should show first color
-        assert!(colors_equal(sequence.color_at(TestDuration(0)).unwrap(), RED));
+        assert!(colors_equal(sequence.color_at(TestDuration(0)), RED));
         
         // Any time after zero, should show landing color
-        assert!(colors_equal(sequence.color_at(TestDuration(1)).unwrap(), BLUE));
-        assert!(colors_equal(sequence.color_at(TestDuration(100)).unwrap(), BLUE));
+        assert!(colors_equal(sequence.color_at(TestDuration(1)), BLUE));
+        assert!(colors_equal(sequence.color_at(TestDuration(100)), BLUE));
     }
 }
