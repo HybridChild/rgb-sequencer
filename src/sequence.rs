@@ -222,3 +222,223 @@ impl<D: TimeDuration, const N: usize> Default for SequenceBuilder<D, N> {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Mock Duration type for testing
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    struct TestDuration(u64);
+
+    impl TimeDuration for TestDuration {
+        const ZERO: Self = TestDuration(0);
+
+        fn as_millis(&self) -> u64 {
+            self.0
+        }
+
+        fn from_millis(millis: u64) -> Self {
+            TestDuration(millis)
+        }
+
+        fn saturating_sub(self, other: Self) -> Self {
+            TestDuration(self.0.saturating_sub(other.0))
+        }
+    }
+
+    // Helper colors
+    const RED: Srgb = Srgb::new(1.0, 0.0, 0.0);
+    const GREEN: Srgb = Srgb::new(0.0, 1.0, 0.0);
+    const BLUE: Srgb = Srgb::new(0.0, 0.0, 1.0);
+    const BLACK: Srgb = Srgb::new(0.0, 0.0, 0.0);
+
+    // Helper to compare colors with small tolerance for floating point
+    fn colors_equal(a: Srgb, b: Srgb) -> bool {
+        const EPSILON: f32 = 0.001;
+        (a.red - b.red).abs() < EPSILON
+            && (a.green - b.green).abs() < EPSILON
+            && (a.blue - b.blue).abs() < EPSILON
+    }
+
+    #[test]
+    fn builder_rejects_empty_sequence() {
+        let result = RgbSequence::<TestDuration, 8>::new().build();
+        assert!(matches!(result, Err(SequenceError::EmptySequence)));
+    }
+
+    #[test]
+    fn builder_rejects_zero_duration_with_linear() {
+        let result = RgbSequence::<TestDuration, 8>::new()
+            .step(RED, TestDuration(0), TransitionStyle::Linear)
+            .build();
+        assert!(matches!(result, Err(SequenceError::ZeroDurationWithLinear)));
+    }
+
+    #[test]
+    fn builder_accepts_valid_sequence() {
+        let result = RgbSequence::<TestDuration, 8>::new()
+            .step(RED, TestDuration(100), TransitionStyle::Step)
+            .step(GREEN, TestDuration(200), TransitionStyle::Linear)
+            .build();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn step_transition_holds_color() {
+        let sequence = RgbSequence::<TestDuration, 8>::new()
+            .step(RED, TestDuration(1000), TransitionStyle::Step)
+            .build()
+            .unwrap();
+
+        // At start
+        assert!(colors_equal(sequence.color_at(TestDuration(0)).unwrap(), RED));
+        
+        // At middle
+        assert!(colors_equal(sequence.color_at(TestDuration(500)).unwrap(), RED));
+        
+        // At end
+        assert!(colors_equal(sequence.color_at(TestDuration(999)).unwrap(), RED));
+    }
+
+    #[test]
+    fn linear_transition_interpolates_correctly() {
+        let sequence = RgbSequence::<TestDuration, 8>::new()
+            .step(RED, TestDuration(100), TransitionStyle::Step)
+            .step(BLUE, TestDuration(1000), TransitionStyle::Linear)
+            .build()
+            .unwrap();
+
+        // At start of linear step (just after red step ends)
+        let color_at_start = sequence.color_at(TestDuration(100)).unwrap();
+        assert!(colors_equal(color_at_start, RED));
+
+        // At 50% through linear transition
+        let color_at_middle = sequence.color_at(TestDuration(600)).unwrap();
+        let expected_middle = RED.mix(BLUE, 0.5);
+        assert!(colors_equal(color_at_middle, expected_middle));
+
+        // At end of linear step
+        let color_at_end = sequence.color_at(TestDuration(1099)).unwrap();
+        assert!(colors_equal(color_at_end, BLUE));
+    }
+
+    #[test]
+    fn first_step_linear_interpolates_from_last() {
+        let sequence = RgbSequence::<TestDuration, 8>::new()
+            .step(RED, TestDuration(1000), TransitionStyle::Linear)
+            .step(GREEN, TestDuration(1000), TransitionStyle::Step)
+            .step(BLUE, TestDuration(1000), TransitionStyle::Step)
+            .loop_count(LoopCount::Infinite)
+            .build()
+            .unwrap();
+
+        let expected_middle = BLUE.mix(RED, 0.5);
+
+        // First loop's first step
+        assert!(colors_equal(sequence.color_at(TestDuration(0)).unwrap(), BLUE));
+        let color_at_middle = sequence.color_at(TestDuration(500)).unwrap();
+        assert!(colors_equal(color_at_middle, expected_middle));
+        assert!(colors_equal(sequence.color_at(TestDuration(999)).unwrap(), RED));
+        
+        // Second loop's first step
+        assert!(colors_equal(sequence.color_at(TestDuration(3000)).unwrap(), BLUE));
+        let color_at_middle = sequence.color_at(TestDuration(3500)).unwrap();
+        assert!(colors_equal(color_at_middle, expected_middle));
+        assert!(colors_equal(sequence.color_at(TestDuration(3999)).unwrap(), RED));
+    }
+
+    #[test]
+    fn multi_step_sequence_progresses() {
+        let sequence = RgbSequence::<TestDuration, 8>::new()
+            .step(RED, TestDuration(100), TransitionStyle::Step)
+            .step(GREEN, TestDuration(100), TransitionStyle::Step)
+            .step(BLUE, TestDuration(100), TransitionStyle::Step)
+            .build()
+            .unwrap();
+
+        assert!(colors_equal(sequence.color_at(TestDuration(50)).unwrap(), RED));
+        assert!(colors_equal(sequence.color_at(TestDuration(150)).unwrap(), GREEN));
+        assert!(colors_equal(sequence.color_at(TestDuration(250)).unwrap(), BLUE));
+    }
+
+    #[test]
+    fn finite_loop_completes_and_shows_landing_color() {
+        let sequence = RgbSequence::<TestDuration, 8>::new()
+            .step(RED, TestDuration(100), TransitionStyle::Step)
+            .step(GREEN, TestDuration(100), TransitionStyle::Step)
+            .loop_count(LoopCount::Finite(2))
+            .landing_color(BLACK)
+            .build()
+            .unwrap();
+        
+        // During first loop
+        assert!(colors_equal(sequence.color_at(TestDuration(50)).unwrap(), RED));
+        
+        // During second loop
+        assert!(colors_equal(sequence.color_at(TestDuration(350)).unwrap(), GREEN));
+        
+        // After completion - should show landing color
+        assert!(colors_equal(sequence.color_at(TestDuration(400)).unwrap(), BLACK));
+        assert!(colors_equal(sequence.color_at(TestDuration(1000)).unwrap(), BLACK));
+    }
+
+    #[test]
+    fn finite_loop_uses_last_step_color_when_no_landing_color() {
+        let sequence = RgbSequence::<TestDuration, 8>::new()
+            .step(RED, TestDuration(100), TransitionStyle::Step)
+            .step(GREEN, TestDuration(100), TransitionStyle::Step)
+            .step(BLUE, TestDuration(100), TransitionStyle::Step)
+            .loop_count(LoopCount::Finite(2))
+            // Note: no .landing_color() call
+            .build()
+            .unwrap();
+
+        // During loops - normal behavior
+        assert!(colors_equal(sequence.color_at(TestDuration(50)).unwrap(), RED));
+        assert!(colors_equal(sequence.color_at(TestDuration(450)).unwrap(), GREEN));
+        
+        // After completion - should show BLUE (the last step's color)
+        assert!(colors_equal(sequence.color_at(TestDuration(600)).unwrap(), BLUE));
+        assert!(colors_equal(sequence.color_at(TestDuration(1000)).unwrap(), BLUE));
+    }
+    
+    #[test]
+    fn infinite_loop_never_completes() {
+        let sequence = RgbSequence::<TestDuration, 8>::new()
+            .step(RED, TestDuration(100), TransitionStyle::Step)
+            .step(GREEN, TestDuration(100), TransitionStyle::Step)
+            .loop_count(LoopCount::Infinite)
+            .landing_color(BLACK)
+            .build()
+            .unwrap();
+
+        // First loop
+        assert!(colors_equal(sequence.color_at(TestDuration(50)).unwrap(), RED));
+        
+        // Second loop
+        assert!(colors_equal(sequence.color_at(TestDuration(350)).unwrap(), GREEN));
+        
+        // Many loops later - still cycling
+        assert!(colors_equal(sequence.color_at(TestDuration(10050)).unwrap(), RED));
+        assert!(sequence.color_at(TestDuration(100000)).is_some());
+    }
+
+    #[test]
+    fn all_zero_duration_steps() {
+        let sequence = RgbSequence::<TestDuration, 8>::new()
+            .step(RED, TestDuration(0), TransitionStyle::Step)
+            .step(GREEN, TestDuration(0), TransitionStyle::Step)
+            .loop_count(LoopCount::Finite(1))
+            .landing_color(BLUE)
+            .build()
+            .unwrap();
+
+        // At time zero, should show first color
+        assert!(colors_equal(sequence.color_at(TestDuration(0)).unwrap(), RED));
+        
+        // Any time after zero, should show landing color
+        assert!(colors_equal(sequence.color_at(TestDuration(1)).unwrap(), BLUE));
+        assert!(colors_equal(sequence.color_at(TestDuration(100)).unwrap(), BLUE));
+    }
+}
