@@ -304,7 +304,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
     fn is_in_linear_transition(&self, elapsed: I::Duration) -> bool {
         let sequence = self.sequence.as_ref().unwrap();
         
-        let loop_duration = self.loop_duration();
+        let loop_duration = sequence.loop_duration();
         if loop_duration.as_millis() == 0 {
             return false;
         }
@@ -341,7 +341,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
     /// Calculates time until the next step begins.
     fn time_until_next_step(&self, elapsed: I::Duration) -> Option<I::Duration> {
         let sequence = self.sequence.as_ref().unwrap();
-        let loop_duration = self.loop_duration();
+        let loop_duration = sequence.loop_duration();
         
         if loop_duration.as_millis() == 0 {
             return None;
@@ -375,16 +375,6 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
 
         // End of loop
         Some(loop_duration.saturating_sub(time_in_loop))
-    }
-
-    /// Returns the duration of one complete loop through all steps.
-    fn loop_duration(&self) -> I::Duration {
-        let sequence = self.sequence.as_ref().unwrap();
-        let mut total_millis = 0u64;
-        for i in 0..sequence.step_count() {
-            total_millis += self.get_step_duration(i).as_millis();
-        }
-        I::Duration::from_millis(total_millis)
     }
 
     /// Gets the duration of a step by index.

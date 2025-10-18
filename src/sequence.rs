@@ -20,6 +20,7 @@ pub struct RgbSequence<D: TimeDuration, const N: usize> {
     steps: Vec<SequenceStep<D>, N>,
     loop_count: LoopCount,
     landing_color: Option<Srgb>,
+    loop_duration: D,
 }
 
 impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
@@ -32,11 +33,11 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
     /// Always returns false for infinite sequences.
     pub fn is_complete(&self, elapsed: D) -> bool {
         if let LoopCount::Finite(count) = self.loop_count {
-            let loop_duration = self.total_duration().as_millis();
-            if loop_duration == 0 {
+            let loop_millis = self.loop_duration.as_millis();
+            if loop_millis == 0 {
                 return elapsed.as_millis() > 0;
             }
-            let total_duration = loop_duration * (count as u64);
+            let total_duration = loop_millis * (count as u64);
             elapsed.as_millis() >= total_duration
         } else {
             false
@@ -50,7 +51,7 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
     /// that have completed, returns the landing color (or last step color if no
     /// landing color was specified).
     pub fn color_at(&self, elapsed: D) -> Srgb {
-        let loop_millis = self.total_duration().as_millis();
+        let loop_millis = self.loop_duration.as_millis();
         
         // Handle edge case: all steps have zero duration
         if loop_millis == 0 {
@@ -119,10 +120,9 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
         }
     }
 
-    /// Calculates the total duration of one complete loop through all steps.
-    fn total_duration(&self) -> D {
-        let total_millis: u64 = self.steps.iter().map(|s| s.duration.as_millis()).sum();
-        D::from_millis(total_millis)
+    /// Returns the duration of one complete loop through all steps.
+    pub fn loop_duration(&self) -> D {
+        self.loop_duration
     }
 
     /// Returns the number of steps in this sequence.
@@ -214,10 +214,15 @@ impl<D: TimeDuration, const N: usize> SequenceBuilder<D, N> {
             }
         }
 
+        // Calculate and cache loop duration here to avoid repeated calculation during operation
+        let total_millis: u64 = self.steps.iter().map(|s| s.duration.as_millis()).sum();
+        let loop_duration = D::from_millis(total_millis);
+
         Ok(RgbSequence {
             steps: self.steps,
             loop_count: self.loop_count,
             landing_color: self.landing_color,
+            loop_duration,
         })
     }
 }
@@ -287,6 +292,18 @@ mod tests {
             .step(GREEN, TestDuration(200), TransitionStyle::Linear)
             .build();
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn loop_duration_is_cached_correctly() {
+        let sequence = RgbSequence::<TestDuration, 8>::new()
+            .step(RED, TestDuration(100), TransitionStyle::Step)
+            .step(GREEN, TestDuration(200), TransitionStyle::Step)
+            .step(BLUE, TestDuration(50), TransitionStyle::Step)
+            .build()
+            .unwrap();
+
+        assert_eq!(sequence.loop_duration(), TestDuration(350));
     }
 
     #[test]
