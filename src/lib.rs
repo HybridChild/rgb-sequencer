@@ -16,6 +16,7 @@
 //! - **`RgbSequencer`**: Controls a single RGB LED through timed color sequences
 //! - **`RgbLed`**: Trait to implement for your LED hardware
 //! - **`TimeSource`**: Trait to implement for your timing system
+//! - **`StepPosition`**: Information about the current position within a sequence
 //!
 //! Colors are represented as `Srgb<f32>` (0.0-1.0 range) internally for accurate interpolation.
 //! Users can convert to other formats in their `RgbLed` implementation as needed.
@@ -32,7 +33,7 @@ pub mod types;
 pub mod sequence;
 pub mod sequencer;
 
-pub use sequence::{RgbSequence, SequenceBuilder};
+pub use sequence::{RgbSequence, SequenceBuilder, StepPosition};
 pub use types::{LoopCount, SequenceError, SequenceStep, TransitionStyle};
 pub use time::{TimeDuration, TimeInstant};
 pub use sequencer::{RgbSequencer, RgbLed, TimeSource, SequencerState, SequencerError};

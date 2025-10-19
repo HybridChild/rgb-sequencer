@@ -3,6 +3,19 @@ use crate::types::{LoopCount, SequenceError, SequenceStep, TransitionStyle};
 use heapless::Vec;
 use palette::{Mix, Srgb};
 
+/// Information about the current position within a sequence.
+#[derive(Debug, Clone, Copy)]
+pub struct StepPosition<D: TimeDuration> {
+    /// Index of the current step
+    pub step_index: usize,
+    /// Time elapsed within the current step
+    pub time_in_step: D,
+    /// Time remaining until this step ends
+    pub time_until_step_end: D,
+    /// Whether the sequence has completed (finite sequences only)
+    pub is_complete: bool,
+}
+
 /// An RGB color sequence with precise timing and transitions.
 ///
 /// Defines a complete animation sequence consisting of multiple steps, each with
@@ -29,6 +42,135 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
         SequenceBuilder::new()
     }
 
+    /// Finds the current step position information at the given elapsed time.
+    pub fn find_step_position(&self, elapsed: D) -> Option<StepPosition<D>> {
+        if self.steps.is_empty() {
+            return None;
+        }
+
+        let loop_millis = self.loop_duration.as_millis();
+        
+        // Handle edge case: all steps have zero duration
+        if loop_millis == 0 {
+            let is_complete = elapsed.as_millis() > 0;
+            let step_index = if is_complete {
+                self.steps.len() - 1
+            } else {
+                0
+            };
+            
+            return Some(StepPosition {
+                step_index,
+                time_in_step: D::ZERO,
+                time_until_step_end: D::ZERO,
+                is_complete,
+            });
+        }
+
+        let elapsed_millis = elapsed.as_millis();
+        
+        // Check if finite sequence is complete
+        let is_complete = if let LoopCount::Finite(count) = self.loop_count {
+            let total_duration = loop_millis * (count as u64);
+            elapsed_millis >= total_duration
+        } else {
+            false
+        };
+
+        if is_complete {
+            let last_index = self.steps.len() - 1;
+            return Some(StepPosition {
+                step_index: last_index,
+                time_in_step: self.steps[last_index].duration,
+                time_until_step_end: D::ZERO,
+                is_complete: true,
+            });
+        }
+        
+        // Calculate time within current loop
+        let time_in_loop = D::from_millis(elapsed_millis % loop_millis);
+
+        // Find current step
+        let mut accumulated_time = D::ZERO;
+        for (step_idx, step) in self.steps.iter().enumerate() {
+            let step_end_time = D::from_millis(
+                accumulated_time.as_millis() + step.duration.as_millis(),
+            );
+
+            if time_in_loop.as_millis() < step_end_time.as_millis() {
+                let time_in_step = D::from_millis(
+                    time_in_loop.as_millis() - accumulated_time.as_millis(),
+                );
+                let time_until_end = step_end_time.saturating_sub(time_in_loop);
+                
+                return Some(StepPosition {
+                    step_index: step_idx,
+                    time_in_step,
+                    time_until_step_end: time_until_end,
+                    is_complete: false,
+                });
+            }
+
+            accumulated_time = step_end_time;
+        }
+
+        // Fallback: last step (should not reach here in normal operation)
+        let last_index = self.steps.len() - 1;
+        Some(StepPosition {
+            step_index: last_index,
+            time_in_step: self.steps[last_index].duration,
+            time_until_step_end: D::ZERO,
+            is_complete: false,
+        })
+    }
+
+    /// Calculates the color at a given step position.
+    pub fn color_at_position(&self, position: &StepPosition<D>) -> Srgb {
+        if position.is_complete {
+            return self.landing_color
+                .unwrap_or(self.steps.last().unwrap().color);
+        }
+
+        let step = &self.steps[position.step_index];
+
+        match step.transition {
+            TransitionStyle::Step => step.color,
+            TransitionStyle::Linear => {
+                let previous_color = if position.step_index == 0 {
+                    self.steps.last().unwrap().color
+                } else {
+                    self.steps[position.step_index - 1].color
+                };
+
+                let duration_millis = step.duration.as_millis();
+                if duration_millis == 0 {
+                    return step.color;
+                }
+
+                let time_millis = position.time_in_step.as_millis();
+                let progress = (time_millis as f32) / (duration_millis as f32);
+                let progress = progress.clamp(0.0, 1.0);
+
+                previous_color.mix(step.color, progress)
+            }
+        }
+    }
+
+    /// Calculates the color at a given elapsed time since the sequence started.
+    ///
+    /// Returns the interpolated color based on current position in the sequence,
+    /// handling step progression, looping, and transitions. For finite sequences
+    /// that have completed, returns the landing color (or last step color if no
+    /// landing color was specified).
+    pub fn color_at(&self, elapsed: D) -> Srgb {
+        if let Some(position) = self.find_step_position(elapsed) {
+            self.color_at_position(&position)
+        } else {
+            // Fallback for empty sequence (shouldn't happen after validation)
+            Srgb::new(0.0, 0.0, 0.0)
+        }
+    }
+
     /// Returns true if a finite sequence has completed at the given elapsed time.
     /// Always returns false for infinite sequences.
     pub fn is_complete(&self, elapsed: D) -> bool {
@@ -44,79 +186,21 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
         }
     }
 
-    /// Calculates the color at a given elapsed time since the sequence started.
+    /// Calculates the optimal time until the next service call is needed.
     ///
-    /// Returns the interpolated color based on current position in the sequence,
-    /// handling step progression, looping, and transitions. For finite sequences
-    /// that have completed, returns the landing color (or last step color if no
-    /// landing color was specified).
-    pub fn color_at(&self, elapsed: D) -> Srgb {
-        let loop_millis = self.loop_duration.as_millis();
-        
-        // Handle edge case: all steps have zero duration
-        if loop_millis == 0 {
-            if elapsed.as_millis() == 0 {
-                return self.steps[0].color;
-            }
-            return self.landing_color
-                .unwrap_or(self.steps.last().unwrap().color);
+    /// Returns:
+    /// * `Some(Duration::ZERO)` - Linear transition in progress, service at frame rate
+    /// * `Some(duration)` - Step transition, service after this duration
+    /// * `None` - Sequence complete, no further servicing needed
+    pub fn next_service_time(&self, position: &StepPosition<D>) -> Option<D> {
+        if position.is_complete {
+            return None;
         }
 
-        let elapsed_millis = elapsed.as_millis();
-        
-        if self.is_complete(elapsed) {
-            return self.landing_color
-                .unwrap_or(self.steps.last().unwrap().color);
-        }
-        
-        // Calculate time within current loop
-        let time_in_loop = D::from_millis(elapsed_millis % loop_millis);
-
-        // Find current step and calculate color
-        let mut accumulated_time = D::ZERO;
-        for (step_idx, step) in self.steps.iter().enumerate() {
-            let step_end_time = D::from_millis(
-                accumulated_time.as_millis() + step.duration.as_millis(),
-            );
-
-            if time_in_loop.as_millis() < step_end_time.as_millis() {
-                let time_in_step = D::from_millis(
-                    time_in_loop.as_millis() - accumulated_time.as_millis(),
-                );
-                return self.calculate_step_color(step_idx, time_in_step);
-            }
-
-            accumulated_time = step_end_time;
-        }
-
-        // Fallback: return last color (should not reach here)
-        self.steps.last().unwrap().color
-    }
-
-    /// Calculates the color for a specific step at a given time within that step.
-    fn calculate_step_color(&self, step_idx: usize, time_in_step: D) -> Srgb {
-        let step = &self.steps[step_idx];
-
+        let step = &self.steps[position.step_index];
         match step.transition {
-            TransitionStyle::Step => step.color,
-            TransitionStyle::Linear => {
-                let previous_color = if step_idx == 0 {
-                    self.steps.last().unwrap().color
-                } else {
-                    self.steps[step_idx - 1].color
-                };
-
-                let duration_millis = step.duration.as_millis();
-                if duration_millis == 0 {
-                    return step.color;
-                }
-
-                let time_millis = time_in_step.as_millis();
-                let progress = (time_millis as f32) / (duration_millis as f32);
-                let progress = progress.clamp(0.0, 1.0);
-
-                previous_color.mix(step.color, progress)
-            }
+            TransitionStyle::Linear => Some(D::ZERO),
+            TransitionStyle::Step => Some(position.time_until_step_end),
         }
     }
 
@@ -461,5 +545,43 @@ mod tests {
         // Any time after zero, should show landing color
         assert!(colors_equal(sequence.color_at(TestDuration(1)), BLUE));
         assert!(colors_equal(sequence.color_at(TestDuration(100)), BLUE));
+    }
+
+    #[test]
+    fn find_step_position_returns_correct_info() {
+        let sequence = RgbSequence::<TestDuration, 8>::new()
+            .step(RED, TestDuration(100), TransitionStyle::Step)
+            .step(GREEN, TestDuration(200), TransitionStyle::Linear)
+            .step(BLUE, TestDuration(50), TransitionStyle::Step)
+            .build()
+            .unwrap();
+
+        // Middle of first step
+        let pos = sequence.find_step_position(TestDuration(50)).unwrap();
+        assert_eq!(pos.step_index, 0);
+        assert_eq!(pos.time_in_step, TestDuration(50));
+        assert_eq!(pos.time_until_step_end, TestDuration(50));
+        assert!(!pos.is_complete);
+
+        // Middle of second step
+        let pos = sequence.find_step_position(TestDuration(200)).unwrap();
+        assert_eq!(pos.step_index, 1);
+        assert_eq!(pos.time_in_step, TestDuration(100));
+        assert_eq!(pos.time_until_step_end, TestDuration(100));
+        assert!(!pos.is_complete);
+
+        // In third step
+        let pos = sequence.find_step_position(TestDuration(320)).unwrap();
+        assert_eq!(pos.step_index, 2);
+        assert_eq!(pos.time_in_step, TestDuration(20));
+        assert_eq!(pos.time_until_step_end, TestDuration(30));
+        assert!(!pos.is_complete);
+
+        // After sequence completes
+        let pos = sequence.find_step_position(TestDuration(400)).unwrap();
+        assert_eq!(pos.step_index, 2);  // Last step index
+        assert_eq!(pos.time_in_step, TestDuration(50));  // Duration of last step
+        assert_eq!(pos.time_until_step_end, TestDuration(0));
+        assert!(pos.is_complete);
     }
 }

@@ -1,5 +1,5 @@
 use crate::sequence::RgbSequence;
-use crate::time::{TimeDuration, TimeInstant};
+use crate::time::TimeInstant;
 use crate::{COLOR_OFF};
 use palette::Srgb;
 
@@ -95,7 +95,9 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
     RgbSequencer<'t, I, L, T, N>
 {
     /// Creates a new idle sequencer with LED turned off.
-    pub fn new(led: L, time_source: &'t T) -> Self {
+    pub fn new(mut led: L, time_source: &'t T) -> Self {
+        led.set_color(COLOR_OFF);
+
         Self {
             led,
             time_source,
@@ -186,22 +188,20 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
         let current_time = self.time_source.now();
         let elapsed = current_time.duration_since(start_time);
 
-        // Get the color (always returns Some now)
-        let new_color = sequence.color_at(elapsed);
-        
-        // Update LED if color changed
+        let position = sequence.find_step_position(elapsed).unwrap();
+        let new_color = sequence.color_at_position(&position);
+
         if new_color != self.current_color {
             self.led.set_color(new_color);
             self.current_color = new_color;
         }
 
-        // Check if sequence is complete
-        if sequence.is_complete(elapsed) {
+        if position.is_complete {
             self.state = SequencerState::Complete;
             return Ok(None);
         }
 
-        Ok(self.calculate_next_service_time(elapsed))
+        Ok(sequence.next_service_time(&position))
     }
 
     /// Stops the sequence and turns off the LED.
@@ -290,104 +290,6 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
     pub fn current_color(&self) -> Srgb {
         self.current_color
     }
-
-    /// Calculates when to service next based on current position.
-    fn calculate_next_service_time(&self, elapsed: I::Duration) -> Option<I::Duration> {
-        if self.is_in_linear_transition(elapsed) {
-            Some(I::Duration::ZERO)
-        } else {
-            self.time_until_next_step(elapsed)
-        }
-    }
-
-    /// Checks if currently in a linear transition.
-    fn is_in_linear_transition(&self, elapsed: I::Duration) -> bool {
-        let sequence = self.sequence.as_ref().unwrap();
-        
-        let loop_duration = sequence.loop_duration();
-        if loop_duration.as_millis() == 0 {
-            return false;
-        }
-
-        // Check if sequence is complete
-        if let crate::types::LoopCount::Finite(count) = sequence.loop_count() {
-            let total_duration_millis = loop_duration.as_millis() * (count as u64);
-            if elapsed.as_millis() >= total_duration_millis {
-                return false;
-            }
-        }
-
-        // Find current step
-        let time_in_loop_millis = elapsed.as_millis() % loop_duration.as_millis();
-        let time_in_loop = I::Duration::from_millis(time_in_loop_millis);
-
-        let mut accumulated_time = I::Duration::ZERO;
-        for i in 0..sequence.step_count() {
-            let step_duration = self.get_step_duration(i);
-            let step_end_time = I::Duration::from_millis(
-                accumulated_time.as_millis() + step_duration.as_millis(),
-            );
-
-            if time_in_loop.as_millis() < step_end_time.as_millis() {
-                return self.is_step_linear(i);
-            }
-
-            accumulated_time = step_end_time;
-        }
-
-        false
-    }
-
-    /// Calculates time until the next step begins.
-    fn time_until_next_step(&self, elapsed: I::Duration) -> Option<I::Duration> {
-        let sequence = self.sequence.as_ref().unwrap();
-        let loop_duration = sequence.loop_duration();
-        
-        if loop_duration.as_millis() == 0 {
-            return None;
-        }
-
-        // Check if finite sequence is complete
-        if let crate::types::LoopCount::Finite(count) = sequence.loop_count() {
-            let total_duration_millis = loop_duration.as_millis() * (count as u64);
-            if elapsed.as_millis() >= total_duration_millis {
-                return None;
-            }
-        }
-
-        let time_in_loop_millis = elapsed.as_millis() % loop_duration.as_millis();
-        let time_in_loop = I::Duration::from_millis(time_in_loop_millis);
-
-        // Find when current step ends
-        let mut accumulated_time = I::Duration::ZERO;
-        for i in 0..sequence.step_count() {
-            let step_duration = self.get_step_duration(i);
-            let step_end_time = I::Duration::from_millis(
-                accumulated_time.as_millis() + step_duration.as_millis(),
-            );
-
-            if time_in_loop.as_millis() < step_end_time.as_millis() {
-                return Some(step_end_time.saturating_sub(time_in_loop));
-            }
-
-            accumulated_time = step_end_time;
-        }
-
-        // End of loop
-        Some(loop_duration.saturating_sub(time_in_loop))
-    }
-
-    /// Gets the duration of a step by index.
-    fn get_step_duration(&self, index: usize) -> I::Duration {
-        let sequence = self.sequence.as_ref().unwrap();
-        sequence.get_step(index).map(|s| s.duration).unwrap_or(I::Duration::ZERO)
-    }
-
-    /// Checks if a step uses linear transition.
-    fn is_step_linear(&self, index: usize) -> bool {
-        let sequence = self.sequence.as_ref().unwrap();
-        sequence.get_step(index).map(|s| s.transition == crate::types::TransitionStyle::Linear).unwrap_or(false)
-    }
 }
 
 #[cfg(test)]
@@ -453,11 +355,11 @@ mod tests {
             }
         }
 
-        fn last_color(&self) -> Srgb {
+        fn _last_color(&self) -> Srgb {
             self.current_color
         }
 
-        fn color_change_count(&self) -> usize {
+        fn _color_change_count(&self) -> usize {
             self.color_history.len()
         }
     }
@@ -486,7 +388,7 @@ mod tests {
             self.current_time.set(TestInstant(current.0 + duration.0));
         }
 
-        fn set_time(&self, time: TestInstant) {
+        fn _set_time(&self, time: TestInstant) {
             self.current_time.set(time);
         }
     }
