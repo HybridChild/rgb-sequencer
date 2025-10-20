@@ -1,4 +1,5 @@
 use crate::sequence::RgbSequence;
+use crate::command::SequencerAction;
 use crate::time::TimeInstant;
 use crate::{COLOR_OFF};
 use palette::Srgb;
@@ -106,6 +107,42 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
             start_time: None,
             pause_start_time: None,
             current_color: COLOR_OFF,
+        }
+    }
+
+    /// Handles a sequencer action by dispatching to the appropriate method.
+    ///
+    /// This is a convenience method for command-based control, allowing actions
+    /// to be dispatched without matching on the action type manually.
+    ///
+    /// # Returns
+    /// * `Ok(Some(duration))` - Time until next service needed
+    /// * `Ok(None)` - Sequence complete or action doesn't require timing
+    /// * `Err` - Operation failed (invalid state, etc.)
+    pub fn handle_action(
+        &mut self,
+        action: SequencerAction<I::Duration, N>,
+    ) -> Result<Option<I::Duration>, SequencerError> {
+        match action {
+            SequencerAction::Load(sequence) => {
+                self.load(sequence);
+                Ok(None)
+            }
+            SequencerAction::Start => self.start(),
+            SequencerAction::Stop => {
+                self.stop()?;
+                Ok(None)
+            }
+            SequencerAction::Pause => {
+                self.pause()?;
+                Ok(None)
+            }
+            SequencerAction::Resume => self.resume(),
+            SequencerAction::Restart => self.restart(),
+            SequencerAction::Clear => {
+                self.clear();
+                Ok(None)
+            }
         }
     }
 

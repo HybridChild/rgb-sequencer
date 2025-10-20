@@ -1,12 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![doc = include_str!("../README.md")]
 
-//! A `no_std`-compatible library for controlling RGB LEDs through timed color sequences.
-//!
-//! This crate provides the building blocks for defining and executing RGB LED animations
-//! on embedded systems. Each sequence consists of multiple steps with colors, durations,
-//! and transition styles, and can be configured to loop finitely or infinitely.
-//!
 //! # Core Concepts
 //!
 //! - **`RgbSequence`**: Defines a complete animation sequence with steps, loops, and landing color
@@ -17,9 +11,14 @@
 //! - **`RgbLed`**: Trait to implement for your LED hardware
 //! - **`TimeSource`**: Trait to implement for your timing system
 //! - **`StepPosition`**: Information about the current position within a sequence
+//! - **`SequencerAction`**: Commands that can be sent to control sequencers
+//! - **`SequencerCollection`**: Optional convenience wrapper for managing multiple LEDs
 //!
 //! Colors are represented as `Srgb<f32>` (0.0-1.0 range) internally for accurate interpolation.
 //! Users can convert to other formats in their `RgbLed` implementation as needed.
+//!
+//! For single LED control, use `RgbSequencer` directly. For multi-LED systems, consider using
+//! `SequencerCollection` for coordinated control and efficient servicing.
 //!
 //! See the repository README for complete usage examples.
 
@@ -32,11 +31,15 @@ pub mod time;
 pub mod types;
 pub mod sequence;
 pub mod sequencer;
+pub mod command;
+pub mod collection;
 
 pub use sequence::{RgbSequence, SequenceBuilder, StepPosition};
 pub use types::{LoopCount, SequenceError, SequenceStep, TransitionStyle};
 pub use time::{TimeDuration, TimeInstant};
 pub use sequencer::{RgbSequencer, RgbLed, TimeSource, SequencerState, SequencerError};
+pub use command::{SequencerAction, SequencerCommand};
+pub use collection::{SequencerCollection, LedId, CollectionError};
 
 #[cfg(test)]
 mod tests {
