@@ -1,0 +1,35 @@
+[package]
+name = "stm32-sequencer-example"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
+cortex-m-rt = "0.7.5"
+critical-section = "1.2.0"
+embedded-hal = "0.2.7"
+panic-halt = "1.0.0"
+rtt-target = "0.6.2"
+stm32f0xx-hal = { version = "0.18.0", features = ["stm32f072"] }
+
+[dependencies.palette]
+version = "0.7.6"
+default-features = false
+features = ["libm"]
+
+[dependencies.rgb-sequencer]
+path = "../.."
+default-features = false
+
+[lib]
+name = "stm32f0_examples"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rainbow_button"
+path = "bin/rainbow_button.rs"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
