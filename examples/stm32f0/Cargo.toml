@@ -1,5 +1,5 @@
 [package]
-name = "stm32-sequencer-example"
+name = "stm32_rgb-sequencer_examples"
 version = "0.1.0"
 edition = "2021"
 
