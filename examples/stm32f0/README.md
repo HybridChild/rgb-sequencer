@@ -2,17 +2,24 @@
 
 Examples for STM32F NUCLEO-F072RB board.
 
-- **rainbow_button** - Simple bare-metal example demonstrating smooth rainbow transitions with button-controlled pause/resume using SysTick timing.
+- **rainbow_button** - Bare-metal example demonstrating smooth rainbow transitions with interactive color capture using SysTick timing and two RGB LEDs.
 
 ## Hardware Setup
 
 ### RGB LED Connections
 
-Connect an RGB LED to the following pins with appropriate current-limiting resistors (220Ω - 330Ω):
+These example uses **two RGB LEDs**. Connect them to the following pins with appropriate current-limiting resistors (220Ω - 330Ω):
 
+**LED 1:**
 - **Red**: PA6 (TIM3_CH1)
 - **Green**: PA7 (TIM3_CH2)
 - **Blue**: PB0 (TIM3_CH3)
+- **Common**: 3.3V (for common anode) or GND (for common cathode)
+
+**LED 2:**
+- **Red**: PA8 (TIM1_CH1)
+- **Green**: PA9 (TIM1_CH2)
+- **Blue**: PA10 (TIM1_CH3)
 - **Common**: 3.3V (for common anode) or GND (for common cathode)
 
 ### User Button
@@ -61,19 +68,26 @@ let led = PwmRgbLed::new(red_pwm, green_pwm, blue_pwm, false);
 
 ### rainbow_button
 
-A smooth rainbow animation with interactive pause/resume control.
+A smooth rainbow animation with interactive color capture control using two independent RGB LEDs.
 
 **Features:**
-- Cycles through red → green → blue continuously with linear color transitions
-- Press the user button to pause/resume the animation
+- **LED 1**: Continuously cycles through red → green → blue with smooth linear color transitions
+- **LED 2**: Starts off, captures and displays the current color from LED 1 when button is pressed
 - Uses SysTick timer for precise 1ms timing
 - Efficient power management with WFI (Wait For Interrupt)
+- Demonstrates independent sequencer control for multi-LED systems
 
 **What you'll learn:**
-- Basic sequencer usage with linear transitions
+- Multi-LED sequencer usage with different animations
+- Color capture and dynamic sequence creation
 - Hardware timer integration (SysTick)
-- Interactive control with button input
 - Pause/resume functionality
+
+**Behavior:**
+1. On startup, LED 1 begins its rainbow animation, LED 2 is off
+2. Press button → LED 1 pauses at current color, LED 2 lights up with that same color
+3. Press button again → LED 1 resumes animation, LED 2 continues holding the captured color
+4. Repeat to capture different colors from the rainbow cycle
 
 **Run:**
 ```bash
