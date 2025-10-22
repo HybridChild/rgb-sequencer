@@ -139,8 +139,9 @@ fn handle_button_press(sequencer_1: &mut Sequencer1<'_>, sequencer_2: &mut Seque
                 rprintln!("Pause error LED 1: {:?}", e);
             }
 
+            let old_color = sequencer_2.current_color();
             let new_color = sequencer_1.current_color();
-            let new_sequence = RgbSequence::new().step(new_color, HalDuration::from_millis(0), TransitionStyle::Step).build().unwrap();
+            let new_sequence = RgbSequence::new().step(new_color, HalDuration::from_millis(2000), TransitionStyle::Linear).start_color(old_color).build().unwrap();
             sequencer_2.load(new_sequence);
             sequencer_2.start().unwrap();
         }
