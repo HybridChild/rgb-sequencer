@@ -15,6 +15,8 @@ pub struct StepPosition<D: TimeDuration> {
     pub time_until_step_end: D,
     /// Whether the sequence has completed (finite sequences only)
     pub is_complete: bool,
+    /// Which loop iteration we're currently in (0-based)
+    pub current_loop: u32,
 }
 
 /// An RGB color sequence with precise timing and transitions.
@@ -146,6 +148,7 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
             time_in_step: D::ZERO,
             time_until_step_end: D::ZERO,
             is_complete,
+            current_loop: 0,
         }
     }
 
@@ -153,16 +156,22 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
     #[inline]
     fn create_complete_position(&self) -> StepPosition<D> {
         let last_index = self.steps.len() - 1;
+        let loop_count = match self.loop_count {
+            LoopCount::Finite(count) => count,
+            LoopCount::Infinite => 0,
+        };
+        
         StepPosition {
             step_index: last_index,
             time_in_step: self.steps[last_index].duration,
             time_until_step_end: D::ZERO,
             is_complete: true,
+            current_loop: loop_count.saturating_sub(1),
         }
     }
 
     /// Finds which step contains the given time within a loop.
-    fn find_step_at_time(&self, time_in_loop: D) -> StepPosition<D> {
+    fn find_step_at_time(&self, time_in_loop: D, current_loop: u32) -> StepPosition<D> {
         let mut accumulated_time = D::ZERO;
         
         for (step_idx, step) in self.steps.iter().enumerate() {
@@ -181,6 +190,7 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
                     time_in_step,
                     time_until_step_end: time_until_end,
                     is_complete: false,
+                    current_loop,
                 };
             }
 
@@ -194,13 +204,22 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
             time_in_step: self.steps[last_index].duration,
             time_until_step_end: D::ZERO,
             is_complete: false,
+            current_loop,
         }
     }
 
     /// Performs linear color interpolation for a step.
     #[inline]
     fn interpolate_color(&self, position: &StepPosition<D>, step: &SequenceStep<D>) -> Srgb {
-        let previous_color = if position.step_index == 0 {
+        // If this is the first step with Linear transition and we're on the first loop,
+        // use start_color if available
+        let previous_color = if position.step_index == 0 
+            && step.transition == TransitionStyle::Linear 
+            && position.current_loop == 0 
+            && self.start_color.is_some() 
+        {
+            self.start_color.unwrap()
+        } else if position.step_index == 0 {
             self.steps.last().unwrap().color
         } else {
             self.steps[position.step_index - 1].color
@@ -240,11 +259,13 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
             return Some(self.create_complete_position());
         }
         
-        // Calculate time within current loop
-        let time_in_loop = D::from_millis(elapsed.as_millis() % loop_millis);
+        // Calculate which loop we're in and time within current loop
+        let elapsed_millis = elapsed.as_millis();
+        let current_loop = (elapsed_millis / loop_millis) as u32;
+        let time_in_loop = D::from_millis(elapsed_millis % loop_millis);
 
         // Find current step within the loop
-        Some(self.find_step_at_time(time_in_loop))
+        Some(self.find_step_at_time(time_in_loop, current_loop))
     }
 
     /// Calculates the color at a given step position.
@@ -328,7 +349,8 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
     /// Returns the start color if one is configured.
     ///
     /// For function-based sequences, this is the base color passed to the function.
-    /// For step-based sequences, this is not used.
+    /// For step-based sequences, this is used as the interpolation starting point
+    /// for the first step if it has a Linear transition (first loop only).
     pub fn start_color(&self) -> Option<Srgb> {
         self.start_color
     }
@@ -352,6 +374,7 @@ pub struct SequenceBuilder<D: TimeDuration, const N: usize> {
     steps: Vec<SequenceStep<D>, N>,
     loop_count: LoopCount,
     landing_color: Option<Srgb>,
+    start_color: Option<Srgb>,
 }
 
 impl<D: TimeDuration, const N: usize> SequenceBuilder<D, N> {
@@ -361,6 +384,7 @@ impl<D: TimeDuration, const N: usize> SequenceBuilder<D, N> {
             steps: Vec::new(),
             loop_count: LoopCount::default(),
             landing_color: None,
+            start_color: None,
         }
     }
 
@@ -396,6 +420,19 @@ impl<D: TimeDuration, const N: usize> SequenceBuilder<D, N> {
         self
     }
 
+    /// Sets the starting color for the sequence.
+    ///
+    /// For step-based sequences with a Linear transition on the first step,
+    /// this color will be used as the interpolation starting point during
+    /// the first loop only. On subsequent loops, the sequence will interpolate
+    /// from the last step's color as normal.
+    ///
+    /// This is useful for creating smooth entry animations into a looping sequence.
+    pub fn start_color(mut self, color: Srgb) -> Self {
+        self.start_color = Some(color);
+        self
+    }
+
     /// Builds and validates the sequence.
     ///
     /// # Errors
@@ -423,7 +460,7 @@ impl<D: TimeDuration, const N: usize> SequenceBuilder<D, N> {
             loop_count: self.loop_count,
             landing_color: self.landing_color,
             loop_duration,
-            start_color: None,
+            start_color: self.start_color,
             color_fn: None,
             timing_fn: None,
         })
@@ -465,6 +502,7 @@ mod tests {
     const GREEN: Srgb = Srgb::new(0.0, 1.0, 0.0);
     const BLUE: Srgb = Srgb::new(0.0, 0.0, 1.0);
     const BLACK: Srgb = Srgb::new(0.0, 0.0, 0.0);
+    const YELLOW: Srgb = Srgb::new(1.0, 1.0, 0.0);
 
     // Helper to compare colors with small tolerance for floating point
     fn colors_equal(a: Srgb, b: Srgb) -> bool {
@@ -675,6 +713,94 @@ mod tests {
         
         let (color, _) = sequence.evaluate(TestDuration(3999));
         assert!(colors_equal(color, RED));
+    }
+
+    #[test]
+    fn start_color_used_for_first_linear_step_first_loop_only() {
+        // Create sequence with start_color = BLACK and first step = RED with Linear transition
+        let sequence = RgbSequence::<TestDuration, 8>::new()
+            .start_color(BLACK)
+            .step(RED, TestDuration(1000), TransitionStyle::Linear)
+            .step(GREEN, TestDuration(1000), TransitionStyle::Step)
+            .loop_count(LoopCount::Infinite)
+            .build()
+            .unwrap();
+
+        assert_eq!(sequence.start_color(), Some(BLACK));
+
+        // First loop - should interpolate from BLACK to RED
+        let (color, _) = sequence.evaluate(TestDuration(0));
+        assert!(colors_equal(color, BLACK)); // Start from BLACK
+
+        let (color, _) = sequence.evaluate(TestDuration(500));
+        let expected_middle = BLACK.mix(RED, 0.5);
+        assert!(colors_equal(color, expected_middle)); // Halfway from BLACK to RED
+
+        let (color, _) = sequence.evaluate(TestDuration(999));
+        assert!(colors_equal(color, RED)); // Almost at RED
+
+        // Second loop - should interpolate from GREEN (last step) to RED
+        let (color, _) = sequence.evaluate(TestDuration(2000));
+        assert!(colors_equal(color, GREEN)); // Start from GREEN (last step's color)
+
+        let (color, _) = sequence.evaluate(TestDuration(2500));
+        let expected_middle = GREEN.mix(RED, 0.5);
+        assert!(colors_equal(color, expected_middle)); // Halfway from GREEN to RED
+
+        let (color, _) = sequence.evaluate(TestDuration(2999));
+        assert!(colors_equal(color, RED)); // Almost at RED
+    }
+
+    #[test]
+    fn start_color_not_used_when_first_step_is_step_transition() {
+        // Create sequence with start_color but first step uses Step transition
+        let sequence = RgbSequence::<TestDuration, 8>::new()
+            .start_color(BLACK)
+            .step(RED, TestDuration(1000), TransitionStyle::Step)
+            .step(GREEN, TestDuration(1000), TransitionStyle::Linear)
+            .loop_count(LoopCount::Infinite)
+            .build()
+            .unwrap();
+
+        // First step is Step transition, so it should just show RED immediately
+        let (color, _) = sequence.evaluate(TestDuration(0));
+        assert!(colors_equal(color, RED));
+
+        let (color, _) = sequence.evaluate(TestDuration(500));
+        assert!(colors_equal(color, RED));
+    }
+
+    #[test]
+    fn start_color_with_finite_loops() {
+        // Test that start_color only affects the first loop even with finite loops
+        let sequence = RgbSequence::<TestDuration, 8>::new()
+            .start_color(YELLOW)
+            .step(RED, TestDuration(1000), TransitionStyle::Linear)
+            .step(GREEN, TestDuration(1000), TransitionStyle::Step)
+            .loop_count(LoopCount::Finite(3))
+            .build()
+            .unwrap();
+
+        // Loop 0 - interpolate from YELLOW to RED
+        let (color, _) = sequence.evaluate(TestDuration(0));
+        assert!(colors_equal(color, YELLOW));
+
+        let (color, _) = sequence.evaluate(TestDuration(500));
+        assert!(colors_equal(color, YELLOW.mix(RED, 0.5)));
+
+        // Loop 1 - interpolate from GREEN to RED
+        let (color, _) = sequence.evaluate(TestDuration(2000));
+        assert!(colors_equal(color, GREEN));
+
+        let (color, _) = sequence.evaluate(TestDuration(2500));
+        assert!(colors_equal(color, GREEN.mix(RED, 0.5)));
+
+        // Loop 2 - still interpolate from GREEN to RED
+        let (color, _) = sequence.evaluate(TestDuration(4000));
+        assert!(colors_equal(color, GREEN));
+
+        let (color, _) = sequence.evaluate(TestDuration(4500));
+        assert!(colors_equal(color, GREEN.mix(RED, 0.5)));
     }
 
     #[test]
