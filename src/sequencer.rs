@@ -76,6 +76,9 @@ impl std::error::Error for SequencerError {}
 /// Each sequencer owns an LED and executes sequences independently. The sequencer
 /// tracks timing, calculates colors, and updates the LED hardware.
 ///
+/// Sequences can be either step-based (pre-defined color transitions) or function-based
+/// (algorithmic animations). Both types work seamlessly with the same sequencer interface.
+///
 /// # Type Parameters
 /// * `'t` - Lifetime of the time source reference
 /// * `I` - Time instant type
@@ -149,6 +152,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
     /// Loads a sequence. Can be called from any state.
     ///
     /// Stops any running sequence and transitions to `Loaded` state.
+    /// Works with both step-based and function-based sequences.
     pub fn load(&mut self, sequence: RgbSequence<I::Duration, N>) {
         self.sequence = Some(sequence);
         self.start_time = None;
@@ -208,7 +212,8 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
     /// Must be called from `Running` state.
     ///
     /// # Returns
-    /// * `Ok(Some(Duration::ZERO))` - Linear transition, service again at desired frame rate
+    /// * `Ok(Some(Duration::ZERO))` - Linear transition or function-based continuous animation,
+    ///   service again at desired frame rate
     /// * `Ok(Some(duration))` - Step transition, service again after this duration
     /// * `Ok(None)` - Sequence complete, transitions to `Complete` state
     /// * `Err` - Invalid state
@@ -225,20 +230,22 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
         let current_time = self.time_source.now();
         let elapsed = current_time.duration_since(start_time);
 
-        let position = sequence.find_step_position(elapsed).unwrap();
-        let new_color = sequence.color_at_position(&position);
+        // Evaluate color and timing
+        let (new_color, next_service) = sequence.evaluate(elapsed);
 
+        // Update LED only if color changed
         if new_color != self.current_color {
             self.led.set_color(new_color);
             self.current_color = new_color;
         }
 
-        if position.is_complete {
+        // Handle completion
+        if next_service.is_none() {
             self.state = SequencerState::Complete;
             return Ok(None);
         }
 
-        Ok(sequence.next_service_time(&position))
+        Ok(next_service)
     }
 
     /// Stops the sequence and turns off the LED.
@@ -569,6 +576,43 @@ mod tests {
         timer.advance(TestDuration(100));
         sequencer.service().unwrap();
         assert!(colors_equal(sequencer.current_color(), BLUE));
+    }
+
+    #[test]
+    fn function_based_sequence_works() {
+        let led = MockLed::new();
+        let timer = MockTimeSource::new();
+        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+
+        fn brightness_pulse(base: Srgb, elapsed: TestDuration) -> Srgb {
+            let brightness = if elapsed.as_millis() < 500 { 0.5 } else { 1.0 };
+            Srgb::new(
+                base.red * brightness,
+                base.green * brightness,
+                base.blue * brightness,
+            )
+        }
+
+        fn continuous(_elapsed: TestDuration) -> Option<TestDuration> {
+            Some(TestDuration::ZERO)
+        }
+
+        let sequence = RgbSequence::<TestDuration, 8>::from_function(
+            RED,
+            brightness_pulse,
+            continuous,
+        );
+
+        sequencer.load(sequence);
+        sequencer.start().unwrap();
+
+        // At start - 50% brightness
+        assert!(colors_equal(sequencer.current_color(), Srgb::new(0.5, 0.0, 0.0)));
+
+        // After 500ms - full brightness
+        timer.advance(TestDuration(500));
+        sequencer.service().unwrap();
+        assert!(colors_equal(sequencer.current_color(), RED));
     }
 
     #[test]

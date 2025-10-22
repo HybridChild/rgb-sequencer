@@ -83,6 +83,10 @@ impl From<SequencerError> for CollectionError {
 /// sequencers and provides efficient batch servicing of all LEDs. Each sequencer
 /// in the collection is identified by a user-specified `LedId`.
 ///
+/// All sequencers in a collection can run different animations (both step-based
+/// and function-based) while maintaining a homogeneous type signature. This allows
+/// for flexible multi-LED control without heap allocation.
+///
 /// # Type Parameters
 /// * `'t` - Lifetime of the time source reference
 /// * `I` - Time instant type
@@ -178,9 +182,13 @@ where
     /// updating their LEDs as needed. It then aggregates the timing information from
     /// all sequencers to determine when the next service call should occur.
     ///
+    /// Works seamlessly with both step-based and function-based sequences, automatically
+    /// handling the different timing requirements of each.
+    ///
     /// # Returns
-    /// * `Some(Duration::ZERO)` - At least one sequencer has a linear transition in
-    ///   progress. Service again at your desired frame rate (e.g., 16ms for 60fps).
+    /// * `Some(Duration::ZERO)` - At least one sequencer has a continuous animation
+    ///   (linear transition or function-based). Service again at your desired frame
+    ///   rate (e.g., 16ms for 60fps).
     /// * `Some(duration)` - All active sequencers are in step transitions. Sleep for
     ///   this duration before the next service call.
     /// * `None` - All sequencers are complete or idle. No further servicing needed
@@ -511,6 +519,30 @@ mod tests {
     }
 
     #[test]
+    fn service_all_returns_zero_for_function_based() {
+        let timer = MockTimeSource::new();
+        let mut collection = SequencerCollection::<TestInstant, MockLed, MockTimeSource, 8, 4>::new(&timer);
+
+        collection.add_sequencer(LedId(0), MockLed::new()).unwrap();
+
+        fn test_fn(base: Srgb, _elapsed: TestDuration) -> Srgb {
+            base
+        }
+
+        fn continuous(_elapsed: TestDuration) -> Option<TestDuration> {
+            Some(TestDuration::ZERO)
+        }
+
+        let seq = RgbSequence::<TestDuration, 8>::from_function(RED, test_fn, continuous);
+
+        collection.handle_command(LedId(0), SequencerAction::Load(seq)).unwrap();
+        collection.handle_command(LedId(0), SequencerAction::Start).unwrap();
+
+        let duration = collection.service_all().unwrap();
+        assert_eq!(duration, Some(TestDuration::ZERO));
+    }
+
+    #[test]
     fn service_all_returns_none_when_all_complete() {
         let timer = MockTimeSource::new();
         let mut collection = SequencerCollection::<TestInstant, MockLed, MockTimeSource, 8, 4>::new(&timer);
@@ -533,5 +565,39 @@ mod tests {
         // Should return None since sequence is complete
         let duration = collection.service_all().unwrap();
         assert_eq!(duration, None);
+    }
+
+    #[test]
+    fn collection_handles_mixed_sequence_types() {
+        let timer = MockTimeSource::new();
+        let mut collection = SequencerCollection::<TestInstant, MockLed, MockTimeSource, 8, 4>::new(&timer);
+
+        collection.add_sequencer(LedId(0), MockLed::new()).unwrap();
+        collection.add_sequencer(LedId(1), MockLed::new()).unwrap();
+
+        // LED 0: Step-based sequence
+        let step_seq = RgbSequence::<TestDuration, 8>::new()
+            .step(RED, TestDuration(1000), TransitionStyle::Step)
+            .build()
+            .unwrap();
+
+        // LED 1: Function-based sequence
+        fn pulse(base: Srgb, _elapsed: TestDuration) -> Srgb {
+            base
+        }
+        fn continuous(_elapsed: TestDuration) -> Option<TestDuration> {
+            Some(TestDuration::ZERO)
+        }
+        let func_seq = RgbSequence::<TestDuration, 8>::from_function(BLUE, pulse, continuous);
+
+        collection.handle_command(LedId(0), SequencerAction::Load(step_seq)).unwrap();
+        collection.handle_command(LedId(1), SequencerAction::Load(func_seq)).unwrap();
+
+        collection.handle_command(LedId(0), SequencerAction::Start).unwrap();
+        collection.handle_command(LedId(1), SequencerAction::Start).unwrap();
+
+        // Should return ZERO because LED 1 has continuous animation
+        let duration = collection.service_all().unwrap();
+        assert_eq!(duration, Some(TestDuration::ZERO));
     }
 }
