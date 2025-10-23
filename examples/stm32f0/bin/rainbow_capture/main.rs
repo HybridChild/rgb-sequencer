@@ -5,19 +5,18 @@ use cortex_m_rt::entry;
 use panic_halt as _;
 use rtt_target::{rprintln, rtt_init_print};
 
-use stm32f0xx_hal::{
-    pac,
-    prelude::*,
-    pwm,
-    time::Hertz,
-};
+use stm32f0xx_hal::{pac, prelude::*};
 
-use palette::{Srgb, FromColor, Hsv};
-
-use stm32f0_examples::rgb_led::PwmRgbLed;
 use stm32f0_examples::time_source::{HalTimeSource, HalInstant, HalDuration};
+use rgb_sequencer::{RgbSequencer, RgbSequence, TransitionStyle, SequencerState, TimeDuration, TimeSource, COLOR_OFF};
 
-use rgb_sequencer::{RgbSequencer, RgbSequence, TransitionStyle, LoopCount, SequencerState, TimeDuration, TimeSource, COLOR_OFF};
+mod button;
+mod sequences;
+mod hardware_setup;
+
+use button::ButtonDebouncer;
+use sequences::create_rainbow_sequence;
+use hardware_setup::{init_clock_and_systick, setup_led1_pwm, setup_led2_pwm, Led1, Led2};
 
 /// SysTick interrupt handler - called every 1ms
 #[cortex_m_rt::exception]
@@ -25,110 +24,9 @@ fn SysTick() {
     stm32f0_examples::time_source::tick();
 }
 
-type Led1 = PwmRgbLed<
-    pwm::PwmChannels<pac::TIM3, pwm::C1>,
-    pwm::PwmChannels<pac::TIM3, pwm::C2>,
-    pwm::PwmChannels<pac::TIM3, pwm::C3>,
->;
-
-type Led2 = PwmRgbLed<
-    pwm::PwmChannels<pac::TIM1, pwm::C1>,
-    pwm::PwmChannels<pac::TIM1, pwm::C2>,
-    pwm::PwmChannels<pac::TIM1, pwm::C3>,
->;
-
+/// Type aliases for the sequencers
 type Sequencer1<'a> = RgbSequencer<'a, HalInstant, Led1, HalTimeSource, 16>;
 type Sequencer2<'a> = RgbSequencer<'a, HalInstant, Led2, HalTimeSource, 16>;
-
-/// Initialize the system clock and SysTick timer
-fn init_clock_and_systick(
-    cfgr: stm32f0xx_hal::rcc::CFGR,
-    flash: &mut pac::FLASH,
-    syst: &mut cortex_m::peripheral::SYST,
-) -> stm32f0xx_hal::rcc::Rcc {
-    let rcc = cfgr.freeze(flash);
-    let sysclk_freq = rcc.clocks.sysclk();
-    rprintln!("System clock: {} Hz", sysclk_freq.0);
-
-    // Configure SysTick to fire every 1ms
-    syst.set_clock_source(cortex_m::peripheral::syst::SystClkSource::Core);
-    syst.set_reload((sysclk_freq.0 / 1_000) - 1);
-    syst.clear_current();
-    syst.enable_counter();
-    syst.enable_interrupt();
-    rprintln!("SysTick configured for 1ms interrupts");
-
-    rcc
-}
-
-/// Configure PWM for LED 1 (TIM3)
-fn setup_led1_pwm(
-    pa6: stm32f0xx_hal::gpio::gpioa::PA6<stm32f0xx_hal::gpio::Input<stm32f0xx_hal::gpio::Floating>>,
-    pa7: stm32f0xx_hal::gpio::gpioa::PA7<stm32f0xx_hal::gpio::Input<stm32f0xx_hal::gpio::Floating>>,
-    pb0: stm32f0xx_hal::gpio::gpiob::PB0<stm32f0xx_hal::gpio::Input<stm32f0xx_hal::gpio::Floating>>,
-    tim3: pac::TIM3,
-    rcc: &mut stm32f0xx_hal::rcc::Rcc,
-) -> Led1 {
-    let pins = cortex_m::interrupt::free(|cs| {
-        (
-            pa6.into_alternate_af1(cs),
-            pa7.into_alternate_af1(cs),
-            pb0.into_alternate_af1(cs),
-        )
-    });
-    
-    let pwm_freq = Hertz(1_000);
-    let (red, green, blue) = pwm::tim3(tim3, pins, rcc, pwm_freq);
-    
-    rprintln!("LED 1 configured on TIM3 (PA6, PA7, PB0)");
-    PwmRgbLed::new(red, green, blue, true)
-}
-
-/// Configure PWM for LED 2 (TIM1)
-fn setup_led2_pwm(
-    pa8: stm32f0xx_hal::gpio::gpioa::PA8<stm32f0xx_hal::gpio::Input<stm32f0xx_hal::gpio::Floating>>,
-    pa9: stm32f0xx_hal::gpio::gpioa::PA9<stm32f0xx_hal::gpio::Input<stm32f0xx_hal::gpio::Floating>>,
-    pa10: stm32f0xx_hal::gpio::gpioa::PA10<stm32f0xx_hal::gpio::Input<stm32f0xx_hal::gpio::Floating>>,
-    tim1: pac::TIM1,
-    rcc: &mut stm32f0xx_hal::rcc::Rcc,
-) -> Led2 {
-    let pins = cortex_m::interrupt::free(|cs| {
-        (
-            pa8.into_alternate_af2(cs),
-            pa9.into_alternate_af2(cs),
-            pa10.into_alternate_af2(cs),
-        )
-    });
-    
-    let pwm_freq = Hertz(1_000);
-    let (red, green, blue) = pwm::tim1(tim1, pins, rcc, pwm_freq);
-    
-    rprintln!("LED 2 configured on TIM1 (PA8, PA9, PA10)");
-    PwmRgbLed::new(red, green, blue, true)
-}
-
-/// Create a rainbow sequence that cycles through the full color spectrum
-fn create_rainbow_sequence() -> RgbSequence<HalDuration, 16> {    
-    RgbSequence::new()
-        .step(
-            Srgb::from_color(Hsv::new(0.0, 1.0, 1.0)),
-            HalDuration::from_millis(4000),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::from_color(Hsv::new(120.0, 1.0, 1.0)),
-            HalDuration::from_millis(4000),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::from_color(Hsv::new(240.0, 1.0, 1.0)),
-            HalDuration::from_millis(4000),
-            TransitionStyle::Linear,
-        )
-        .loop_count(LoopCount::Infinite)
-        .build()
-        .unwrap()
-}
 
 /// Handle button press - toggle pause/resume for both sequencers
 fn handle_button_press(sequencer_1: &mut Sequencer1<'_>, sequencer_2: &mut Sequencer2<'_>) {
@@ -141,7 +39,11 @@ fn handle_button_press(sequencer_1: &mut Sequencer1<'_>, sequencer_2: &mut Seque
 
             let old_color = sequencer_2.current_color();
             let new_color = sequencer_1.current_color();
-            let new_sequence = RgbSequence::new().step(new_color, HalDuration::from_millis(2000), TransitionStyle::Linear).start_color(old_color).build().unwrap();
+            let new_sequence = RgbSequence::new()
+                .step(new_color, HalDuration(2000), TransitionStyle::Linear)
+                .start_color(old_color)
+                .build()
+                .unwrap();
             sequencer_2.load(new_sequence);
             sequencer_2.start().unwrap();
         }
@@ -243,38 +145,6 @@ fn sleep_until_next_service(
     }
 }
 
-/// Simple button debouncer
-struct ButtonDebouncer {
-    pressed: bool,
-    last_press_time: u32,
-    debounce_ms: u32,
-}
-
-impl ButtonDebouncer {
-    fn new(debounce_ms: u32) -> Self {
-        Self {
-            pressed: false,
-            last_press_time: 0,
-            debounce_ms,
-        }
-    }
-    
-    /// Check if button was just pressed (returns true on falling edge)
-    fn check_press(&mut self, button_is_low: bool, current_time_ms: u32) -> bool {
-        if button_is_low && !self.pressed {
-            let time_diff = current_time_ms.wrapping_sub(self.last_press_time);
-            if time_diff >= self.debounce_ms {
-                self.pressed = true;
-                self.last_press_time = current_time_ms;
-                return true;
-            }
-        } else if !button_is_low && self.pressed {
-            self.pressed = false;
-        }
-        false
-    }
-}
-
 #[entry]
 fn main() -> ! {
     rtt_init_print!();
@@ -314,7 +184,10 @@ fn main() -> ! {
 
     // Create and load sequences
     let sequence_1 = create_rainbow_sequence();  // 12 second cycle
-    let sequence_2 = RgbSequence::new().step(COLOR_OFF, HalDuration::from_millis(0), TransitionStyle::Step).build().unwrap();
+    let sequence_2 = RgbSequence::new()
+        .step(COLOR_OFF, HalDuration(0), TransitionStyle::Step)
+        .build()
+        .unwrap();
     
     sequencer_1.load(sequence_1);
     sequencer_1.start().unwrap();
