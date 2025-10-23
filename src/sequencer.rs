@@ -336,6 +336,16 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
     pub fn current_color(&self) -> Srgb {
         self.current_color
     }
+
+    /// Returns true if the sequencer is currently paused.
+    pub fn is_paused(&self) -> bool {
+        self.state == SequencerState::Paused
+    }
+
+    /// Returns true if the sequencer is currently running.
+    pub fn is_running(&self) -> bool {
+        self.state == SequencerState::Running
+    }
 }
 
 #[cfg(test)]
