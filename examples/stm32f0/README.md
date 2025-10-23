@@ -3,12 +3,13 @@
 Examples for STM32F NUCLEO-F072RB board.
 
 - **rainbow_capture** - Bare-metal example demonstrating smooth rainbow transitions with interactive color capture using SysTick timing and two RGB LEDs.
+- **mode_switcher** - Bare-metal example demonstrating coordinated multi-LED control with mode switching using SysTick timing.
 
 ## Hardware Setup
 
 ### RGB LED Connections
 
-These example uses **two RGB LEDs**. Connect them to the following pins with appropriate current-limiting resistors (220Ω - 330Ω):
+These examples use **two RGB LEDs**. Connect them to the following pins with appropriate current-limiting resistors (220Ω - 330Ω):
 
 **LED 1:**
 - **Red**: PA6 (TIM3_CH1)
@@ -92,4 +93,34 @@ A smooth rainbow animation with interactive color capture control using two inde
 **Run:**
 ```bash
 cargo run --release --bin rainbow_capture
+```
+
+### mode_switcher
+
+A coordinated multi-LED controller demonstrating mode switching with synchronized animations.
+
+**Features:**
+- **Three display modes**: Breathing, Rainbow, and Police
+- **Coordinated control**: Both LEDs run the same sequence in perfect sync
+- **Mode indicator**: Onboard LED (PA5) indicates current mode
+- Uses SysTick timer for precise 1ms timing
+- Efficient power management with WFI (Wait For Interrupt)
+- Demonstrates synchronized multi-LED sequencing
+
+**What you'll learn:**
+- Coordinated multi-LED control with identical sequences
+- Dynamic sequence loading and mode switching
+- Mode state management
+- Efficient sequencer servicing with optimal timing hints
+
+**Behavior:**
+1. On startup, both LEDs begin rainbow animation (synchronized)
+2. Press button → switches to breathing mode (gentle white fade)
+3. Press again → police mode (red/blue alternating)
+4. Press again → back to breathing mode (cycle repeats)
+5. Onboard LED indicates mode: off = breathing, on = rainbow/police
+
+**Run:**
+```bash
+cargo run --release --bin mode_switcher
 ```

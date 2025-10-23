@@ -1,0 +1,47 @@
+#![no_std]
+#![no_main]
+
+use cortex_m_rt::entry;
+use panic_halt as _;
+use rtt_target::{rprintln, rtt_init_print};
+
+use stm32f0_examples::time_source::HalTimeSource;
+
+mod button;
+mod sequences;
+mod hardware_setup;
+mod app_state;
+
+use app_state::AppState;
+
+/// SysTick interrupt handler - called every 1ms
+#[cortex_m_rt::exception]
+fn SysTick() {
+    stm32f0_examples::time_source::tick();
+}
+
+#[entry]
+fn main() -> ! {
+    rtt_init_print!();
+    rprintln!("=== RGB LED Mode Switcher Example ===");
+    rprintln!("Starting initialization...");
+
+    // Initialize all hardware
+    let hw = hardware_setup::init_hardware();
+    rprintln!("Hardware initialized successfully");
+
+    // Create time source
+    let time_source = HalTimeSource::new();
+
+    // Initialize application state and run
+    let mut app = AppState::new(hw, &time_source);
+    
+    rprintln!("=== System Ready ===");
+    rprintln!("Press button to cycle through modes:");
+    rprintln!("  1. Breathing (white fade)");
+    rprintln!("  2. Rainbow (color cycle)");
+    rprintln!("  3. Police (red/blue alternating)");
+    
+    // Run the main application loop (never returns)
+    app.run()
+}
