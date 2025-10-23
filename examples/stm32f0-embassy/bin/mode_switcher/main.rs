@@ -47,7 +47,6 @@ fn configure_clock() -> Config {
 
 /// Initialize PWM for TIM3 (LED 1: PA6, PA7, PB0)
 fn setup_pwm_tim3(p: &mut Peripherals) -> (SimplePwm<'static, TIM3>, u16) {
-    // Use into_ref! macro to convert Peri to PeripheralRef
     let tim3 = unsafe { p.TIM3.clone_unchecked() };
     let pa6 = unsafe { p.PA6.clone_unchecked() };
     let pa7 = unsafe { p.PA7.clone_unchecked() };
@@ -73,8 +72,6 @@ fn setup_pwm_tim3(p: &mut Peripherals) -> (SimplePwm<'static, TIM3>, u16) {
     pwm.ch1().enable();
     pwm.ch2().enable();
     pwm.ch3().enable();
-    
-    info!("LED 1 PWM configured on TIM3 (PA6, PA7, PB0), max_duty: {}", max_duty);
     
     (pwm, max_duty)
 }
@@ -107,8 +104,6 @@ fn setup_pwm_tim1(p: &mut Peripherals) -> (SimplePwm<'static, TIM1>, u16) {
     pwm.ch2().enable();
     pwm.ch3().enable();
     
-    info!("LED 2 PWM configured on TIM1 (PA8, PA9, PA10), max_duty: {}", max_duty);
-    
     (pwm, max_duty)
 }
 
@@ -117,28 +112,22 @@ fn setup_button(p: &mut Peripherals) -> ExtiInput<'static> {
     let pc13 = unsafe { p.PC13.clone_unchecked() };
     let exti13 = unsafe { p.EXTI13.clone_unchecked() };
     
-    let button = ExtiInput::new(pc13, exti13, Pull::Up);
-    info!("Button configured on PC13");
-    button
+    ExtiInput::new(pc13, exti13, Pull::Up)
 }
 
 /// Configure onboard LED
 fn setup_onboard_led(p: &mut Peripherals) -> Output<'static> {
     let pa5 = unsafe { p.PA5.clone_unchecked() };
-    
-    let led = Output::new(pa5, Level::Low, Speed::Low);
-    info!("Onboard LED configured on PA5");
-    led
+    Output::new(pa5, Level::Low, Speed::Low)
 }
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
-    info!("Starting RGB Sequencer Embassy Example...");
+    info!("Starting...");
 
     // Initialize peripherals with clock configuration
     let config = configure_clock();
     let mut p = embassy_stm32::init(config);
-    info!("Peripherals initialized");
 
     // Setup hardware
     let button = setup_button(&mut p);
@@ -148,16 +137,10 @@ async fn main(spawner: Spawner) {
 
     // Spawn tasks
     spawner.spawn(button_task(button)).unwrap();
-    info!("Button task spawned");
-
     spawner.spawn(app_logic_task(onboard_led)).unwrap();
-    info!("App logic task spawned");
-
     spawner.spawn(rgb_task(pwm_tim3, max_duty_tim3, pwm_tim1, max_duty_tim1)).unwrap();
-    info!("RGB task spawned");
 
-    info!("All tasks spawned successfully!");
-    info!("Press the user button to cycle through modes");
+    info!("Ready!");
     
     // Main task has no more work to do - all logic is in spawned tasks
     pending::<()>().await;

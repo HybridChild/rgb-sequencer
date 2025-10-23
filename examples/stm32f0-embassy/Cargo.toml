@@ -36,8 +36,18 @@ path = "src/lib.rs"
 name = "mode_switcher"
 path = "bin/mode_switcher/main.rs"
 
+[profile.dev]
+opt-level = "z"
+debug = 1
+lto = "thin"
+panic = "abort"
+overflow-checks = false
+incremental = false
+
 [profile.release]
 opt-level = "z"
 lto = true
 codegen-units = 1
-debug = true  # Keep debug info for defmt
+debug = 2
+panic = "abort"
+strip = false

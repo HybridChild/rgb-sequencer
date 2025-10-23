@@ -65,7 +65,7 @@ pub async fn rgb_task(
     pwm_tim1: SimplePwm<'static, TIM1>,
     max_duty_tim1: u16,
 ) {
-    info!("Starting RGB task...");
+    info!("RGB ready");
     
     // Create LED wrappers (common anode = true)
     let led1 = EmbassyPwmRgbLed::new(pwm_tim3, max_duty_tim3, true);
@@ -78,8 +78,6 @@ pub async fn rgb_task(
     let mut sequencer1 = RgbSequencer::new(led1, &time_source);
     let mut sequencer2 = RgbSequencer::new(led2, &time_source);
     
-    info!("RGB sequencers initialized");
-    
     // Start with a short delay, will be updated after first service
     let mut next_service_delay = Duration::from_millis(16);
     
@@ -90,30 +88,18 @@ pub async fn rgb_task(
             Timer::after(next_service_delay)
         ).await {
             Either::First(command) => {
-                info!("Received command in RGB task");
-                
                 match command {
                     RgbCommand::LoadCoordinated(sequence) => {
-                        info!("Loading coordinated sequence");
-                        
                         // Load the same sequence on both LEDs
                         sequencer1.load(sequence.clone());
                         sequencer2.load(sequence);
                         
                         // Start both sequencers
-                        match sequencer1.start() {
-                            Ok(_) => info!("Sequencer 1 started successfully"),
-                            Err(e) => info!("Sequencer 1 start error: {:?}", e),
-                        }
-                        
-                        match sequencer2.start() {
-                            Ok(_) => info!("Sequencer 2 started successfully"),
-                            Err(e) => info!("Sequencer 2 start error: {:?}", e),
-                        }
+                        let _ = sequencer1.start();
+                        let _ = sequencer2.start();
                         
                         // Immediately service to get first colors and timing
                         next_service_delay = service_both_sequencers(&mut sequencer1, &mut sequencer2);
-                        info!("Initial service complete, next delay: {} ms", next_service_delay.as_millis());
                     }
                 }
             }
@@ -143,49 +129,33 @@ fn service_both_sequencers(
     
     // Service sequencer 1 if running
     if sequencer1.get_state() == SequencerState::Running {
-        match sequencer1.service() {
-            Ok(Some(delay)) => {
-                min_delay = Some(match min_delay {
-                    None => delay,
-                    Some(current_min) => {
-                        if delay.0.as_millis() < current_min.0.as_millis() {
-                            delay
-                        } else {
-                            current_min
-                        }
+        if let Ok(Some(delay)) = sequencer1.service() {
+            min_delay = Some(match min_delay {
+                None => delay,
+                Some(current_min) => {
+                    if delay.0.as_millis() < current_min.0.as_millis() {
+                        delay
+                    } else {
+                        current_min
                     }
-                });
-            }
-            Ok(None) => {
-                info!("Sequencer 1 completed");
-            }
-            Err(e) => {
-                info!("Sequencer 1 service error: {:?}", e);
-            }
+                }
+            });
         }
     }
     
     // Service sequencer 2 if running
     if sequencer2.get_state() == SequencerState::Running {
-        match sequencer2.service() {
-            Ok(Some(delay)) => {
-                min_delay = Some(match min_delay {
-                    None => delay,
-                    Some(current_min) => {
-                        if delay.0.as_millis() < current_min.0.as_millis() {
-                            delay
-                        } else {
-                            current_min
-                        }
+        if let Ok(Some(delay)) = sequencer2.service() {
+            min_delay = Some(match min_delay {
+                None => delay,
+                Some(current_min) => {
+                    if delay.0.as_millis() < current_min.0.as_millis() {
+                        delay
+                    } else {
+                        current_min
                     }
-                });
-            }
-            Ok(None) => {
-                info!("Sequencer 2 completed");
-            }
-            Err(e) => {
-                info!("Sequencer 2 service error: {:?}", e);
-            }
+                }
+            });
         }
     }
     
