@@ -10,6 +10,7 @@ palette = { version = "0.7.6", default-features = false, features = ["libm"] }
 [features]
 default = []
 std = ["palette/std"]
+defmt = []
 
 [profile.release]
 opt-level = "z"     # Optimize for size

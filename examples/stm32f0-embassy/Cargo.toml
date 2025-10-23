@@ -1,0 +1,43 @@
+[package]
+name = "stm32f0-embassy-examples"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
+cortex-m-rt = "0.7.5"
+defmt = "1.0.1"
+defmt-rtt = "1.1.0"
+panic-probe = { version = "1.0.0", features = ["print-defmt"] }
+
+embassy-futures = { version = "0.1.2" }
+embassy-executor = { version = "0.9.1", features = ["arch-cortex-m", "executor-thread", "defmt"] }
+embassy-time = { version = "0.5.0", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }
+embassy-stm32 = { version = "0.4.0", features = ["stm32f072rb", "time-driver-any", "exti", "memory-x", "defmt"] }
+embassy-sync = { version = "0.7.2", features = ["defmt"] }
+
+embedded-hal = "1.0.0"
+
+[dependencies.palette]
+version = "0.7.6"
+default-features = false
+features = ["libm"]
+
+[dependencies.rgb-sequencer]
+path = "../.."
+default-features = false
+features = ["defmt"]
+
+[lib]
+name = "stm32f0_embassy"
+path = "src/lib.rs"
+
+[[bin]]
+name = "mode_switcher"
+path = "bin/mode_switcher/main.rs"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+debug = true  # Keep debug info for defmt

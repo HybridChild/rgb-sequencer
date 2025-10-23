@@ -1,0 +1,99 @@
+# STM32 NUCLEO-F072RB Embassy Examples
+
+Embassy async examples for STM32F NUCLEO-F072RB board.
+
+- **mode_switcher** - Embassy async example demonstrating coordinated multi-LED control with mode switching using async tasks and channels.
+
+## Hardware Setup
+
+### RGB LED Connections
+
+This example uses **two RGB LEDs**. Connect them to the following pins with appropriate current-limiting resistors (220Ω - 330Ω):
+
+**LED 1:**
+- **Red**: PA6 (TIM3_CH1)
+- **Green**: PA7 (TIM3_CH2)
+- **Blue**: PB0 (TIM3_CH3)
+- **Common**: 3.3V (for common anode) or GND (for common cathode)
+
+**LED 2:**
+- **Red**: PA8 (TIM1_CH1)
+- **Green**: PA9 (TIM1_CH2)
+- **Blue**: PA10 (TIM1_CH3)
+- **Common**: 3.3V (for common anode) or GND (for common cathode)
+
+### User Button
+
+The examples use the onboard user button on PC13 (blue button on Nucleo board).
+
+## Building and Flashing
+
+### Prerequisites
+
+- Rust toolchain with `thumbv6m-none-eabi` target
+- probe-rs for flashing
+
+### Install Target
+```bash
+rustup target add thumbv6m-none-eabi
+```
+
+### Build
+```bash
+cargo build --release --bin <example_name>
+```
+
+### Flash and Run
+
+With probe-rs:
+```bash
+cargo run --release --bin <example_name>
+```
+
+Or manually:
+```bash
+probe-rs run --chip STM32F072RBTx target/thumbv6m-none-eabi/release/<example_name>
+```
+
+## Common Anode vs Common Cathode
+
+The examples assume a **common anode** RGB LED (common pin connected to 3.3V).
+
+If you have a **common cathode** LED (common pin connected to GND), change the last parameter in `PwmRgbLed::new()` to `false`:
+```rust
+let led = PwmRgbLed::new(pwm, Channel::Ch1, Channel::Ch2, Channel::Ch3, false);
+```
+
+## Examples
+
+### mode_switcher
+
+A coordinated multi-LED controller demonstrating Embassy's async task architecture with mode switching.
+
+**Features:**
+- **Four display modes**: Rainbow, Breathing, Alternating, and Off
+- **Task-based architecture**: Three async tasks (button, app_logic, rgb)
+- **Inter-task communication**: Channels and signals for coordinated control
+- **SequencerCollection**: Manages two independent LED sequencers
+- Uses Embassy's time driver for precise async timing
+
+**What you'll learn:**
+- Embassy async task patterns and communication
+- Multi-LED coordination with SequencerCollection
+- Dynamic sequence loading and mode switching
+- Efficient sequencer servicing with optimal timing hints
+
+**Behavior:**
+1. On startup, both LEDs begin rainbow animation (synchronized)
+2. Press button → switches to breathing mode (gentle white fade)
+3. Press again → alternating mode (red/blue swap between LEDs)
+4. Press again → off mode (both LEDs turn off)
+5. Press again → back to rainbow mode
+
+**Run:**
+```bash
+cargo run --release --bin mode_switcher
+```
+
+**Viewing logs:**
+The example uses `defmt` for logging. Logs appear automatically when running with `probe-rs`.
