@@ -11,6 +11,7 @@ embedded-hal = "0.2.7"
 panic-halt = "1.0.0"
 rtt-target = "0.6.2"
 stm32f0xx-hal = { version = "0.18.0", features = ["stm32f072"] }
+libm = "0.2"
 
 [dependencies.palette]
 version = "0.7.6"

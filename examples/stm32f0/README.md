@@ -3,7 +3,7 @@
 Examples for STM32F NUCLEO-F072RB board.
 
 - **rainbow_capture** - Bare-metal example demonstrating smooth rainbow transitions with interactive color capture using SysTick timing and two RGB LEDs.
-- **mode_switcher** - Bare-metal example demonstrating coordinated multi-LED control with mode switching using SysTick timing.
+- **mode_switcher** - Bare-metal example demonstrating coordinated multi-LED control with mode switching using SysTick timing. Features a **function-based breathing sequence** using sine wave animation.
 
 ## Hardware Setup
 
@@ -97,25 +97,35 @@ cargo run --release --bin rainbow_capture
 
 ### mode_switcher
 
-A coordinated multi-LED controller demonstrating mode switching with synchronized animations.
+A coordinated multi-LED controller demonstrating mode switching with synchronized animations. **Features function-based sequences** using sine wave mathematics for the breathing effect.
 
 **Features:**
-- **Three display modes**: Breathing, Rainbow, and Police
+- **Three display modes**: Breathing (sine wave), Rainbow, and Police
+- **Function-based breathing sequence**: Uses algorithmic sine wave animation instead of step-based interpolation
 - **Coordinated control**: Both LEDs run the same sequence in perfect sync
 - **Mode indicator**: Onboard LED (PA5) indicates current mode
 - Uses SysTick timer for precise 1ms timing
 - Efficient power management with WFI (Wait For Interrupt)
-- Demonstrates synchronized multi-LED sequencing
+- Demonstrates both function-based and step-based sequencing approaches
 
 **What you'll learn:**
+- **Function-based sequences**: How to create algorithmic animations using custom functions
+- **Sine wave mathematics**: Applying trigonometric functions for smooth breathing effects
 - Coordinated multi-LED control with identical sequences
 - Dynamic sequence loading and mode switching
 - Mode state management
 - Efficient sequencer servicing with optimal timing hints
 
+**Technical Highlights:**
+The breathing mode demonstrates the library's function-based sequence feature, where a sine wave function computes LED brightness algorithmically based on elapsed time. This approach:
+- Allows the same function to be reused with different colors
+- Provides smooth, natural-looking animations through mathematical curves
+- Uses `libm` for `no_std` sine calculations
+- Returns to the sequencer continuously for frame-by-frame updates
+
 **Behavior:**
 1. On startup, both LEDs begin rainbow animation (synchronized)
-2. Press button → switches to breathing mode (gentle white fade)
+2. Press button → switches to breathing mode (gentle white fade using sine wave)
 3. Press again → police mode (red/blue alternating)
 4. Press again → back to breathing mode (cycle repeats)
 5. Onboard LED indicates mode: off = breathing, on = rainbow/police

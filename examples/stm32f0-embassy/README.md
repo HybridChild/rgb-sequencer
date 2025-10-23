@@ -2,8 +2,8 @@
 
 Embassy async examples for STM32F NUCLEO-F072RB board.
 
-- **mode_switcher** - Embassy async example demonstrating coordinated multi-LED control with mode switching using async tasks and channels.
 - **rainbow_capture** - Embassy async example demonstrating smooth rainbow transitions with interactive color capture using async tasks, channels, and signals.
+- **mode_switcher** - Embassy async example demonstrating coordinated multi-LED control with mode switching using async tasks and channels. Features a **function-based breathing sequence** using sine wave animation.
 
 ## Hardware Setup
 
@@ -56,6 +56,9 @@ Or manually:
 probe-rs run --chip STM32F072RBTx target/thumbv6m-none-eabi/release/<example_name>
 ```
 
+### Viewing logs
+Both examples use `defmt` for logging. Logs appear automatically when running with `probe-rs`.
+
 ## Common Anode vs Common Cathode
 
 The examples assume a **common anode** RGB LED (common pin connected to 3.3V).
@@ -66,35 +69,6 @@ let led = PwmRgbLed::new(pwm, Channel::Ch1, Channel::Ch2, Channel::Ch3, false);
 ```
 
 ## Examples
-
-### mode_switcher
-
-A coordinated multi-LED controller demonstrating Embassy's async task architecture with mode switching.
-
-**Features:**
-- **Four display modes**: Rainbow, Breathing, Alternating, and Off
-- **Task-based architecture**: Three async tasks (button, app_logic, rgb)
-- **Inter-task communication**: Channels and signals for coordinated control
-- **SequencerCollection**: Manages two independent LED sequencers
-- Uses Embassy's time driver for precise async timing
-
-**What you'll learn:**
-- Embassy async task patterns and communication
-- Multi-LED coordination with SequencerCollection
-- Dynamic sequence loading and mode switching
-- Efficient sequencer servicing with optimal timing hints
-
-**Behavior:**
-1. On startup, both LEDs begin rainbow animation (synchronized)
-2. Press button → switches to breathing mode (gentle white fade)
-3. Press again → alternating mode (red/blue swap between LEDs)
-4. Press again → off mode (both LEDs turn off)
-5. Press again → back to rainbow mode
-
-**Run:**
-```bash
-cargo run --release --bin mode_switcher
-```
 
 ### rainbow_capture
 
@@ -128,5 +102,42 @@ A smooth rainbow animation with interactive color capture control using two inde
 cargo run --release --bin rainbow_capture
 ```
 
-**Viewing logs:**
-Both examples use `defmt` for logging. Logs appear automatically when running with `probe-rs`.
+### mode_switcher
+
+A coordinated multi-LED controller demonstrating Embassy's async task architecture with mode switching. **Features function-based sequences** using sine wave mathematics for the breathing effect.
+
+**Features:**
+- **Four display modes**: Rainbow, Breathing (sine wave), Alternating, and Off
+- **Function-based breathing sequence**: Uses algorithmic sine wave animation instead of step-based interpolation
+- **Task-based architecture**: Three async tasks (button, app_logic, rgb)
+- **Inter-task communication**: Channels and signals for coordinated control
+- **SequencerCollection**: Manages two independent LED sequencers
+- Uses Embassy's time driver for precise async timing
+- Demonstrates both function-based and step-based sequencing approaches
+
+**What you'll learn:**
+- **Function-based sequences**: How to create algorithmic animations using custom functions
+- **Sine wave mathematics**: Applying trigonometric functions for smooth breathing effects
+- Embassy async task patterns and communication
+- Multi-LED coordination with SequencerCollection
+- Dynamic sequence loading and mode switching
+- Efficient sequencer servicing with optimal timing hints
+
+**Technical Highlights:**
+The breathing mode demonstrates the library's function-based sequence feature, where a sine wave function computes LED brightness algorithmically based on elapsed time. This approach:
+- Allows the same function to be reused with different colors
+- Provides smooth, natural-looking animations through mathematical curves
+- Uses `libm` for `no_std` sine calculations
+- Integrates seamlessly with Embassy's async runtime for continuous frame-by-frame updates
+
+**Behavior:**
+1. On startup, both LEDs begin rainbow animation (synchronized)
+2. Press button → switches to breathing mode (gentle white fade using sine wave)
+3. Press again → alternating mode (red/blue swap between LEDs)
+4. Press again → off mode (both LEDs turn off)
+5. Press again → back to rainbow mode
+
+**Run:**
+```bash
+cargo run --release --bin mode_switcher
+```

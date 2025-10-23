@@ -15,7 +15,7 @@ type Sequencer2<'a> = RgbSequencer<'a, HalInstant, Led2, HalTimeSource, 16>;
 /// Operating modes for the RGB LEDs
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
-    /// Slow breathing white effect on both LEDs
+    /// Slow breathing white effect on both LEDs (using sine wave function)
     Breathing,
     /// Rainbow color cycle on both LEDs
     Rainbow,
@@ -81,7 +81,7 @@ impl<'a> AppState<'a> {
         rprintln!("Switching to mode: {:?}", mode);
         
         let sequence = match mode {
-            Mode::Breathing => create_breathing_sequence(),
+            Mode::Breathing => create_breathing_sequence(),  // Now uses function-based sine wave!
             Mode::Rainbow => create_rainbow_sequence(),
             Mode::Police => create_police_sequence(),
         };

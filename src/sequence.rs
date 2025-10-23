@@ -41,11 +41,11 @@ pub struct StepPosition<D: TimeDuration> {
 pub struct RgbSequence<D: TimeDuration, const N: usize> {
     steps: Vec<SequenceStep<D>, N>,
     loop_count: LoopCount,
+    start_color: Option<Srgb>,
     landing_color: Option<Srgb>,
     loop_duration: D,
     
     // Optional function-based animation (overrides step-based logic)
-    start_color: Option<Srgb>,
     color_fn: Option<fn(Srgb, D) -> Srgb>,
     timing_fn: Option<fn(D) -> Option<D>>,
 }
