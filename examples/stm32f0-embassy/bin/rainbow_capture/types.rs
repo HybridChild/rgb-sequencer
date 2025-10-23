@@ -54,4 +54,5 @@ pub static RGB_COMMAND_CHANNEL: Channel<ThreadModeRawMutex, RgbCommand, 4> = Cha
 /// Signal for receiving color query responses
 pub static COLOR_RESPONSE_SIGNAL: Signal<ThreadModeRawMutex, Srgb> = Signal::new();
 
+/// Maximum number of steps that can be stored in a sequence
 pub const SEQUENCE_STEP_SIZE: usize = 8;

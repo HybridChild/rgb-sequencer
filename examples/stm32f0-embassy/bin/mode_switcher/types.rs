@@ -40,4 +40,5 @@ pub static BUTTON_SIGNAL: Signal<ThreadModeRawMutex, ()> = Signal::new();
 /// Channel for sending commands from app_logic_task to rgb_task
 pub static RGB_COMMAND_CHANNEL: Channel<ThreadModeRawMutex, RgbCommand, 2> = Channel::new();
 
+/// Maximum number of steps that can be stored in a sequence
 pub static SEQUENCE_STEP_SIZE: usize = 8;

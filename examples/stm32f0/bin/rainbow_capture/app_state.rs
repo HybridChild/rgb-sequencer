@@ -6,11 +6,11 @@ use rgb_sequencer::{RgbSequencer, RgbSequence, TransitionStyle, SequencerState, 
 
 use crate::button::ButtonDebouncer;
 use crate::hardware_setup::{HardwareContext, Led1, Led2};
-use crate::sequences::create_rainbow_sequence;
+use crate::sequences::{create_rainbow_sequence, SEQUENCE_STEP_SIZE};
 
 /// Type aliases for the sequencers
-type Sequencer1<'a> = RgbSequencer<'a, HalInstant, Led1, HalTimeSource, 16>;
-type Sequencer2<'a> = RgbSequencer<'a, HalInstant, Led2, HalTimeSource, 16>;
+type Sequencer1<'a> = RgbSequencer<'a, HalInstant, Led1, HalTimeSource, SEQUENCE_STEP_SIZE>;
+type Sequencer2<'a> = RgbSequencer<'a, HalInstant, Led2, HalTimeSource, SEQUENCE_STEP_SIZE>;
 
 /// Application state containing all runtime data
 pub struct AppState<'a> {
