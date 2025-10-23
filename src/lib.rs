@@ -32,14 +32,12 @@ pub mod types;
 pub mod sequence;
 pub mod sequencer;
 pub mod command;
-pub mod collection;
 
 pub use sequence::{RgbSequence, SequenceBuilder, StepPosition};
 pub use types::{LoopCount, SequenceError, SequenceStep, TransitionStyle};
 pub use time::{TimeDuration, TimeInstant};
 pub use sequencer::{RgbSequencer, RgbLed, TimeSource, SequencerState, SequencerError};
 pub use command::{SequencerAction, SequencerCommand};
-pub use collection::{SequencerCollection, LedId, CollectionError};
 
 #[cfg(test)]
 mod tests {
