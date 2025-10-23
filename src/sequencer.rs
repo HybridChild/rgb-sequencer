@@ -346,6 +346,19 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
     pub fn is_running(&self) -> bool {
         self.state == SequencerState::Running
     }
+
+    /// Returns a reference to the currently loaded sequence, if any
+    pub fn current_sequence(&self) -> Option<&RgbSequence<I::Duration, N>> {
+        self.sequence.as_ref()
+    }
+
+    /// Returns the elapsed time since the sequence started, if running
+    pub fn elapsed_time(&self) -> Option<I::Duration> {
+        self.start_time.map(|start| {
+            let now = self.time_source.now();
+            now.duration_since(start)
+        })
+    }
 }
 
 #[cfg(test)]
