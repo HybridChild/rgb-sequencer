@@ -3,12 +3,13 @@
 Embassy async examples for STM32F NUCLEO-F072RB board.
 
 - **mode_switcher** - Embassy async example demonstrating coordinated multi-LED control with mode switching using async tasks and channels.
+- **rainbow_capture** - Embassy async example demonstrating smooth rainbow transitions with interactive color capture using async tasks, channels, and signals.
 
 ## Hardware Setup
 
 ### RGB LED Connections
 
-This example uses **two RGB LEDs**. Connect them to the following pins with appropriate current-limiting resistors (220Ω - 330Ω):
+These examples use **two RGB LEDs**. Connect them to the following pins with appropriate current-limiting resistors (220Ω - 330Ω):
 
 **LED 1:**
 - **Red**: PA6 (TIM3_CH1)
@@ -95,5 +96,37 @@ A coordinated multi-LED controller demonstrating Embassy's async task architectu
 cargo run --release --bin mode_switcher
 ```
 
+### rainbow_capture
+
+A smooth rainbow animation with interactive color capture control using two independent RGB LEDs and async tasks.
+
+**Features:**
+- **LED 1**: Continuously cycles through red → green → blue with smooth linear color transitions
+- **LED 2**: Starts off, captures and displays the current color from LED 1 when button is pressed
+- **Smooth color transitions**: LED 2 smoothly transitions to captured colors over 2 seconds
+- **Pause/resume control**: Button toggles LED 1 between running and paused states
+- **Bidirectional communication**: Query-response pattern using channels and signals
+- Uses Embassy's async tasks for coordinated control
+- Efficient power management with async timers
+
+**What you'll learn:**
+- Independent sequencer control for multi-LED systems
+- Color capture and dynamic sequence creation
+- Query-response patterns with Embassy signals
+- Pause/resume functionality with timing compensation
+- Smooth color transitions using `start_color` feature
+
+**Behavior:**
+1. On startup, LED 1 begins rainbow animation, LED 2 is off
+2. Press button → LED 1 pauses at current color, LED 2 smoothly transitions to that color (over 2 seconds)
+3. Press button again → LED 1 resumes animation, LED 2 continues holding the captured color
+4. Repeat to capture different colors from the rainbow cycle
+5. Onboard LED indicates state: high when LED 1 running, low when paused
+
+**Run:**
+```bash
+cargo run --release --bin rainbow_capture
+```
+
 **Viewing logs:**
-The example uses `defmt` for logging. Logs appear automatically when running with `probe-rs`.
+Both examples use `defmt` for logging. Logs appear automatically when running with `probe-rs`.

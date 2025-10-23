@@ -36,6 +36,10 @@ path = "src/lib.rs"
 name = "mode_switcher"
 path = "bin/mode_switcher/main.rs"
 
+[[bin]]
+name = "rainbow_capture"
+path = "bin/rainbow_capture/main.rs"
+
 [profile.dev]
 opt-level = "z"
 debug = 1
