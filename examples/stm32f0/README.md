@@ -2,7 +2,7 @@
 
 Examples for STM32F NUCLEO-F072RB board.
 
-- **rainbow_button** - Bare-metal example demonstrating smooth rainbow transitions with interactive color capture using SysTick timing and two RGB LEDs.
+- **rainbow_capture** - Bare-metal example demonstrating smooth rainbow transitions with interactive color capture using SysTick timing and two RGB LEDs.
 
 ## Hardware Setup
 
@@ -66,7 +66,7 @@ let led = PwmRgbLed::new(red_pwm, green_pwm, blue_pwm, false);
 
 ## Examples
 
-### rainbow_button
+### rainbow_capture
 
 A smooth rainbow animation with interactive color capture control using two independent RGB LEDs.
 
@@ -91,5 +91,5 @@ A smooth rainbow animation with interactive color capture control using two inde
 
 **Run:**
 ```bash
-cargo run --release --bin rainbow_button
+cargo run --release --bin rainbow_capture
 ```

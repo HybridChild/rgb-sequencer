@@ -26,8 +26,8 @@ name = "stm32f0_examples"
 path = "src/lib.rs"
 
 [[bin]]
-name = "rainbow_button"
-path = "bin/rainbow_button.rs"
+name = "rainbow_capture"
+path = "bin/rainbow_capture.rs"
 
 [profile.release]
 opt-level = "z"
