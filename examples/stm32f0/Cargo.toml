@@ -27,7 +27,7 @@ path = "src/lib.rs"
 
 [[bin]]
 name = "rainbow_capture"
-path = "bin/rainbow_capture.rs"
+path = "bin/rainbow_capture/main.rs"
 
 [profile.release]
 opt-level = "z"
