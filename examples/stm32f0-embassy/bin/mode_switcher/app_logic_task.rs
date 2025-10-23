@@ -3,7 +3,6 @@ use embassy_stm32::gpio::Output;
 use embassy_time::Duration;
 use palette::{Srgb, FromColor, Hsv};
 use rgb_sequencer::{RgbSequence, TransitionStyle, LoopCount};
-use embassy_time::Timer;
 
 use crate::types::{Mode, RgbCommand, BUTTON_SIGNAL, RGB_COMMAND_CHANNEL, EmbassyDuration, SEQUENCE_STEP_SIZE};
 
@@ -94,9 +93,10 @@ fn update_mode_indicator(led: &mut Output<'static>, mode: Mode) {
 pub async fn app_logic_task(mut onboard_led: Output<'static>) {
     info!("Starting app logic task...");
     
-    let mut current_mode = Mode::Breathing;
+    let mut current_mode = Mode::Rainbow;
     
     // Load initial sequence
+    info!("Loading initial mode: {:?}", current_mode);
     let initial_sequence = get_sequence_for_mode(current_mode);
     RGB_COMMAND_CHANNEL
         .send(RgbCommand::LoadCoordinated(initial_sequence))
@@ -111,6 +111,7 @@ pub async fn app_logic_task(mut onboard_led: Output<'static>) {
         
         // Cycle to next mode
         current_mode = current_mode.next();
+        info!("New mode: {:?}", current_mode);
         
         // Update onboard LED indicator
         update_mode_indicator(&mut onboard_led, current_mode);
@@ -120,7 +121,7 @@ pub async fn app_logic_task(mut onboard_led: Output<'static>) {
         RGB_COMMAND_CHANNEL
             .send(RgbCommand::LoadCoordinated(new_sequence))
             .await;
-
-        Timer::after_secs(60).await;
+        
+        info!("New sequence sent to RGB task");
     }
 }

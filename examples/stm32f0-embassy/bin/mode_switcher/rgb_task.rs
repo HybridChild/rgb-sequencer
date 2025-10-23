@@ -4,7 +4,7 @@ use embassy_stm32::peripherals::{TIM1, TIM3};
 use embassy_time::{Duration, Timer};
 use embassy_futures::select::{select, Either};
 use palette::Srgb;
-use rgb_sequencer::{RgbSequencer, RgbLed, TimeSource};
+use rgb_sequencer::{RgbSequencer, RgbLed, TimeSource, SequencerState};
 
 use crate::types::{RgbCommand, RGB_COMMAND_CHANNEL, EmbassyDuration, EmbassyInstant, SEQUENCE_STEP_SIZE};
 
@@ -80,8 +80,8 @@ pub async fn rgb_task(
     
     info!("RGB sequencers initialized");
     
-    // Default to maximum delay (wait for command)
-    let mut next_service_delay = Duration::from_secs(3600);
+    // Start with a short delay, will be updated after first service
+    let mut next_service_delay = Duration::from_millis(16);
     
     loop {
         // Wait for either a command or the next service time
@@ -90,33 +90,45 @@ pub async fn rgb_task(
             Timer::after(next_service_delay)
         ).await {
             Either::First(command) => {
-                info!("Received command");
+                info!("Received command in RGB task");
                 
                 match command {
                     RgbCommand::LoadCoordinated(sequence) => {
+                        info!("Loading coordinated sequence");
+                        
                         // Load the same sequence on both LEDs
                         sequencer1.load(sequence.clone());
                         sequencer2.load(sequence);
                         
                         // Start both sequencers
                         match sequencer1.start() {
-                            Ok(_) => info!("Sequencer 1 started"),
-                            Err(_) => info!("Sequencer 1 start error"),
+                            Ok(_) => info!("Sequencer 1 started successfully"),
+                            Err(e) => info!("Sequencer 1 start error: {:?}", e),
                         }
                         
                         match sequencer2.start() {
-                            Ok(_) => info!("Sequencer 2 started"),
-                            Err(_) => info!("Sequencer 2 start error"),
+                            Ok(_) => info!("Sequencer 2 started successfully"),
+                            Err(e) => info!("Sequencer 2 start error: {:?}", e),
                         }
                         
                         // Immediately service to get first colors and timing
                         next_service_delay = service_both_sequencers(&mut sequencer1, &mut sequencer2);
+                        info!("Initial service complete, next delay: {} ms", next_service_delay.as_millis());
                     }
                 }
             }
             Either::Second(_) => {
                 // Time to service the sequencers
-                next_service_delay = service_both_sequencers(&mut sequencer1, &mut sequencer2);
+                let state1 = sequencer1.get_state();
+                let state2 = sequencer2.get_state();
+                
+                // Only service if at least one is running
+                if state1 == SequencerState::Running || state2 == SequencerState::Running {
+                    next_service_delay = service_both_sequencers(&mut sequencer1, &mut sequencer2);
+                } else {
+                    // Both idle/stopped - wait for commands
+                    next_service_delay = Duration::from_secs(3600);
+                }
             }
         }
     }
@@ -129,47 +141,51 @@ fn service_both_sequencers(
 ) -> Duration {
     let mut min_delay: Option<EmbassyDuration> = None;
     
-    // Service sequencer 1
-    match sequencer1.service() {
-        Ok(Some(delay)) => {
-            min_delay = Some(match min_delay {
-                None => delay,
-                Some(current_min) => {
-                    if delay.0.as_millis() < current_min.0.as_millis() {
-                        delay
-                    } else {
-                        current_min
+    // Service sequencer 1 if running
+    if sequencer1.get_state() == SequencerState::Running {
+        match sequencer1.service() {
+            Ok(Some(delay)) => {
+                min_delay = Some(match min_delay {
+                    None => delay,
+                    Some(current_min) => {
+                        if delay.0.as_millis() < current_min.0.as_millis() {
+                            delay
+                        } else {
+                            current_min
+                        }
                     }
-                }
-            });
-        }
-        Ok(None) => {
-            info!("Sequencer 1 completed");
-        }
-        Err(_) => {
-            info!("Sequencer 1 service error");
+                });
+            }
+            Ok(None) => {
+                info!("Sequencer 1 completed");
+            }
+            Err(e) => {
+                info!("Sequencer 1 service error: {:?}", e);
+            }
         }
     }
     
-    // Service sequencer 2
-    match sequencer2.service() {
-        Ok(Some(delay)) => {
-            min_delay = Some(match min_delay {
-                None => delay,
-                Some(current_min) => {
-                    if delay.0.as_millis() < current_min.0.as_millis() {
-                        delay
-                    } else {
-                        current_min
+    // Service sequencer 2 if running
+    if sequencer2.get_state() == SequencerState::Running {
+        match sequencer2.service() {
+            Ok(Some(delay)) => {
+                min_delay = Some(match min_delay {
+                    None => delay,
+                    Some(current_min) => {
+                        if delay.0.as_millis() < current_min.0.as_millis() {
+                            delay
+                        } else {
+                            current_min
+                        }
                     }
-                }
-            });
-        }
-        Ok(None) => {
-            info!("Sequencer 2 completed");
-        }
-        Err(_) => {
-            info!("Sequencer 2 service error");
+                });
+            }
+            Ok(None) => {
+                info!("Sequencer 2 completed");
+            }
+            Err(e) => {
+                info!("Sequencer 2 service error: {:?}", e);
+            }
         }
     }
     
