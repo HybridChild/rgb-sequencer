@@ -26,6 +26,7 @@ pub trait TimeSource<I: TimeInstant> {
 
 /// The current state of an RGB sequencer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SequencerState {
     /// No sequence loaded, LED off.
     Idle,
@@ -41,6 +42,7 @@ pub enum SequencerState {
 
 /// Errors that can occur during sequencer operations.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SequencerError {
     /// Operation called from an invalid state.
     InvalidState {

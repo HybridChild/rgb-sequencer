@@ -6,11 +6,12 @@ edition = "2024"
 [dependencies]
 heapless = "0.9.1"
 palette = { version = "0.7.6", default-features = false, features = ["libm"] }
+defmt = { version = "1.0.1", optional = true }
 
 [features]
 default = []
 std = ["palette/std"]
-defmt = []
+defmt = ["dep:defmt"]
 
 [profile.release]
 opt-level = "z"     # Optimize for size
