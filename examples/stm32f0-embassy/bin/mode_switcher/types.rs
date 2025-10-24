@@ -4,7 +4,7 @@ use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use rgb_sequencer::RgbSequence;
 
 // Re-export the time types from the library
-pub use stm32f0_embassy::time_wrapper::{EmbassyDuration, EmbassyInstant};
+pub use stm32f0_embassy::time_wrapper::{EmbassyDuration, EmbassyInstant, EmbassyTimeSource};
 
 /// Operating modes for the RGB LEDs
 #[derive(Debug, Clone, Copy, PartialEq, Eq, defmt::Format)]

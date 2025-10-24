@@ -5,7 +5,7 @@ use rgb_sequencer::RgbSequence;
 use palette::Srgb;
 
 // Re-export the time types from the library
-pub use stm32f0_embassy::time_wrapper::{EmbassyDuration, EmbassyInstant};
+pub use stm32f0_embassy::time_wrapper::{EmbassyDuration, EmbassyInstant, EmbassyTimeSource};
 
 /// Which LED to target with a command
 #[derive(Debug, Clone, Copy, PartialEq, Eq, defmt::Format)]

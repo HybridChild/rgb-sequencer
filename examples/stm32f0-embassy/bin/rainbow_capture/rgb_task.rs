@@ -4,9 +4,9 @@ use embassy_stm32::peripherals::{TIM1, TIM3};
 use embassy_time::{Duration, Timer};
 use embassy_futures::select::{select, Either};
 use palette::Srgb;
-use rgb_sequencer::{RgbSequencer, RgbLed, TimeSource, SequencerState};
+use rgb_sequencer::{RgbSequencer, RgbLed, SequencerState};
 
-use crate::types::{RgbCommand, RGB_COMMAND_CHANNEL, EmbassyDuration, EmbassyInstant, SEQUENCE_STEP_SIZE, LedId};
+use crate::types::{RgbCommand, RGB_COMMAND_CHANNEL, EmbassyDuration, EmbassyInstant, EmbassyTimeSource, SEQUENCE_STEP_SIZE, LedId};
 
 /// PWM-based RGB LED implementation for Embassy
 pub struct EmbassyPwmRgbLed<'d, T: embassy_stm32::timer::GeneralInstance4Channel> {
@@ -49,15 +49,6 @@ impl<'d, T: embassy_stm32::timer::GeneralInstance4Channel> RgbLed for EmbassyPwm
     }
 }
 
-/// Time source implementation for Embassy
-pub struct EmbassyTimeSource;
-
-impl TimeSource<EmbassyInstant> for EmbassyTimeSource {
-    fn now(&self) -> EmbassyInstant {
-        EmbassyInstant(embassy_time::Instant::now())
-    }
-}
-
 #[embassy_executor::task]
 pub async fn rgb_task(
     pwm_tim3: SimplePwm<'static, TIM3>,
@@ -72,7 +63,7 @@ pub async fn rgb_task(
     let led2 = EmbassyPwmRgbLed::new(pwm_tim1, max_duty_tim1, true);
     
     // Create time source
-    let time_source = EmbassyTimeSource;
+    let time_source = EmbassyTimeSource::new();
     
     // Create sequencers
     let mut sequencer1 = RgbSequencer::new(led1, &time_source);

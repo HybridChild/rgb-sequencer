@@ -45,6 +45,13 @@ impl TimeInstant for EmbassyInstant {
 /// Time source implementation for Embassy
 pub struct EmbassyTimeSource;
 
+impl EmbassyTimeSource {
+    /// Creates a new Embassy time source
+    pub fn new() -> Self {
+        Self
+    }
+}
+
 impl TimeSource<EmbassyInstant> for EmbassyTimeSource {
     fn now(&self) -> EmbassyInstant {
         EmbassyInstant(embassy_time::Instant::now())
