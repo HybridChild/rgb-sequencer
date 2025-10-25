@@ -2,8 +2,10 @@
 
 Embassy async examples for STM32F NUCLEO-F072RB board.
 
-- **rainbow_capture** - Embassy async example demonstrating smooth rainbow transitions with interactive color capture using async tasks, channels, and signals.
-- **mode_switcher** - Embassy async example demonstrating coordinated multi-LED control with mode switching using async tasks and channels. Features a **function-based breathing sequence** using sine wave animation.
+Both examples demonstrate advanced embedded Rust patterns including **enum wrapper collections** for managing heterogeneous LED types (TIM1 and TIM3) in a single collection without heap allocation, enabling efficient multi-LED control with zero-cost abstraction.
+
+- **rainbow_capture** - Embassy async example demonstrating smooth rainbow transitions with interactive color capture using async tasks, channels, and signals. Shows **individual LED control** with the enum wrapper pattern.
+- **mode_switcher** - Embassy async example demonstrating coordinated multi-LED control with mode switching using async tasks and channels. Features a **function-based breathing sequence** using sine wave animation and **synchronized LED control** with the enum wrapper pattern.
 
 ## Hardware Setup
 
@@ -80,15 +82,28 @@ A smooth rainbow animation with interactive color capture control using two inde
 - **Smooth color transitions**: LED 2 smoothly transitions to captured colors over 2 seconds
 - **Pause/resume control**: Button toggles LED 1 between running and paused states
 - **Bidirectional communication**: Query-response pattern using channels and signals
+- **Enum wrapper collection**: Manages TIM1 and TIM3 LEDs in a single collection for individual control
 - Uses Embassy's async tasks for coordinated control
 - Efficient power management with async timers
 
 **What you'll learn:**
+- **Enum wrapper pattern**: How to store heterogeneous LED types (different timers) in a single collection
+- **Zero-cost abstraction**: Type-safe multi-LED management without heap allocation or runtime overhead
 - Independent sequencer control for multi-LED systems
 - Color capture and dynamic sequence creation
 - Query-response patterns with Embassy signals
 - Pause/resume functionality with timing compensation
 - Smooth color transitions using `start_color` feature
+
+**Technical Highlights:**
+The enum wrapper pattern (`AnyLed`) allows both TIM1 and TIM3 based LEDs to be stored in the same `Vec`:
+```rust
+pub enum AnyLed<'d> {
+    Tim1(EmbassyPwmRgbLed<'d, TIM1>),
+    Tim3(EmbassyPwmRgbLed<'d, TIM3>),
+}
+```
+This enables individual LED control through `get_mut(led_id)` while maintaining type safety and zero-cost abstraction. The collection pattern eliminates code duplication when servicing multiple sequencers.
 
 **Behavior:**
 1. On startup, LED 1 begins rainbow animation, LED 2 is off
@@ -111,15 +126,17 @@ A coordinated multi-LED controller demonstrating Embassy's async task architectu
 - **Function-based breathing sequence**: Uses algorithmic sine wave animation instead of step-based interpolation
 - **Task-based architecture**: Three async tasks (button, app_logic, rgb)
 - **Inter-task communication**: Channels and signals for coordinated control
-- **SequencerCollection**: Manages two independent LED sequencers
+- **Enum wrapper collection**: Manages TIM1 and TIM3 LEDs in a single collection for synchronized control
 - Uses Embassy's time driver for precise async timing
 - Demonstrates both function-based and step-based sequencing approaches
 
 **What you'll learn:**
+- **Enum wrapper pattern**: How to operate on all LEDs simultaneously using the same collection
+- **Coordinated control**: Loading the same sequence on multiple heterogeneous LEDs with `load_all()`
 - **Function-based sequences**: How to create algorithmic animations using custom functions
 - **Sine wave mathematics**: Applying trigonometric functions for smooth breathing effects
 - Embassy async task patterns and communication
-- Multi-LED coordination with SequencerCollection
+- Multi-LED coordination with heterogeneous collection
 - Dynamic sequence loading and mode switching
 - Efficient sequencer servicing with optimal timing hints
 
@@ -129,6 +146,13 @@ The breathing mode demonstrates the library's function-based sequence feature, w
 - Provides smooth, natural-looking animations through mathematical curves
 - Uses `libm` for `no_std` sine calculations
 - Integrates seamlessly with Embassy's async runtime for continuous frame-by-frame updates
+
+The enum wrapper collection enables synchronized control:
+```rust
+// Load same sequence on all LEDs regardless of timer type
+collection.load_all(sequence);
+```
+This demonstrates how the pattern supports both individual control (rainbow_capture) and coordinated control (mode_switcher) with the same underlying abstraction.
 
 **Behavior:**
 1. On startup, both LEDs begin rainbow animation (synchronized)
