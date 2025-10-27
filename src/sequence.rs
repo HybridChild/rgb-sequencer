@@ -85,19 +85,14 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
         }
     }
 
-    /// Evaluates the sequence at the given elapsed time.
-    ///
-    /// This is the primary method for computing both the current color and when
-    /// the next service call should occur. It efficiently calculates both values
-    /// in a single pass, avoiding duplicate position lookups for step-based sequences.
+    /// Computes the color and next service time at the given elapsed time.
     ///
     /// # Returns
-    /// A tuple of:
     /// * `Srgb` - The color to display at this point in time
     /// * `Option<Duration>` - When to service next:
-    ///   - `Some(Duration::ZERO)` = Service at frame rate (linear transitions)
-    ///   - `Some(duration)` = Service after this duration (step transitions)
-    ///   - `None` = Animation complete, no further servicing needed
+    ///   - `Some(Duration::ZERO)` = Continuous animation, service again at desired frame rate
+    ///   - `Some(duration)` = Static hold, no need to service until after this delay
+    ///   - `None` = Sequence complete
     pub fn evaluate(&self, elapsed: D) -> (Srgb, Option<D>) {
         // Use custom functions if present
         if let (Some(color_fn), Some(timing_fn)) = (self.color_fn, self.timing_fn) {
@@ -116,9 +111,9 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
         }
     }
 
-    /// Checks if a finite sequence has completed at the given elapsed time.
+    /// Checks if a step-based finite sequence has completed all loops at the given elapsed time.
     #[inline]
-    fn check_completion(&self, elapsed: D) -> bool {
+    fn is_complete_step_based(&self, elapsed: D) -> bool {
         match self.loop_count {
             LoopCount::Finite(count) => {
                 let loop_millis = self.loop_duration.as_millis();
@@ -170,7 +165,7 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
         }
     }
 
-    /// Finds which step contains the given time within a loop.
+    /// Locates the active step at a given time offset within a loop iteration.
     fn find_step_at_time(&self, time_in_loop: D, current_loop: u32) -> StepPosition<D> {
         let mut accumulated_time = D::ZERO;
         
@@ -248,23 +243,18 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
 
         let loop_millis = self.loop_duration.as_millis();
         
-        // Handle all-zero-duration case
         if loop_millis == 0 {
             return Some(self.handle_zero_duration_sequence(elapsed));
         }
 
-        
-        // Check if finite sequence is complete
-        if self.check_completion(elapsed) {
+        if self.is_complete_step_based(elapsed) {
             return Some(self.create_complete_position());
         }
         
-        // Calculate which loop we're in and time within current loop
         let elapsed_millis = elapsed.as_millis();
         let current_loop = (elapsed_millis / loop_millis) as u32;
         let time_in_loop = D::from_millis(elapsed_millis % loop_millis);
 
-        // Find current step within the loop
         Some(self.find_step_at_time(time_in_loop, current_loop))
     }
 
@@ -306,16 +296,16 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
 
     /// Returns true if a finite sequence has completed at the given elapsed time.
     ///
-    /// For function-based sequences, this checks if the timing function returns None.
     /// For step-based sequences, this checks if all loops have completed.
+    /// For function-based sequences, this checks if the timing function returns None.
     #[inline]
-    pub fn is_complete(&self, elapsed: D) -> bool {
+    pub fn has_completed(&self, elapsed: D) -> bool {
         if let Some(timing_fn) = self.timing_fn {
             // For function-based sequences, check if timing function returns None
             timing_fn(elapsed).is_none()
         } else {
             // For step-based sequences, check loop completion
-            self.check_completion(elapsed)
+            self.is_complete_step_based(elapsed)
         }
     }
 
@@ -391,7 +381,7 @@ impl<D: TimeDuration, const N: usize> SequenceBuilder<D, N> {
     /// Adds a step to the sequence.
     ///
     /// # Panics
-    /// Panics if the sequence capacity is exceeded.
+    /// Panics if the sequence is full (capacity `N` has been reached).
     pub fn step(
         mut self,
         color: Srgb,
@@ -399,7 +389,7 @@ impl<D: TimeDuration, const N: usize> SequenceBuilder<D, N> {
         transition: TransitionStyle,
     ) -> Self {
         if self.steps.push(SequenceStep::new(color, duration, transition)).is_err() {
-            panic!("sequence capacity exceeded");
+            panic!("sequence capacity ({}) exceeded - cannot add more steps", N);
         }
         self
     }

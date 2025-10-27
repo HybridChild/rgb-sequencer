@@ -10,8 +10,9 @@ pub enum TransitionStyle {
     /// Instantly jump to the target color with no interpolation.
     ///
     /// The step's duration determines how long to hold the color before moving
-    /// to the next step. A duration of zero means an instant color change that
-    /// holds indefinitely (useful for static colors or waypoints).
+    /// to the next step. A zero-duration step displays its color instantly and
+    /// immediately proceeds to the next step, making it useful as a waypoint color
+    /// in looping sequences (e.g., defining the loop boundary for smooth transitions).
     Step,
 
     /// Smoothly interpolate from the previous color to the target color.
@@ -87,7 +88,6 @@ pub enum SequenceError {
     /// A step with zero duration was combined with a Linear transition.
     ///
     /// Linear transitions require non-zero duration to perform interpolation.
-    /// Use `Step` transition for zero-duration steps.
     ZeroDurationWithLinear,
 }
 

@@ -3,7 +3,7 @@
 
 //! # Core Concepts
 //!
-//! - **`RgbSequence`**: Defines a complete animation sequence with steps, loops, and landing color
+//! - **`RgbSequence`**: Defines a complete animation sequence with steps, loops, start color and landing color
 //! - **`SequenceStep`**: A single color + duration + transition within a sequence
 //! - **`TransitionStyle`**: How to animate to a color (instant `Step` or smooth `Linear`)
 //! - **`LoopCount`**: How many times to repeat (`Finite(n)` or `Infinite`)
@@ -12,20 +12,13 @@
 //! - **`TimeSource`**: Trait to implement for your timing system
 //! - **`StepPosition`**: Information about the current position within a sequence
 //! - **`SequencerAction`**: Commands that can be sent to control sequencers
-//! - **`SequencerCollection`**: Optional convenience wrapper for managing multiple LEDs
 //!
-//! Colors are represented as `Srgb<f32>` (0.0-1.0 range) internally for accurate interpolation.
-//! Users can convert to other formats in their `RgbLed` implementation as needed.
-//!
-//! For single LED control, use `RgbSequencer` directly. For multi-LED systems, consider using
-//! `SequencerCollection` for coordinated control and efficient servicing.
-//!
-//! See the repository README for complete usage examples.
+//! The library uses `Srgb<f32>` (0.0-1.0 range) for all color operations and interpolation.
+//! When implementing `RgbLed` for your hardware, convert these values to your device's
+//! native format (e.g., 8-bit integers, PWM duty cycles).
 
 // Re-export Srgb from palette for user convenience
 pub use palette::Srgb;
-
-pub const COLOR_OFF: Srgb = Srgb::new(0.0, 0.0, 0.0);
 
 pub mod time;
 pub mod types;
@@ -35,9 +28,11 @@ pub mod command;
 
 pub use sequence::{RgbSequence, SequenceBuilder, StepPosition};
 pub use types::{LoopCount, SequenceError, SequenceStep, TransitionStyle};
-pub use time::{TimeDuration, TimeInstant};
-pub use sequencer::{RgbSequencer, RgbLed, TimeSource, SequencerState, SequencerError};
+pub use time::{TimeDuration, TimeInstant, TimeSource};
+pub use sequencer::{RgbSequencer, RgbLed, SequencerState, SequencerError};
 pub use command::{SequencerAction, SequencerCommand};
+
+pub const COLOR_OFF: Srgb = Srgb::new(0.0, 0.0, 0.0);
 
 #[cfg(test)]
 mod tests {

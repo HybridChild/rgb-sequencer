@@ -1,3 +1,21 @@
+//! Time abstraction traits for platform-agnostic duration and instant types.
+//!
+//! These traits allow the sequencer to work with different timing systems
+//! (Embassy, std::time, custom hardware timers, etc.) without being tied
+//! to a specific implementation.
+//!
+//! Implementers should ensure their types handle time wrapping appropriately
+//! for their platform's timer width (e.g., 32-bit vs 64-bit counters).
+
+/// Trait for abstracting time sources.
+///
+/// Allows the sequencer to query current time from different systems
+/// (Embassy, std, custom timers, etc.).
+pub trait TimeSource<I: TimeInstant> {
+    /// Returns the current time instant.
+    fn now(&self) -> I;
+}
+
 /// Abstracts over duration types from different embedded time libraries.
 pub trait TimeDuration: Copy {
     /// A duration of zero length, used for initialization.
@@ -11,7 +29,8 @@ pub trait TimeDuration: Copy {
 
     /// Subtracts another duration from this one, used for calculating remaining time in steps.
     ///
-    /// Overflow behavior when `other > self` is implementation-defined.
+    /// If `other` is greater than `self`, implementations should return `Self::ZERO` rather
+    /// than wrapping or panicking (saturating behavior).
     fn saturating_sub(self, other: Self) -> Self;
 }
 
@@ -23,7 +42,8 @@ pub trait TimeInstant: Copy {
     /// Returns the duration elapsed from `earlier` to `self`.
     ///
     /// # Panics
-    /// Panics if `earlier` is after `self` (implementation-defined).
+    /// May panic if `earlier` is after `self`. Implementations should either panic
+    /// or handle time wrapping appropriately for their use case.
     fn duration_since(&self, earlier: Self) -> Self::Duration;
 
     /// Adds a duration to this instant.
@@ -33,7 +53,7 @@ pub trait TimeInstant: Copy {
 
     /// Subtracts a duration from this instant.
     ///
-    /// Returns `None` if the resulting instant would be before the epoch
-    /// or would underflow.
+    /// Returns `None` if the subtraction would underflow (i.e., the duration
+    /// is larger than the time elapsed since the instant's reference point).
     fn checked_sub(self, duration: Self::Duration) -> Option<Self>;
 }

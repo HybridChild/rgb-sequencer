@@ -1,6 +1,6 @@
 use crate::sequence::RgbSequence;
 use crate::command::SequencerAction;
-use crate::time::TimeInstant;
+use crate::time::{TimeInstant, TimeSource};
 use crate::{COLOR_OFF};
 use palette::Srgb;
 
@@ -11,32 +11,26 @@ use palette::Srgb;
 pub trait RgbLed {
     /// Sets the LED to the specified RGB color.
     ///
-    /// Should be infallible - handle errors internally if needed.
+    /// Color components are in the range 0.0-1.0. Implementations should
+    /// convert these to their hardware's native format (e.g., PWM duty cycles,
+    /// 8-bit RGB values). Handle any hardware errors internally - this method
+    /// cannot fail.
     fn set_color(&mut self, color: Srgb);
-}
-
-/// Trait for abstracting time sources.
-///
-/// Allows the sequencer to query current time from different systems
-/// (Embassy, std, custom timers, etc.).
-pub trait TimeSource<I: TimeInstant> {
-    /// Returns the current time instant.
-    fn now(&self) -> I;
 }
 
 /// The current state of an RGB sequencer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SequencerState {
-    /// No sequence loaded, LED off.
+    /// No sequence loaded. LED is off.
     Idle,
-    /// Sequence loaded but not started.
+    /// Sequence loaded and ready to start. LED is off.
     Loaded,
-    /// Sequence actively running.
+    /// Sequence actively executing. LED displays animated colors.
     Running,
-    /// Sequence paused at current color.
+    /// Sequence paused. LED holds the color from when pause was called.
     Paused,
-    /// Finite sequence completed, displaying final color.
+    /// Finite sequence finished. LED displays landing color or last step color.
     Complete,
 }
 
@@ -45,8 +39,12 @@ pub enum SequencerState {
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SequencerError {
     /// Operation called from an invalid state.
+    ///
+    /// The `expected` field describes which state(s) are valid for this operation.
     InvalidState {
+        /// Human-readable description of expected state(s), e.g. "Running" or "Running, Paused, or Complete"
         expected: &'static str,
+        /// The actual current state
         actual: SequencerState,
     },
     /// No sequence is loaded.
@@ -78,8 +76,9 @@ impl std::error::Error for SequencerError {}
 /// Each sequencer owns an LED and executes sequences independently. The sequencer
 /// tracks timing, calculates colors, and updates the LED hardware.
 ///
-/// Sequences can be either step-based (pre-defined color transitions) or function-based
-/// (algorithmic animations). Both types work seamlessly with the same sequencer interface.
+/// Supports both step-based sequences (pre-defined color transitions) and 
+/// function-based sequences (algorithmic animations). Both types work seamlessly
+/// with the same sequencer interface.
 ///
 /// # Type Parameters
 /// * `'t` - Lifetime of the time source reference
@@ -154,7 +153,6 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
     /// Loads a sequence. Can be called from any state.
     ///
     /// Stops any running sequence and transitions to `Loaded` state.
-    /// Works with both step-based and function-based sequences.
     pub fn load(&mut self, sequence: RgbSequence<I::Duration, N>) {
         self.sequence = Some(sequence);
         self.start_time = None;
@@ -214,11 +212,10 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
     /// Must be called from `Running` state.
     ///
     /// # Returns
-    /// * `Ok(Some(Duration::ZERO))` - Linear transition or function-based continuous animation,
-    ///   service again at desired frame rate
-    /// * `Ok(Some(duration))` - Step transition, service again after this duration
-    /// * `Ok(None)` - Sequence complete, transitions to `Complete` state
-    /// * `Err` - Invalid state
+    /// - `Ok(Some(Duration::ZERO))` - Continuous animation, service at desired frame rate
+    /// - `Ok(Some(duration))` - Static hold, service after this delay
+    /// - `Ok(None)` - Sequence complete, transitions to `Complete` state
+    /// - `Err` - Invalid state
     pub fn service(&mut self) -> Result<Option<I::Duration>, SequencerError> {
         if self.state != SequencerState::Running {
             return Err(SequencerError::InvalidState {
