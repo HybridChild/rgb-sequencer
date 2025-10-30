@@ -179,12 +179,11 @@ impl<'a> AppState<'a> {
     }
 
     /// Check for button press and handle it
-    fn check_button(&mut self) {
+    fn is_button_pressed(&mut self) -> bool {
         let button_is_low = self.button.is_low().unwrap();
         let current_time = self.time_source.now();
-        if self.button_debouncer.check_press(button_is_low, current_time.as_millis()) {
-            self.handle_button_press();
-        }
+
+        self.button_debouncer.check_press(button_is_low, current_time.as_millis())
     }
 
     /// Sleep until next service time is needed
@@ -216,7 +215,9 @@ impl<'a> AppState<'a> {
     pub fn run(&mut self) -> ! {
         loop {
             // Check for button press
-            self.check_button();
+            if self.is_button_pressed() {
+                self.handle_button_press();
+            }
 
             // Service sequencers
             let delay = self.service_sequencers();
