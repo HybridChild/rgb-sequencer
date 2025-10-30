@@ -27,6 +27,10 @@ name = "stm32f0_examples"
 path = "src/lib.rs"
 
 [[bin]]
+name = "blinky"
+path = "bin/blinky/main.rs"
+
+[[bin]]
 name = "rainbow_capture"
 path = "bin/rainbow_capture/main.rs"
 
