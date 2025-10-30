@@ -84,7 +84,7 @@ impl<'d> RgbLed for AnyLed<'d> {
 /// All sequencers have the same type: RgbSequencer<..., AnyLed, ...>
 /// This allows them to be stored in a Vec and iterated over without
 /// code duplication, while maintaining zero-cost abstraction.
-struct HeterogeneousCollection<'t, const CAPACITY: usize> {
+struct SequencerCollection<'t, const CAPACITY: usize> {
     sequencers: Vec<
         RgbSequencer<'t, EmbassyInstant, AnyLed<'t>, EmbassyTimeSource, SEQUENCE_STEP_SIZE>,
         CAPACITY
@@ -92,7 +92,7 @@ struct HeterogeneousCollection<'t, const CAPACITY: usize> {
     time_source: &'t EmbassyTimeSource,
 }
 
-impl<'t, const CAPACITY: usize> HeterogeneousCollection<'t, CAPACITY> {
+impl<'t, const CAPACITY: usize> SequencerCollection<'t, CAPACITY> {
     /// Create a new empty collection
     fn new(time_source: &'t EmbassyTimeSource) -> Self {
         Self {
@@ -190,7 +190,7 @@ pub async fn rgb_task(
     let time_source = EmbassyTimeSource::new();
     
     // Create collection that can hold up to 4 LEDs
-    let mut collection: HeterogeneousCollection<4> = HeterogeneousCollection::new(&time_source);
+    let mut collection: SequencerCollection<4> = SequencerCollection::new(&time_source);
     
     // Add LEDs to collection - different timer types, same collection!
     collection.push_tim3(led_tim3).unwrap();
@@ -230,7 +230,7 @@ pub async fn rgb_task(
 /// 
 /// This helper function keeps the main loop clean and handles
 /// the delay calculation logic in one place.
-fn service_and_get_delay(collection: &mut HeterogeneousCollection<4>) -> Duration {
+fn service_and_get_delay(collection: &mut SequencerCollection<4>) -> Duration {
     match collection.service_all() {
         Some(delay) if delay.0.as_millis() == 0 => {
             // Linear transition - service at ~60fps
