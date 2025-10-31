@@ -5,19 +5,18 @@ use stm32f0_examples::time_source::{HalTimeSource, HalInstant, HalDuration};
 use rgb_sequencer::{RgbSequencer, SequencerState, TimeDuration, TimeSource};
 
 use crate::button::ButtonDebouncer;
-use crate::hardware_setup::{HardwareContext, Led1, Led2};
+use crate::hardware_setup::{HardwareContext, Led1};
 use crate::sequences::{create_breathing_sequence, create_rainbow_sequence, create_police_sequence};
 
 /// Type aliases for the sequencers
-type Sequencer1<'a> = RgbSequencer<'a, HalInstant, Led1, HalTimeSource, 16>;
-type Sequencer2<'a> = RgbSequencer<'a, HalInstant, Led2, HalTimeSource, 16>;
+type Sequencer<'a> = RgbSequencer<'a, HalInstant, Led1, HalTimeSource, 16>;
 
-/// Operating modes for the RGB LEDs
+/// Operating modes for the RGB LED
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
-    /// Slow breathing white effect on both LEDs (using sine wave function)
+    /// Slow breathing white effect (using sine wave function)
     Breathing,
-    /// Rainbow color cycle on both LEDs
+    /// Rainbow color cycle
     Rainbow,
     /// Red/Blue alternating police lights effect
     Police,
@@ -36,8 +35,7 @@ impl Mode {
 
 /// Application state containing all runtime data
 pub struct AppState<'a> {
-    sequencer_1: Sequencer1<'a>,
-    sequencer_2: Sequencer2<'a>,
+    sequencer: Sequencer<'a>,
     button: crate::hardware_setup::Button,
     onboard_led: crate::hardware_setup::OnboardLed,
     button_debouncer: ButtonDebouncer,
@@ -49,25 +47,19 @@ impl<'a> AppState<'a> {
     /// Initialize the application with hardware and initial mode
     pub fn new(hw: HardwareContext, time_source: &'a HalTimeSource) -> Self {
         // Create sequencers
-        let mut sequencer_1 = RgbSequencer::new(hw.led_1, time_source);
-        let mut sequencer_2 = RgbSequencer::new(hw.led_2, time_source);
+        let mut sequencer = RgbSequencer::new(hw.led_1, time_source);
 
         // Start with Rainbow mode
         let initial_mode = Mode::Rainbow;
         let sequence = create_rainbow_sequence();
         
-        sequencer_1.load(sequence.clone());
-        sequencer_1.start().unwrap();
-        
-        sequencer_2.load(sequence);
-        sequencer_2.start().unwrap();
+        sequencer.load(sequence);
+        sequencer.start().unwrap();
 
         rprintln!("Initial mode: {:?}", initial_mode);
-        rprintln!("Both LEDs synchronized in rainbow mode");
 
         Self {
-            sequencer_1,
-            sequencer_2,
+            sequencer,
             button: hw.button,
             onboard_led: hw.onboard_led,
             button_debouncer: ButtonDebouncer::new(200),
@@ -76,7 +68,7 @@ impl<'a> AppState<'a> {
         }
     }
 
-    /// Load a new mode on both LEDs (coordinated)
+    /// Load a new mode to the sequencer
     fn load_mode(&mut self, mode: Mode) {
         rprintln!("Switching to mode: {:?}", mode);
         
@@ -86,12 +78,9 @@ impl<'a> AppState<'a> {
             Mode::Police => create_police_sequence(),
         };
         
-        // Load and start on both LEDs
-        self.sequencer_1.load(sequence.clone());
-        self.sequencer_1.start().unwrap();
-        
-        self.sequencer_2.load(sequence);
-        self.sequencer_2.start().unwrap();
+        // Load and start the sequencer
+        self.sequencer.load(sequence);
+        self.sequencer.start().unwrap();
         
         // Update onboard LED indicator
         self.update_mode_indicator(mode);
@@ -124,58 +113,28 @@ impl<'a> AppState<'a> {
         self.load_mode(next_mode);
     }
 
-    /// Service both sequencers and return the minimum delay needed
-    fn service_sequencers(&mut self) -> Option<HalDuration> {
-        let state_1 = self.sequencer_1.get_state();
-        let state_2 = self.sequencer_2.get_state();
+    /// Service sequencer and return the minimum delay needed
+    fn service_sequencer(&mut self) -> Option<HalDuration> {
+        let state = self.sequencer.get_state();
         
         let mut min_delay: Option<HalDuration> = None;
         
-        // Service LED 1
-        if state_1 == SequencerState::Running {
-            match self.sequencer_1.service() {
+        // Service RGB LED
+        if state == SequencerState::Running {
+            match self.sequencer.service() {
                 Ok(Some(delay)) => {
-                    min_delay = Some(Self::min_duration(min_delay, delay));
+                    min_delay = Some(delay);
                 }
                 Ok(None) => {
-                    rprintln!("LED 1 sequence completed");
+                    rprintln!("RGB LED sequence completed");
                 }
                 Err(e) => {
-                    rprintln!("LED 1 sequencer error: {:?}", e);
-                }
-            }
-        }
-        
-        // Service LED 2
-        if state_2 == SequencerState::Running {
-            match self.sequencer_2.service() {
-                Ok(Some(delay)) => {
-                    min_delay = Some(Self::min_duration(min_delay, delay));
-                }
-                Ok(None) => {
-                    rprintln!("LED 2 sequence completed");
-                }
-                Err(e) => {
-                    rprintln!("LED 2 sequencer error: {:?}", e);
+                    rprintln!("RGB LED sequencer error: {:?}", e);
                 }
             }
         }
         
         min_delay
-    }
-
-    /// Helper to find minimum duration
-    fn min_duration(current: Option<HalDuration>, new: HalDuration) -> HalDuration {
-        match current {
-            None => new,
-            Some(curr) => {
-                if new.as_millis() < curr.as_millis() {
-                    new
-                } else {
-                    curr
-                }
-            }
-        }
     }
 
     /// Check for button press and handle it
@@ -206,7 +165,7 @@ impl<'a> AppState<'a> {
                 }
             }
         } else {
-            // Both paused - just sleep and let interrupts wake us
+            // RGB LED paused or completed - just sleep and let interrupts wake us
             cortex_m::asm::wfi();
         }
     }
@@ -220,7 +179,7 @@ impl<'a> AppState<'a> {
             }
 
             // Service sequencers
-            let delay = self.service_sequencers();
+            let delay = self.service_sequencer();
             
             // Sleep until next service needed
             self.sleep_until_next_service(delay);

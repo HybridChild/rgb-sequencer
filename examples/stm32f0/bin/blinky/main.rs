@@ -28,8 +28,8 @@ use rgb_sequencer::{
     TransitionStyle,
 };
 
-/// Type alias for the LED
-pub type Led = PwmRgbLed<
+/// Type alias for LED 1
+pub type Led1 = PwmRgbLed<
     pwm::PwmChannels<pac::TIM3, pwm::C1>,
     pwm::PwmChannels<pac::TIM3, pwm::C2>,
     pwm::PwmChannels<pac::TIM3, pwm::C3>,
@@ -121,13 +121,13 @@ fn configure_clock(
 }
 
 /// Configure PWM for LED using TIM3
-fn setup_led(
+fn setup_led1(
     pa6: gpioa::PA6<Input<stm32f0xx_hal::gpio::Floating>>,
     pa7: gpioa::PA7<Input<stm32f0xx_hal::gpio::Floating>>,
     pb0: gpiob::PB0<Input<stm32f0xx_hal::gpio::Floating>>,
     tim3: pac::TIM3,
     rcc: &mut stm32f0xx_hal::rcc::Rcc,
-) -> Led {
+) -> Led1 {
     let pins = cortex_m::interrupt::free(|cs| {
         (
             pa6.into_alternate_af1(cs),
@@ -139,7 +139,7 @@ fn setup_led(
     let pwm_freq = Hertz(1_000);
     let (red, green, blue) = pwm::tim3(tim3, pins, rcc, pwm_freq);
     
-    rprintln!("LED configured on TIM3 (PA6, PA7, PB0)");
+    rprintln!("LED 1 configured on TIM3 (PA6, PA7, PB0)");
     
     // Common anode = true
     PwmRgbLed::new(red, green, blue, true)
@@ -163,13 +163,13 @@ fn main() -> ! {
     let gpioa = dp.GPIOA.split(&mut rcc);
     let gpiob = dp.GPIOB.split(&mut rcc);
 
-    let led = setup_led(gpioa.pa6, gpioa.pa7, gpiob.pb0, dp.TIM3, &mut rcc);
+    let led_1 = setup_led1(gpioa.pa6, gpioa.pa7, gpiob.pb0, dp.TIM3, &mut rcc);
     let time_source = BlinkyTimeSource::new();
 
     rprintln!("=== Hardware Ready ===");
 
-    let mut sequencer: RgbSequencer<BlinkyInstant, Led, BlinkyTimeSource, SEQUENCE_STEP_SIZE>
-        = RgbSequencer::new(led, &time_source);
+    let mut sequencer: RgbSequencer<BlinkyInstant, Led1, BlinkyTimeSource, SEQUENCE_STEP_SIZE>
+        = RgbSequencer::new(led_1, &time_source);
 
     // Create a sequence
     let sequence = RgbSequence::<BlinkyDuration, SEQUENCE_STEP_SIZE>::new()

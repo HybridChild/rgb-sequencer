@@ -2,15 +2,15 @@
 
 Examples for STM32F NUCLEO-F072RB board.
 
-- **blinky** - Simple bare-metal example demonstrating basic LED sequencing with a clean, blocking delay approach. Perfect starting point for learning the library.
+- **blinky** - Simple bare-metal example demonstrating basic RGB LED sequencing with a clean, blocking delay approach. Perfect starting point for learning the library.
+- **mode_switcher** - Bare-metal example demonstrating RGB LED control with mode switching using SysTick timing. Features a **function-based breathing sequence** using sine wave animation.
 - **rainbow_capture** - Bare-metal example demonstrating smooth rainbow transitions with interactive color capture using SysTick timing and two RGB LEDs.
-- **mode_switcher** - Bare-metal example demonstrating coordinated multi-LED control with mode switching using SysTick timing. Features a **function-based breathing sequence** using sine wave animation.
 
 ## Hardware Setup
 
 ### RGB LED Connections
 
-These examples use **one or two RGB LEDs** depending on the example. Connect them to the following pins with appropriate current-limiting resistors (220Ω - 330Ω):
+These examples use **one or two external RGB LEDs** depending on the example. Connect them to the following pins with appropriate current-limiting resistors:
 
 **LED 1 (used by all examples):**
 - **Red**: PA6 (TIM3_CH1)
@@ -18,7 +18,7 @@ These examples use **one or two RGB LEDs** depending on the example. Connect the
 - **Blue**: PB0 (TIM3_CH3)
 - **Common**: 3.3V (for common anode) or GND (for common cathode)
 
-**LED 2 (used by rainbow_capture and mode_switcher):**
+**LED 2 (only used by rainbow_capture):**
 - **Red**: PA8 (TIM1_CH1)
 - **Green**: PA9 (TIM1_CH2)
 - **Blue**: PA10 (TIM1_CH3)
@@ -73,7 +73,7 @@ let led = PwmRgbLed::new(red_pwm, green_pwm, blue_pwm, false);
 A simple, clean example demonstrating basic LED sequencing with blocking delays. This is the perfect starting point for learning the library.
 
 **Features:**
-- **Single LED**: Controls one RGB LED through a colorful sequence
+- **Single RGB LED**: Controls one RGB LED through a colorful sequence
 - **Blocking approach**: Uses HAL's `Delay` for simple, easy-to-understand timing
 - **Simple time source**: Advances time manually after each delay
 - **Finite sequence**: Runs 3 loops then displays a landing color
@@ -98,6 +98,44 @@ A simple, clean example demonstrating basic LED sequencing with blocking delays.
 **Run:**
 ```bash
 cargo run --release --bin blinky
+```
+
+### mode_switcher
+
+An RGB LED controller demonstrating mode switching with different animations. **Features function-based sequences** using sine wave mathematics for the breathing effect.
+
+**Features:**
+- **Three display modes**: Breathing (sine wave), Rainbow, and Police
+- **Function-based breathing sequence**: Uses algorithmic sine wave animation instead of step-based interpolation
+- **Mode indicator**: Onboard LED (PA5) indicates current mode
+- Uses SysTick timer for precise 1ms timing
+- Efficient power management with WFI (Wait For Interrupt)
+- Demonstrates both function-based and step-based sequencing approaches
+
+**What you'll learn:**
+- **Function-based sequences**: How to create algorithmic animations using custom functions
+- **Sine wave mathematics**: Applying trigonometric functions for smooth breathing effects
+- Dynamic sequence loading and mode switching
+- Mode state management
+- Efficient sequencer servicing with optimal timing hints
+
+**Technical Highlights:**
+The breathing mode demonstrates the library's function-based sequence feature, where a sine wave function computes LED brightness algorithmically based on elapsed time. This approach:
+- Allows the same function to be reused with different colors
+- Provides smooth, natural-looking animations through mathematical curves
+- Uses `libm` for `no_std` sine calculations
+- Returns to the sequencer continuously for frame-by-frame updates
+
+**Behavior:**
+1. On startup, the RGB LED begins rainbow animation
+3. Press button → switches to police mode (red/blue alternating)
+2. Press again → switches to breathing mode (gentle white fade using sine wave)
+4. Press again → back to rainbow animation (cycle repeats)
+5. Onboard LED indicates mode: off = breathing, on = rainbow/police
+
+**Run:**
+```bash
+cargo run --release --bin mode_switcher
 ```
 
 ### rainbow_capture
@@ -126,44 +164,4 @@ A smooth rainbow animation with interactive color capture control using two inde
 **Run:**
 ```bash
 cargo run --release --bin rainbow_capture
-```
-
-### mode_switcher
-
-A coordinated multi-LED controller demonstrating mode switching with synchronized animations. **Features function-based sequences** using sine wave mathematics for the breathing effect.
-
-**Features:**
-- **Three display modes**: Breathing (sine wave), Rainbow, and Police
-- **Function-based breathing sequence**: Uses algorithmic sine wave animation instead of step-based interpolation
-- **Coordinated control**: Both LEDs run the same sequence in perfect sync
-- **Mode indicator**: Onboard LED (PA5) indicates current mode
-- Uses SysTick timer for precise 1ms timing
-- Efficient power management with WFI (Wait For Interrupt)
-- Demonstrates both function-based and step-based sequencing approaches
-
-**What you'll learn:**
-- **Function-based sequences**: How to create algorithmic animations using custom functions
-- **Sine wave mathematics**: Applying trigonometric functions for smooth breathing effects
-- Coordinated multi-LED control with identical sequences
-- Dynamic sequence loading and mode switching
-- Mode state management
-- Efficient sequencer servicing with optimal timing hints
-
-**Technical Highlights:**
-The breathing mode demonstrates the library's function-based sequence feature, where a sine wave function computes LED brightness algorithmically based on elapsed time. This approach:
-- Allows the same function to be reused with different colors
-- Provides smooth, natural-looking animations through mathematical curves
-- Uses `libm` for `no_std` sine calculations
-- Returns to the sequencer continuously for frame-by-frame updates
-
-**Behavior:**
-1. On startup, both LEDs begin rainbow animation (synchronized)
-2. Press button → switches to breathing mode (gentle white fade using sine wave)
-3. Press again → police mode (red/blue alternating)
-4. Press again → back to breathing mode (cycle repeats)
-5. Onboard LED indicates mode: off = breathing, on = rainbow/police
-
-**Run:**
-```bash
-cargo run --release --bin mode_switcher
 ```

@@ -10,17 +10,11 @@ use stm32f0xx_hal::{
 
 use stm32f0_examples::rgb_led::PwmRgbLed;
 
-/// Type aliases for the two LEDs
+/// Type alias for LED 1
 pub type Led1 = PwmRgbLed<
     pwm::PwmChannels<pac::TIM3, pwm::C1>,
     pwm::PwmChannels<pac::TIM3, pwm::C2>,
     pwm::PwmChannels<pac::TIM3, pwm::C3>,
->;
-
-pub type Led2 = PwmRgbLed<
-    pwm::PwmChannels<pac::TIM1, pwm::C1>,
-    pwm::PwmChannels<pac::TIM1, pwm::C2>,
-    pwm::PwmChannels<pac::TIM1, pwm::C3>,
 >;
 
 /// Button type (user button on PC13)
@@ -32,7 +26,6 @@ pub type OnboardLed = gpioa::PA5<Output<PushPull>>;
 /// Container for all initialized hardware peripherals
 pub struct HardwareContext {
     pub led_1: Led1,
-    pub led_2: Led2,
     pub button: Button,
     pub onboard_led: OnboardLed,
 }
@@ -43,7 +36,7 @@ pub struct HardwareContext {
 /// - System clock configuration
 /// - SysTick timer setup (1ms interrupts)
 /// - GPIO port initialization
-/// - PWM configuration for both RGB LEDs
+/// - PWM configuration
 /// - Button configuration
 /// - Onboard LED configuration
 /// 
@@ -64,13 +57,11 @@ pub fn init_hardware() -> HardwareContext {
 
     // Setup hardware components
     let led_1 = setup_led1_pwm(gpioa.pa6, gpioa.pa7, gpiob.pb0, dp.TIM3, &mut rcc);
-    let led_2 = setup_led2_pwm(gpioa.pa8, gpioa.pa9, gpioa.pa10, dp.TIM1, &mut rcc);
     let button = setup_button(gpioc.pc13);
     let onboard_led = setup_onboard_led(gpioa.pa5);
 
     HardwareContext {
         led_1,
-        led_2,
         button,
         onboard_led,
     }
@@ -165,47 +156,7 @@ fn setup_led1_pwm(
     let pwm_freq = Hertz(1_000);
     let (red, green, blue) = pwm::tim3(tim3, pins, rcc, pwm_freq);
     
-    rprintln!("LED 1 configured on TIM3 (PA6, PA7, PB0)");
-    
-    // Common anode = true
-    PwmRgbLed::new(red, green, blue, true)
-}
-
-/// Configure PWM for LED 2 using TIM1
-/// 
-/// Sets up TIM1 with PWM channels for RGB control:
-/// - Red: PA8 (TIM1_CH1)
-/// - Green: PA9 (TIM1_CH2)
-/// - Blue: PA10 (TIM1_CH3)
-/// 
-/// # Arguments
-/// * `pa8` - GPIO pin for red channel
-/// * `pa9` - GPIO pin for green channel
-/// * `pa10` - GPIO pin for blue channel
-/// * `tim1` - TIM1 peripheral
-/// * `rcc` - Reference to RCC for clock configuration
-/// 
-/// # Returns
-/// Configured `Led2` instance (common anode)
-fn setup_led2_pwm(
-    pa8: gpioa::PA8<Input<stm32f0xx_hal::gpio::Floating>>,
-    pa9: gpioa::PA9<Input<stm32f0xx_hal::gpio::Floating>>,
-    pa10: gpioa::PA10<Input<stm32f0xx_hal::gpio::Floating>>,
-    tim1: pac::TIM1,
-    rcc: &mut stm32f0xx_hal::rcc::Rcc,
-) -> Led2 {
-    let pins = cortex_m::interrupt::free(|cs| {
-        (
-            pa8.into_alternate_af2(cs),
-            pa9.into_alternate_af2(cs),
-            pa10.into_alternate_af2(cs),
-        )
-    });
-    
-    let pwm_freq = Hertz(1_000);
-    let (red, green, blue) = pwm::tim1(tim1, pins, rcc, pwm_freq);
-    
-    rprintln!("LED 2 configured on TIM1 (PA8, PA9, PA10)");
+    rprintln!("RGB LED configured on TIM3 (PA6, PA7, PB0)");
     
     // Common anode = true
     PwmRgbLed::new(red, green, blue, true)

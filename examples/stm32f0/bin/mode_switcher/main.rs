@@ -38,9 +38,9 @@ fn main() -> ! {
     
     rprintln!("=== System Ready ===");
     rprintln!("Press button to cycle through modes:");
-    rprintln!("  1. Breathing (white fade)");
-    rprintln!("  2. Rainbow (color cycle)");
-    rprintln!("  3. Police (red/blue alternating)");
+    rprintln!("  1. Rainbow (color cycle)");
+    rprintln!("  2. Police (red/blue alternating)");
+    rprintln!("  3. Breathing (white fade)");
     
     // Run the main application loop (never returns)
     app.run()
