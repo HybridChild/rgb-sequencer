@@ -8,7 +8,7 @@ use embassy_stm32::time::Hertz;
 use embassy_stm32::timer::simple_pwm::{PwmPin, SimplePwm};
 use embassy_stm32::{bind_interrupts, Config, Peripherals};
 use embassy_stm32::exti::ExtiInput;
-use embassy_stm32::peripherals::{TIM1, TIM3};
+use embassy_stm32::peripherals::TIM3;
 use core::future::pending;
 use {defmt_rtt as _, panic_probe as _};
 
@@ -45,7 +45,7 @@ fn configure_clock() -> Config {
     config
 }
 
-/// Initialize PWM for TIM3 (LED 1: PA6, PA7, PB0)
+/// Initialize PWM for TIM3 (RGB LED 1: PA6, PA7, PB0)
 fn setup_pwm_tim3(p: &mut Peripherals) -> (SimplePwm<'static, TIM3>, u16) {
     let tim3 = unsafe { p.TIM3.clone_unchecked() };
     let pa6 = unsafe { p.PA6.clone_unchecked() };
@@ -58,37 +58,6 @@ fn setup_pwm_tim3(p: &mut Peripherals) -> (SimplePwm<'static, TIM3>, u16) {
     
     let mut pwm = SimplePwm::new(
         tim3,
-        Some(ch1_pin),
-        Some(ch2_pin),
-        Some(ch3_pin),
-        None,
-        Hertz(1_000),
-        Default::default(),
-    );
-    
-    let max_duty = pwm.max_duty_cycle();
-    
-    // Enable all PWM channels
-    pwm.ch1().enable();
-    pwm.ch2().enable();
-    pwm.ch3().enable();
-    
-    (pwm, max_duty)
-}
-
-/// Initialize PWM for TIM1 (LED 2: PA8, PA9, PA10)
-fn setup_pwm_tim1(p: &mut Peripherals) -> (SimplePwm<'static, TIM1>, u16) {
-    let tim1 = unsafe { p.TIM1.clone_unchecked() };
-    let pa8 = unsafe { p.PA8.clone_unchecked() };
-    let pa9 = unsafe { p.PA9.clone_unchecked() };
-    let pa10 = unsafe { p.PA10.clone_unchecked() };
-    
-    let ch1_pin = PwmPin::new(pa8, embassy_stm32::gpio::OutputType::PushPull);
-    let ch2_pin = PwmPin::new(pa9, embassy_stm32::gpio::OutputType::PushPull);
-    let ch3_pin = PwmPin::new(pa10, embassy_stm32::gpio::OutputType::PushPull);
-    
-    let mut pwm = SimplePwm::new(
-        tim1,
         Some(ch1_pin),
         Some(ch2_pin),
         Some(ch3_pin),
@@ -132,13 +101,12 @@ async fn main(spawner: Spawner) {
     // Setup hardware
     let button = setup_button(&mut p);
     let (pwm_tim3, max_duty_tim3) = setup_pwm_tim3(&mut p);
-    let (pwm_tim1, max_duty_tim1) = setup_pwm_tim1(&mut p);
     let onboard_led = setup_onboard_led(&mut p);
 
     // Spawn tasks
     spawner.spawn(button_task(button)).unwrap();
     spawner.spawn(app_logic_task(onboard_led)).unwrap();
-    spawner.spawn(rgb_task(pwm_tim3, max_duty_tim3, pwm_tim1, max_duty_tim1)).unwrap();
+    spawner.spawn(rgb_task(pwm_tim3, max_duty_tim3)).unwrap();
 
     info!("Ready!");
     

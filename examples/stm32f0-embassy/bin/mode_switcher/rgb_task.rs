@@ -1,13 +1,12 @@
 use defmt::info;
 use embassy_stm32::timer::simple_pwm::SimplePwm;
-use embassy_stm32::peripherals::{TIM1, TIM3};
+use embassy_stm32::peripherals::TIM3;
 use embassy_time::{Duration, Timer};
 use embassy_futures::select::{select, Either};
-use heapless::Vec;
 use palette::Srgb;
 use rgb_sequencer::{RgbSequencer, RgbLed};
 
-use crate::types::{RgbCommand, RGB_COMMAND_CHANNEL, EmbassyDuration, EmbassyInstant, EmbassyTimeSource, SEQUENCE_STEP_SIZE};
+use crate::types::{RgbCommand, RGB_COMMAND_CHANNEL, EmbassyInstant, EmbassyTimeSource, SEQUENCE_STEP_SIZE};
 
 // ============================================================================
 // PWM-based RGB LED implementation for Embassy
@@ -54,122 +53,6 @@ impl<'d, T: embassy_stm32::timer::GeneralInstance4Channel> RgbLed for EmbassyPwm
 }
 
 // ============================================================================
-// Enum to unify different LED types
-// ============================================================================
-
-/// Enum that can hold either TIM1 or TIM3 based LED.
-/// 
-/// This is the key to storing sequencers with different timer types
-/// in the same collection without heap allocation!
-pub enum AnyLed<'d> {
-    Tim1(EmbassyPwmRgbLed<'d, TIM1>),
-    Tim3(EmbassyPwmRgbLed<'d, TIM3>),
-}
-
-impl<'d> RgbLed for AnyLed<'d> {
-    fn set_color(&mut self, color: Srgb) {
-        match self {
-            AnyLed::Tim1(led) => led.set_color(color),
-            AnyLed::Tim3(led) => led.set_color(color),
-        }
-    }
-}
-
-// ============================================================================
-// Heterogeneous Collection
-// ============================================================================
-
-/// Collection of sequencers with different LED types (TIM1 and TIM3).
-/// 
-/// All sequencers have the same type: RgbSequencer<..., AnyLed, ...>
-/// This allows them to be stored in a Vec and iterated over without
-/// code duplication, while maintaining zero-cost abstraction.
-struct SequencerCollection<'t, const CAPACITY: usize> {
-    sequencers: Vec<
-        RgbSequencer<'t, EmbassyInstant, AnyLed<'t>, EmbassyTimeSource, SEQUENCE_STEP_SIZE>,
-        CAPACITY
-    >,
-    time_source: &'t EmbassyTimeSource,
-}
-
-impl<'t, const CAPACITY: usize> SequencerCollection<'t, CAPACITY> {
-    /// Create a new empty collection
-    fn new(time_source: &'t EmbassyTimeSource) -> Self {
-        Self {
-            sequencers: Vec::new(),
-            time_source,
-        }
-    }
-    
-    /// Add a TIM1-based LED to the collection
-    fn push_tim1(&mut self, led: EmbassyPwmRgbLed<'t, TIM1>) -> Result<usize, ()> {
-        let any_led = AnyLed::Tim1(led);
-        let sequencer = RgbSequencer::new(any_led, self.time_source);
-        self.sequencers.push(sequencer).map_err(|_| ())?;
-        Ok(self.sequencers.len() - 1)
-    }
-    
-    /// Add a TIM3-based LED to the collection
-    fn push_tim3(&mut self, led: EmbassyPwmRgbLed<'t, TIM3>) -> Result<usize, ()> {
-        let any_led = AnyLed::Tim3(led);
-        let sequencer = RgbSequencer::new(any_led, self.time_source);
-        self.sequencers.push(sequencer).map_err(|_| ())?;
-        Ok(self.sequencers.len() - 1)
-    }
-    
-    /// Load the same sequence on all LEDs (coordinated control)
-    fn load_all(&mut self, sequence: rgb_sequencer::RgbSequence<EmbassyDuration, SEQUENCE_STEP_SIZE>) {
-        for sequencer in self.sequencers.iter_mut() {
-            sequencer.load(sequence.clone());
-            let _ = sequencer.start();
-        }
-    }
-    
-    /// Service all running sequencers
-    /// 
-    /// This single method handles both TIM1 and TIM3 sequencers
-    /// by iterating over the collection.
-    fn service_all(&mut self) -> Option<EmbassyDuration> {
-        let mut min_delay: Option<EmbassyDuration> = None;
-        
-        // Iterate over all sequencers regardless of their timer type
-        for sequencer in self.sequencers.iter_mut() {
-            if !sequencer.is_running() {
-                continue;
-            }
-            
-            match sequencer.service() {
-                Ok(Some(delay)) => {
-                    min_delay = Some(match min_delay {
-                        None => delay,
-                        Some(current_min) => {
-                            if delay.0.as_millis() < current_min.0.as_millis() {
-                                delay
-                            } else {
-                                current_min
-                            }
-                        }
-                    });
-                }
-                Ok(None) => {
-                    info!("Sequence completed");
-                }
-                Err(e) => {
-                    info!("Sequencer error: {:?}", e);
-                }
-            }
-        }
-        
-        min_delay
-    }
-    
-    /// Get number of LEDs in collection
-    fn len(&self) -> usize {
-        self.sequencers.len()
-    }
-}
-
-// ============================================================================
 // RGB Task
 // ============================================================================
 
@@ -177,26 +60,19 @@ impl<'t, const CAPACITY: usize> SequencerCollection<'t, CAPACITY> {
 pub async fn rgb_task(
     pwm_tim3: SimplePwm<'static, TIM3>,
     max_duty_tim3: u16,
-    pwm_tim1: SimplePwm<'static, TIM1>,
-    max_duty_tim1: u16,
 ) {
-    info!("RGB ready");
+    info!("RGB task started");
     
-    // Create LED wrappers (common anode = true)
-    let led_tim3 = EmbassyPwmRgbLed::new(pwm_tim3, max_duty_tim3, true);
-    let led_tim1 = EmbassyPwmRgbLed::new(pwm_tim1, max_duty_tim1, true);
+    // Create LED wrapper (common anode = true)
+    let led_1 = EmbassyPwmRgbLed::new(pwm_tim3, max_duty_tim3, true);
     
     // Create time source
     let time_source = EmbassyTimeSource::new();
     
-    // Create collection that can hold up to 4 LEDs
-    let mut collection: SequencerCollection<4> = SequencerCollection::new(&time_source);
+    // Create sequencer
+    let mut sequencer = RgbSequencer::<EmbassyInstant, _, _, SEQUENCE_STEP_SIZE>::new(led_1, &time_source);
     
-    // Add LEDs to collection - different timer types, same collection!
-    collection.push_tim3(led_tim3).unwrap();
-    collection.push_tim1(led_tim1).unwrap();
-    
-    info!("Collection created with {} LEDs", collection.len());
+    info!("Sequencer created");
     
     // Start with a short delay, will be updated after first service
     let mut next_service_delay = Duration::from_millis(16);
@@ -209,39 +85,49 @@ pub async fn rgb_task(
         ).await {
             Either::First(command) => {
                 match command {
-                    RgbCommand::LoadCoordinated(sequence) => {
-                        info!("Loading coordinated sequence");
-                        // Load same sequence on all LEDs
-                        collection.load_all(sequence);
+                    RgbCommand::Load(sequence) => {
+                        info!("Loading sequence");
+                        sequencer.load(sequence);
+                        if let Err(e) = sequencer.start() {
+                            info!("Start error: {:?}", e);
+                        }
                         // Service to set color and get delay
-                        next_service_delay = service_and_get_delay(&mut collection);
+                        next_service_delay = service_and_get_delay(&mut sequencer);
                     }
                 }
             }
             Either::Second(_) => {
-                // Time to service the sequencers
-                next_service_delay = service_and_get_delay(&mut collection);
+                // Time to service the sequencer
+                next_service_delay = service_and_get_delay(&mut sequencer);
             }
         }
     }
 }
 
-/// Service all sequencers and return the appropriate delay.
-/// 
-/// This helper function keeps the main loop clean and handles
-/// the delay calculation logic in one place.
-fn service_and_get_delay(collection: &mut SequencerCollection<4>) -> Duration {
-    match collection.service_all() {
-        Some(delay) if delay.0.as_millis() == 0 => {
+/// Service the sequencer and return the appropriate delay.
+fn service_and_get_delay(
+    sequencer: &mut RgbSequencer<EmbassyInstant, EmbassyPwmRgbLed<TIM3>, EmbassyTimeSource, SEQUENCE_STEP_SIZE>
+) -> Duration {
+    if !sequencer.is_running() {
+        return Duration::from_secs(3600);
+    }
+    
+    match sequencer.service() {
+        Ok(Some(delay)) if delay.0.as_millis() == 0 => {
             // Linear transition - service at ~60fps
             Duration::from_millis(16)
         }
-        Some(delay) => {
+        Ok(Some(delay)) => {
             // Step transition - use the delay
             delay.0
         }
-        None => {
-            // All sequences complete - wait indefinitely
+        Ok(None) => {
+            info!("Sequence completed");
+            // Sequence complete - wait indefinitely - One hour for simplicity
+            Duration::from_secs(3600)
+        }
+        Err(e) => {
+            info!("Sequencer error: {:?}", e);
             Duration::from_secs(3600)
         }
     }

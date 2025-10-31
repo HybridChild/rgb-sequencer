@@ -67,25 +67,6 @@ fn create_breathing_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_SIZ
     )
 }
 
-/// Create a breathing white sequence using step-based animation (original)
-/// 
-/// Smoothly fades between dim white and bright white over 4 seconds,
-/// creating a gentle breathing effect. Loops infinitely.
-/// 
-/// This is the original step-based implementation, kept for comparison.
-#[allow(dead_code)]
-fn create_breathing_sequence_step_based() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_SIZE> {
-    let white = Srgb::new(1.0, 1.0, 1.0);
-    let dim_white = Srgb::new(0.1, 0.1, 0.1);
-    
-    RgbSequence::new()
-        .step(dim_white, EmbassyDuration(Duration::from_millis(2000)), TransitionStyle::Linear)
-        .step(white, EmbassyDuration(Duration::from_millis(2000)), TransitionStyle::Linear)
-        .loop_count(LoopCount::Infinite)
-        .build()
-        .unwrap()
-}
-
 /// Create a rainbow cycle sequence
 fn create_rainbow_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_SIZE> {
     RgbSequence::new()
@@ -132,19 +113,15 @@ fn create_police_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_SIZE> 
 /// Get the sequence for a given mode
 fn get_sequence_for_mode(mode: Mode) -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_SIZE> {
     match mode {
-        Mode::Breathing => create_breathing_sequence(),  // Now uses function-based sine wave!
         Mode::Rainbow => create_rainbow_sequence(),
         Mode::Police => create_police_sequence(),
+        Mode::Breathing => create_breathing_sequence(),
     }
 }
 
 /// Update the onboard LED to indicate the current mode
 fn update_mode_indicator(led: &mut Output<'static>, mode: Mode) {
     match mode {
-        Mode::Breathing => {
-            // Mode 1: LED off
-            led.set_low();
-        }
         Mode::Rainbow => {
             // Mode 2: LED on
             led.set_high();
@@ -152,6 +129,10 @@ fn update_mode_indicator(led: &mut Output<'static>, mode: Mode) {
         Mode::Police => {
             // Mode 3: LED on (could blink in future)
             led.set_high();
+        }
+        Mode::Breathing => {
+            // Mode 1: LED off
+            led.set_low();
         }
     }
 }
@@ -166,7 +147,7 @@ pub async fn app_logic_task(mut onboard_led: Output<'static>) {
     info!("Loading initial mode: {:?}", current_mode);
     let initial_sequence = get_sequence_for_mode(current_mode);
     RGB_COMMAND_CHANNEL
-        .send(RgbCommand::LoadCoordinated(initial_sequence))
+        .send(RgbCommand::Load(initial_sequence))
         .await;
     
     update_mode_indicator(&mut onboard_led, current_mode);
@@ -186,7 +167,7 @@ pub async fn app_logic_task(mut onboard_led: Output<'static>) {
         // Create and send new sequence
         let new_sequence = get_sequence_for_mode(current_mode);
         RGB_COMMAND_CHANNEL
-            .send(RgbCommand::LoadCoordinated(new_sequence))
+            .send(RgbCommand::Load(new_sequence))
             .await;
         
         info!("New sequence sent to RGB task");

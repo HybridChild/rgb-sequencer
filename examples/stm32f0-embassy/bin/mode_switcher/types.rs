@@ -6,15 +6,15 @@ use rgb_sequencer::RgbSequence;
 // Re-export the time types from the library
 pub use stm32f0_embassy::time_wrapper::{EmbassyDuration, EmbassyInstant, EmbassyTimeSource};
 
-/// Operating modes for the RGB LEDs
+/// Operating modes for the RGB LED
 #[derive(Debug, Clone, Copy, PartialEq, Eq, defmt::Format)]
 pub enum Mode {
-    /// Slow breathing white effect on both LEDs
-    Breathing,
-    /// Rainbow color cycle on both LEDs
+    /// Rainbow color cycle
     Rainbow,
     /// Red/Blue alternating police lights effect
     Police,
+    /// Slow breathing white effect
+    Breathing,
 }
 
 impl Mode {
@@ -30,8 +30,8 @@ impl Mode {
 
 /// Commands that can be sent to the RGB task
 pub enum RgbCommand {
-    /// Load a new sequence on both LEDs (coordinated)
-    LoadCoordinated(RgbSequence<EmbassyDuration, SEQUENCE_STEP_SIZE>),
+    /// Load a new sequence
+    Load(RgbSequence<EmbassyDuration, SEQUENCE_STEP_SIZE>),
 }
 
 /// Signal from button_task to app_logic_task when button is pressed

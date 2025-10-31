@@ -88,6 +88,31 @@ A simple, clean example demonstrating basic LED sequencing with blocking delays.
 - Finite loop counts with landing colors
 - Simple blocking delay pattern
 
+**Technical Highlights:**
+This example shows the simplest possible integration pattern:
+```rust
+// Create a simple time source
+let time_source = BlinkyTimeSource::new();
+
+// Service loop
+loop {
+    if let Some(delay_duration) = sequencer.service().unwrap() {
+        if delay_duration == TimeDuration::ZERO {
+            // Linear transition - maintain frame rate
+            delay.delay_ms(FRAME_RATE_MS as u32);
+            time_source.advance(BlinkyDuration(FRAME_RATE_MS));
+        } else {
+            // Step transition - delay for the specified time
+            delay.delay_ms(delay_duration.as_millis() as u32);
+            time_source.advance(delay_duration);
+        }
+    } else {
+        break; // Sequence complete
+    }
+}
+```
+
+The time source is dead simple - just a counter that advances after each delay. This works perfectly for applications where the sequencer is the only thing happening.
 **Behavior:**
 1. LED fades from Yellow to off over 1 second
 2. LED fades from Cyan to off over 1 second

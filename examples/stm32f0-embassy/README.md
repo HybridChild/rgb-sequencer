@@ -2,24 +2,22 @@
 
 Embassy async examples for STM32F NUCLEO-F072RB board.
 
-Both examples demonstrate advanced embedded Rust patterns including **enum wrapper collections** for managing varying LED types (TIM1 and TIM3) in a single heterogeneous collection without heap allocation, enabling efficient multi-LED control with zero-cost abstraction.
-
-- **[mode_switcher](#mode_switcher)** - Embassy async example demonstrating coordinated multi-LED control with mode switching using async tasks and channels. Features a **function-based breathing sequence** using sine wave animation and **synchronized LED control** with the enum wrapper pattern.
-- **[rainbow_capture](#rainbow_capture)** - Embassy async example demonstrating smooth rainbow transitions with interactive color capture using async tasks, channels, and signals. Shows **individual LED control** with the enum wrapper pattern.
+- **[mode_switcher](#mode_switcher)** - Embassy async example demonstrating single-LED control with mode switching using async tasks and channels. Features a **function-based breathing sequence** using sine wave animation.
+- **[rainbow_capture](#rainbow_capture)** - Embassy async example demonstrating smooth rainbow transitions with interactive color capture using async tasks, channels, and signals. Shows **individual LED control** with the enum wrapper pattern for managing heterogeneous LED types.
 
 ## Hardware Setup
 
 ### RGB LED Connections
 
-These examples use **two external RGB LEDs**. Connect them to the following pins with appropriate current-limiting resistors:
+These examples use **one or two external RGB LEDs** depending on the example. Connect them to the following pins with appropriate current-limiting resistors:
 
-**LED 1:**
+**LED 1 (used by all examples):**
 - **Red**: PA6 (TIM3_CH1)
 - **Green**: PA7 (TIM3_CH2)
 - **Blue**: PB0 (TIM3_CH3)
 - **Common**: 3.3V (for common anode) or GND (for common cathode)
 
-**LED 2:**
+**LED 2 (only used by rainbow_capture):**
 - **Red**: PA8 (TIM1_CH1)
 - **Green**: PA9 (TIM1_CH2)
 - **Blue**: PA10 (TIM1_CH3)
@@ -27,7 +25,7 @@ These examples use **two external RGB LEDs**. Connect them to the following pins
 
 ### User Button
 
-The examples use the onboard user button on PC13 (blue button on Nucleo board).
+Both examples use the onboard user button on PC13 (blue button on Nucleo board).
 
 ## Building and Flashing
 
@@ -65,16 +63,56 @@ Both examples use `defmt` for logging. Logs appear automatically when running wi
 
 The examples assume a **common anode** RGB LED (common pin connected to 3.3V).
 
-If you have a **common cathode** LED (common pin connected to GND), change the last parameter in `PwmRgbLed::new()` to `false`:
+If you have a **common cathode** LED (common pin connected to GND), change the last parameter in `EmbassyPwmRgbLed::new()` to `false`:
 ```rust
-let led = PwmRgbLed::new(pwm, Channel::Ch1, Channel::Ch2, Channel::Ch3, false);
+let led = EmbassyPwmRgbLed::new(pwm, max_duty, false);
 ```
 
 ## Examples
 
+### mode_switcher
+
+A single-LED controller demonstrating Embassy's async task architecture with mode switching. **Features function-based sequences** using sine wave mathematics for the breathing effect.
+
+**Features:**
+- **Single RGB LED**: Controls one RGB LED with three different animation modes: Rainbow, Police, and Breathing
+- **Function-based breathing sequence**: Uses algorithmic sine wave animation instead of step-based interpolation
+- **Task-based architecture**: Three async tasks (button, app_logic, rgb)
+- **Inter-task communication**: Channels and signals for coordinated control
+- **Mode indicator**: Onboard LED shows current mode state
+- Uses Embassy's time driver for precise async timing
+- Demonstrates both function-based and step-based sequencing approaches
+
+**What you'll learn:**
+- **Embassy async patterns**: How to structure multi-task applications with channels and signals
+- **Function-based sequences**: How to create algorithmic animations using custom functions
+- **Sine wave mathematics**: Applying trigonometric functions for smooth breathing effects
+- Dynamic sequence loading and mode switching
+- Efficient sequencer servicing with optimal timing hints
+- Simple single-LED control with Embassy tasks
+
+**Technical Highlights:**
+The breathing mode demonstrates the library's function-based sequence feature, where a sine wave function computes LED brightness algorithmically based on elapsed time. This approach:
+- Allows the same function to be reused with different colors
+- Provides smooth, natural-looking animations through mathematical curves
+- Uses `libm` for `no_std` sine calculations
+- Integrates seamlessly with Embassy's async runtime for continuous frame-by-frame updates
+
+**Behavior:**
+1. On startup, LED begins rainbow animation (synchronized)
+2. Press button → switches to police mode (red/blue alternating)
+3. Press again → breathing mode (gentle white fade using sine wave)
+4. Press again → back to rainbow mode
+5. Onboard LED indicates mode: low when breathing, high when rainbow/police
+
+**Run:**
+```bash
+cargo run --release --bin mode_switcher
+```
+
 ### rainbow_capture
 
-A smooth rainbow animation with interactive color capture control using two independent RGB LEDs and async tasks.
+A smooth rainbow animation with interactive color capture control using two independent RGB LEDs and async tasks. This example demonstrates advanced embedded Rust patterns including **enum wrapper collections** for managing varying LED types (TIM1 and TIM3) in a single heterogeneous collection without heap allocation.
 
 **Features:**
 - **LED 1**: Continuously cycles through red → green → blue with smooth linear color transitions
@@ -115,53 +153,4 @@ This enables individual LED control through `get_mut(led_id)` while maintaining 
 **Run:**
 ```bash
 cargo run --release --bin rainbow_capture
-```
-
-### mode_switcher
-
-A coordinated multi-LED controller demonstrating Embassy's async task architecture with mode switching. **Features function-based sequences** using sine wave mathematics for the breathing effect.
-
-**Features:**
-- **Four display modes**: Rainbow, Breathing (sine wave), Alternating, and Off
-- **Function-based breathing sequence**: Uses algorithmic sine wave animation instead of step-based interpolation
-- **Task-based architecture**: Three async tasks (button, app_logic, rgb)
-- **Inter-task communication**: Channels and signals for coordinated control
-- **Enum wrapper collection**: Manages TIM1 and TIM3 LEDs in a single collection for synchronized control
-- Uses Embassy's time driver for precise async timing
-- Demonstrates both function-based and step-based sequencing approaches
-
-**What you'll learn:**
-- **Enum wrapper pattern**: How to operate on all LEDs simultaneously using the same collection
-- **Coordinated control**: Loading the same sequence on multiple heterogeneous LEDs with `load_all()`
-- **Function-based sequences**: How to create algorithmic animations using custom functions
-- **Sine wave mathematics**: Applying trigonometric functions for smooth breathing effects
-- Embassy async task patterns and communication
-- Multi-LED coordination with heterogeneous collection
-- Dynamic sequence loading and mode switching
-- Efficient sequencer servicing with optimal timing hints
-
-**Technical Highlights:**
-The breathing mode demonstrates the library's function-based sequence feature, where a sine wave function computes LED brightness algorithmically based on elapsed time. This approach:
-- Allows the same function to be reused with different colors
-- Provides smooth, natural-looking animations through mathematical curves
-- Uses `libm` for `no_std` sine calculations
-- Integrates seamlessly with Embassy's async runtime for continuous frame-by-frame updates
-
-The enum wrapper collection enables synchronized control:
-```rust
-// Load same sequence on all LEDs regardless of timer type
-collection.load_all(sequence);
-```
-This demonstrates how the pattern supports both individual control (rainbow_capture) and coordinated control (mode_switcher) with the same underlying abstraction.
-
-**Behavior:**
-1. On startup, both LEDs begin rainbow animation (synchronized)
-2. Press button → switches to breathing mode (gentle white fade using sine wave)
-3. Press again → alternating mode (red/blue swap between LEDs)
-4. Press again → off mode (both LEDs turn off)
-5. Press again → back to rainbow mode
-
-**Run:**
-```bash
-cargo run --release --bin mode_switcher
 ```
