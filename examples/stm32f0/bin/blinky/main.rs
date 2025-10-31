@@ -6,8 +6,8 @@ use panic_halt as _;
 use rtt_target::{rprintln, rtt_init_print};
 
 use palette::{Srgb, FromColor, Hsv};
-use cortex_m::peripheral::SYST;
 use stm32f0xx_hal::{
+    delay::Delay,
     gpio::{gpioa, gpiob, Input},
     pac,
     prelude::*,
@@ -15,7 +15,6 @@ use stm32f0xx_hal::{
     time::Hertz,
 };
 
-use stm32f0_examples::time_source::{HalTimeSource, HalInstant, HalDuration};
 use stm32f0_examples::rgb_led::PwmRgbLed;
 
 use rgb_sequencer::{
@@ -25,6 +24,7 @@ use rgb_sequencer::{
     RgbSequencer,
     TimeSource,
     TimeDuration,
+    TimeInstant,
     TransitionStyle,
 };
 
@@ -37,18 +37,77 @@ pub type Led = PwmRgbLed<
 
 /// Maximum number of steps that can be stored in a sequence
 pub const SEQUENCE_STEP_SIZE: usize = 8;
-pub const FRAME_RATE_MS: u32 = 16;
+pub const FRAME_RATE_MS: u64 = 16;
 
-/// SysTick interrupt handler - called every 1ms
-#[cortex_m_rt::exception]
-fn SysTick() {
-    stm32f0_examples::time_source::tick();
+/// Duration type using milliseconds
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct BlinkyDuration(pub u64);
+
+impl TimeDuration for BlinkyDuration {
+    const ZERO: Self = BlinkyDuration(0);
+
+    fn as_millis(&self) -> u64 {
+        self.0
+    }
+
+    fn from_millis(millis: u64) -> Self {
+        BlinkyDuration(millis)
+    }
+
+    fn saturating_sub(self, other: Self) -> Self {
+        BlinkyDuration(self.0.saturating_sub(other.0))
+    }
 }
 
-/// Configure the system clock to run at maximum speed
+/// Instant type representing a point in time (in milliseconds)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct BlinkyInstant(u64);
+
+impl TimeInstant for BlinkyInstant {
+    type Duration = BlinkyDuration;
+
+    fn duration_since(&self, earlier: Self) -> Self::Duration {
+        BlinkyDuration(self.0.saturating_sub(earlier.0))
+    }
+
+    fn checked_add(self, duration: Self::Duration) -> Option<Self> {
+        Some(BlinkyInstant(self.0.saturating_add(duration.0)))
+    }
+
+    fn checked_sub(self, duration: Self::Duration) -> Option<Self> {
+        self.0.checked_sub(duration.0).map(BlinkyInstant)
+    }
+}
+
+/// Simple time source that increments on each call
 /// 
-/// # Returns
-/// The configured RCC (Reset and Clock Control) peripheral
+/// This works because we call `now()` only after each service/delay cycle,
+/// so the time advances naturally with the delays.
+pub struct BlinkyTimeSource {
+    current_time: core::cell::Cell<u64>,
+}
+
+impl BlinkyTimeSource {
+    pub fn new() -> Self {
+        Self {
+            current_time: core::cell::Cell::new(0),
+        }
+    }
+
+    /// Advance time by the given duration
+    pub fn advance(&self, duration: BlinkyDuration) {
+        let current = self.current_time.get();
+        self.current_time.set(current + duration.as_millis());
+    }
+}
+
+impl TimeSource<BlinkyInstant> for BlinkyTimeSource {
+    fn now(&self) -> BlinkyInstant {
+        BlinkyInstant(self.current_time.get())
+    }
+}
+
+/// Configure the system clock
 fn configure_clock(
     flash: &mut pac::FLASH,
     rcc: pac::RCC,
@@ -61,41 +120,7 @@ fn configure_clock(
     rcc
 }
 
-/// Configure SysTick timer for 1ms interrupts
-/// 
-/// The SysTick interrupt handler increments a global millisecond counter
-/// used for timing throughout the application.
-fn configure_systick(
-    rcc: &stm32f0xx_hal::rcc::Rcc,
-    syst: &mut SYST,
-) {
-    let sysclk_freq = rcc.clocks.sysclk();
-    
-    syst.set_clock_source(cortex_m::peripheral::syst::SystClkSource::Core);
-    syst.set_reload((sysclk_freq.0 / 1_000) - 1);
-    syst.clear_current();
-    syst.enable_counter();
-    syst.enable_interrupt();
-    
-    rprintln!("SysTick configured for 1ms interrupts");
-}
-
-/// Configure PWM for LED 1 using TIM3
-/// 
-/// Sets up TIM3 with PWM channels for RGB control:
-/// - Red: PA6 (TIM3_CH1)
-/// - Green: PA7 (TIM3_CH2)
-/// - Blue: PB0 (TIM3_CH3)
-/// 
-/// # Arguments
-/// * `pa6` - GPIO pin for red channel
-/// * `pa7` - GPIO pin for green channel
-/// * `pb0` - GPIO pin for blue channel
-/// * `tim3` - TIM3 peripheral
-/// * `rcc` - Reference to RCC for clock configuration
-/// 
-/// # Returns
-/// Configured `Led1` instance (common anode)
+/// Configure PWM for LED using TIM3
 fn setup_led(
     pa6: gpioa::PA6<Input<stm32f0xx_hal::gpio::Floating>>,
     pa7: gpioa::PA7<Input<stm32f0xx_hal::gpio::Floating>>,
@@ -114,81 +139,76 @@ fn setup_led(
     let pwm_freq = Hertz(1_000);
     let (red, green, blue) = pwm::tim3(tim3, pins, rcc, pwm_freq);
     
-    rprintln!("LED 1 configured on TIM3 (PA6, PA7, PB0)");
+    rprintln!("LED configured on TIM3 (PA6, PA7, PB0)");
     
     // Common anode = true
     PwmRgbLed::new(red, green, blue, true)
 }
 
-/// Sleep until next service time is needed
-fn sleep(delay: Option<HalDuration>, time_source: &HalTimeSource) {
-    if let Some(delay) = delay {
-        let delay_ms = delay.as_millis();
-        if delay_ms > 0 {
-            // For step transitions, use WFI
-            cortex_m::asm::wfi();
-        } else {
-            // For linear transitions, target ~60fps (16ms)
-            let current_time = time_source.now();
-            let target_time = current_time.as_millis().wrapping_add(FRAME_RATE_MS);
-            loop {
-                cortex_m::asm::wfi();
-                let now = time_source.now();
-                if now.as_millis().wrapping_sub(target_time) < 0x8000_0000 {
-                    break;
-                }
-            }
-        }
-    } else {
-        // Both paused - just sleep and let interrupts wake us
-        cortex_m::asm::wfi();
-    }
-}
-
 #[entry]
 fn main() -> ! {
     rtt_init_print!();
-    rprintln!("=== RGB LED Rainbow Capture Example ===");
+    rprintln!("=== Simple RGB LED Blinky Example ===");
     rprintln!("Starting initialization...");
 
     // Initialize hardware
     let mut dp = pac::Peripherals::take().unwrap();
-    let mut cp = cortex_m::Peripherals::take().unwrap();
+    let cp = cortex_m::Peripherals::take().unwrap();
 
-    // Configure system clock and SysTick
     let mut rcc = configure_clock(&mut dp.FLASH, dp.RCC);
-    configure_systick(&rcc, &mut cp.SYST);
 
-    // Split GPIO ports
+    // Create delay provider using SysTick
+    let mut delay = Delay::new(cp.SYST, &rcc);
+
     let gpioa = dp.GPIOA.split(&mut rcc);
     let gpiob = dp.GPIOB.split(&mut rcc);
 
-    // Setup hardware components
     let led = setup_led(gpioa.pa6, gpioa.pa7, gpiob.pb0, dp.TIM3, &mut rcc);
-    let time_source = HalTimeSource::new();
+    let time_source = BlinkyTimeSource::new();
 
     rprintln!("=== Hardware Ready ===");
 
-    let mut sequencer: RgbSequencer<HalInstant, Led, HalTimeSource, SEQUENCE_STEP_SIZE>
+    let mut sequencer: RgbSequencer<BlinkyInstant, Led, BlinkyTimeSource, SEQUENCE_STEP_SIZE>
         = RgbSequencer::new(led, &time_source);
 
-    let sequence = RgbSequence::<HalDuration, SEQUENCE_STEP_SIZE>::new()
-        .step(Srgb::from_color(Hsv::new(0.0, 1.0, 1.0)), HalDuration(500), TransitionStyle::Step,)   // Red
-        .step(COLOR_OFF, HalDuration(500), TransitionStyle::Linear,)                                 // Off
-        .step(Srgb::from_color(Hsv::new(120.0, 1.0, 1.0)), HalDuration(500), TransitionStyle::Step,) // Green
-        .step(COLOR_OFF, HalDuration(500), TransitionStyle::Linear,)                                 // Off
-        .step(Srgb::from_color(Hsv::new(240.0, 1.0, 1.0)), HalDuration(500), TransitionStyle::Step,) // Blue
-        .step(COLOR_OFF, HalDuration(500), TransitionStyle::Linear,)                                 // Off
-        .loop_count(LoopCount::Infinite)
+    // Create a sequence
+    let sequence = RgbSequence::<BlinkyDuration, SEQUENCE_STEP_SIZE>::new()
+        .step(Srgb::from_color(Hsv::new(60.0, 1.0, 1.0)), BlinkyDuration(0), TransitionStyle::Step,)  // Yellow
+        .step(COLOR_OFF, BlinkyDuration(1000), TransitionStyle::Linear,)                              // Fade out
+        .step(Srgb::from_color(Hsv::new(180.0, 1.0, 1.0)), BlinkyDuration(0), TransitionStyle::Step,) // Cyan
+        .step(COLOR_OFF, BlinkyDuration(1000), TransitionStyle::Linear,)                              // Fade out
+        .step(Srgb::from_color(Hsv::new(300.0, 1.0, 1.0)), BlinkyDuration(0), TransitionStyle::Step,) // Purple
+        .step(COLOR_OFF, BlinkyDuration(1000), TransitionStyle::Linear,)                              // Fade out
+        .loop_count(LoopCount::Finite(3))
+        .landing_color(Srgb::new(1.0, 1.0, 1.0))
         .build()
         .unwrap();
 
     sequencer.load(sequence);
     sequencer.start().unwrap();
 
+    rprintln!("Sequence started");
+
     loop {
-        if let Ok(delay) = sequencer.service() {
-            sleep(delay, &time_source);
+        if let Some(delay_duration) = sequencer.service().unwrap() {
+            if delay_duration == TimeDuration::ZERO {
+                // Linear transition - maintain frame rate
+                delay.delay_ms(FRAME_RATE_MS as u32);
+                time_source.advance(BlinkyDuration(FRAME_RATE_MS));
+            } else {
+                // Step transition - delay for the specified time
+                delay.delay_ms(delay_duration.as_millis() as u32);
+                time_source.advance(delay_duration);
+            }
+        } else {
+            // Sequence complete
+            break;
         }
+    }
+
+    rprintln!("Sequence complete");
+    
+    loop {
+        cortex_m::asm::wfi();
     }
 }

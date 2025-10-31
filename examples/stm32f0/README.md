@@ -2,6 +2,7 @@
 
 Examples for STM32F NUCLEO-F072RB board.
 
+- **blinky** - Simple bare-metal example demonstrating basic LED sequencing with a clean, blocking delay approach. Perfect starting point for learning the library.
 - **rainbow_capture** - Bare-metal example demonstrating smooth rainbow transitions with interactive color capture using SysTick timing and two RGB LEDs.
 - **mode_switcher** - Bare-metal example demonstrating coordinated multi-LED control with mode switching using SysTick timing. Features a **function-based breathing sequence** using sine wave animation.
 
@@ -9,15 +10,15 @@ Examples for STM32F NUCLEO-F072RB board.
 
 ### RGB LED Connections
 
-These examples use **two RGB LEDs**. Connect them to the following pins with appropriate current-limiting resistors (220Ω - 330Ω):
+These examples use **one or two RGB LEDs** depending on the example. Connect them to the following pins with appropriate current-limiting resistors (220Ω - 330Ω):
 
-**LED 1:**
+**LED 1 (used by all examples):**
 - **Red**: PA6 (TIM3_CH1)
 - **Green**: PA7 (TIM3_CH2)
 - **Blue**: PB0 (TIM3_CH3)
 - **Common**: 3.3V (for common anode) or GND (for common cathode)
 
-**LED 2:**
+**LED 2 (used by rainbow_capture and mode_switcher):**
 - **Red**: PA8 (TIM1_CH1)
 - **Green**: PA9 (TIM1_CH2)
 - **Blue**: PA10 (TIM1_CH3)
@@ -25,7 +26,7 @@ These examples use **two RGB LEDs**. Connect them to the following pins with app
 
 ### User Button
 
-The examples use the onboard user button on PC13 (blue button on Nucleo board).
+The rainbow_capture and mode_switcher examples use the onboard user button on PC13 (blue button on Nucleo board).
 
 ## Building and Flashing
 
@@ -66,6 +67,38 @@ let led = PwmRgbLed::new(red_pwm, green_pwm, blue_pwm, false);
 ```
 
 ## Examples
+
+### blinky
+
+A simple, clean example demonstrating basic LED sequencing with blocking delays. This is the perfect starting point for learning the library.
+
+**Features:**
+- **Single LED**: Controls one RGB LED through a colorful sequence
+- **Blocking approach**: Uses HAL's `Delay` for simple, easy-to-understand timing
+- **Simple time source**: Advances time manually after each delay
+- **Finite sequence**: Runs 3 loops then displays a landing color
+- **Zero-duration steps**: Demonstrates instant color changes before fade-outs
+- No interrupt handlers or manual WFI calls needed
+
+**What you'll learn:**
+- Basic sequencer usage with minimal setup
+- How to create sequences with steps and transitions
+- The difference between Step (instant) and Linear (fade) transitions
+- Zero-duration steps as color waypoints
+- Finite loop counts with landing colors
+- Simple blocking delay pattern
+
+**Behavior:**
+1. LED fades from Yellow to off over 1 second
+2. LED fades from Cyan to off over 1 second
+3. LED fades from Purple to off over 1 second
+4. Sequence repeats 3 times total
+5. After completion, LED shows white (landing color)
+
+**Run:**
+```bash
+cargo run --release --bin blinky
+```
 
 ### rainbow_capture
 
