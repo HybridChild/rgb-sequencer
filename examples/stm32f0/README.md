@@ -2,9 +2,9 @@
 
 Examples for STM32F NUCLEO-F072RB board.
 
-- **blinky** - Simple bare-metal example demonstrating basic RGB LED sequencing with a clean, blocking delay approach. Perfect starting point for learning the library.
-- **mode_switcher** - Bare-metal example demonstrating RGB LED control with mode switching using SysTick timing. Features a **function-based breathing sequence** using sine wave animation.
-- **rainbow_capture** - Bare-metal example demonstrating smooth rainbow transitions with interactive color capture using SysTick timing and two RGB LEDs.
+- **[blinky](#blinky)** - Simple bare-metal example demonstrating basic RGB LED sequencing with a clean, blocking delay approach. Perfect starting point for learning the library.
+- **[mode_switcher](#mode_switcher)** - Bare-metal example demonstrating RGB LED control with mode switching using SysTick timing. Features a **function-based breathing sequence** using sine wave animation.
+- **[rainbow_capture](#rainbow_capture)** - Bare-metal example demonstrating smooth rainbow transitions with interactive color capture using SysTick timing and two RGB LEDs.
 
 ## Hardware Setup
 

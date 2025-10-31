@@ -4,14 +4,14 @@ Embassy async examples for STM32F NUCLEO-F072RB board.
 
 Both examples demonstrate advanced embedded Rust patterns including **enum wrapper collections** for managing varying LED types (TIM1 and TIM3) in a single heterogeneous collection without heap allocation, enabling efficient multi-LED control with zero-cost abstraction.
 
-- **rainbow_capture** - Embassy async example demonstrating smooth rainbow transitions with interactive color capture using async tasks, channels, and signals. Shows **individual LED control** with the enum wrapper pattern.
-- **mode_switcher** - Embassy async example demonstrating coordinated multi-LED control with mode switching using async tasks and channels. Features a **function-based breathing sequence** using sine wave animation and **synchronized LED control** with the enum wrapper pattern.
+- **[mode_switcher](#mode_switcher)** - Embassy async example demonstrating coordinated multi-LED control with mode switching using async tasks and channels. Features a **function-based breathing sequence** using sine wave animation and **synchronized LED control** with the enum wrapper pattern.
+- **[rainbow_capture](#rainbow_capture)** - Embassy async example demonstrating smooth rainbow transitions with interactive color capture using async tasks, channels, and signals. Shows **individual LED control** with the enum wrapper pattern.
 
 ## Hardware Setup
 
 ### RGB LED Connections
 
-These examples use **two RGB LEDs**. Connect them to the following pins with appropriate current-limiting resistors (220Ω - 330Ω):
+These examples use **two external RGB LEDs**. Connect them to the following pins with appropriate current-limiting resistors:
 
 **LED 1:**
 - **Red**: PA6 (TIM3_CH1)
