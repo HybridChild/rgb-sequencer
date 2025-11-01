@@ -77,7 +77,7 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
     ///   - `Some(duration)` = wait this long before next update
     ///   - `None` = animation complete
     pub fn from_function(
-        start_color: Srgb,
+        base_color: Srgb,
         color_fn: fn(Srgb, D) -> Srgb,
         timing_fn: fn(D) -> Option<D>,
     ) -> Self {
@@ -86,7 +86,7 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
             loop_count: LoopCount::Finite(1),
             landing_color: None,
             loop_duration: D::ZERO,
-            start_color: Some(start_color),
+            start_color: Some(base_color),
             color_fn: Some(color_fn),
             timing_fn: Some(timing_fn),
         }
