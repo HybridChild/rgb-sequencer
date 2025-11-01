@@ -19,7 +19,7 @@ pub enum RgbCommand {
     /// Load a new sequence on a specific LED
     Load {
         led_id: LedId,
-        sequence: RgbSequence<EmbassyDuration, SEQUENCE_STEP_SIZE>,
+        sequence: RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACITY>,
     },
     
     /// Start a specific LED's sequence
@@ -55,4 +55,4 @@ pub static RGB_COMMAND_CHANNEL: Channel<ThreadModeRawMutex, RgbCommand, 4> = Cha
 pub static COLOR_RESPONSE_SIGNAL: Signal<ThreadModeRawMutex, Srgb> = Signal::new();
 
 /// Maximum number of steps that can be stored in a sequence
-pub const SEQUENCE_STEP_SIZE: usize = 8;
+pub const SEQUENCE_STEP_CAPACITY: usize = 8;

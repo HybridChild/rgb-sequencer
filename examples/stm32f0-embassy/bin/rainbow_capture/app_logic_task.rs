@@ -5,11 +5,11 @@ use rgb_sequencer::{RgbSequence, TransitionStyle, LoopCount};
 
 use crate::types::{
     RgbCommand, BUTTON_SIGNAL, RGB_COMMAND_CHANNEL, COLOR_RESPONSE_SIGNAL,
-    EmbassyDuration, SEQUENCE_STEP_SIZE, LedId,
+    EmbassyDuration, SEQUENCE_STEP_CAPACITY, LedId,
 };
 
 /// Create a rainbow cycle sequence (red -> green -> blue)
-fn create_rainbow_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_SIZE> {
+fn create_rainbow_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACITY> {
     RgbSequence::new()
         .step(
             Srgb::from_color(Hsv::new(0.0, 1.0, 1.0)),      // Red
@@ -32,7 +32,7 @@ fn create_rainbow_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_SIZE>
 }
 
 /// Create a static color sequence that holds a single color
-fn create_static_sequence(color: Srgb) -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_SIZE> {
+fn create_static_sequence(color: Srgb) -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACITY> {
     RgbSequence::new()
         .step(
             color,
@@ -48,7 +48,7 @@ fn create_transition_sequence(
     from: Srgb,
     to: Srgb,
     duration_ms: u64,
-) -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_SIZE> {
+) -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACITY> {
     RgbSequence::new()
         .start_color(from)
         .step(

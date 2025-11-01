@@ -7,7 +7,15 @@ use heapless::Vec;
 use palette::Srgb;
 use rgb_sequencer::{RgbSequencer, RgbLed};
 
-use crate::types::{RgbCommand, RGB_COMMAND_CHANNEL, EmbassyDuration, EmbassyInstant, EmbassyTimeSource, SEQUENCE_STEP_SIZE, LedId};
+use crate::types::{
+    RgbCommand,
+    RGB_COMMAND_CHANNEL,
+    EmbassyDuration,
+    EmbassyInstant,
+    EmbassyTimeSource,
+    LedId,
+    SEQUENCE_STEP_CAPACITY,
+};
 
 // ============================================================================
 // PWM-based RGB LED implementation for Embassy
@@ -86,7 +94,7 @@ impl<'d> RgbLed for AnyLed<'d> {
 /// while maintaining zero-cost abstraction.
 struct SequencerCollection<'t, const CAPACITY: usize> {
     sequencers: Vec<
-        RgbSequencer<'t, EmbassyInstant, AnyLed<'t>, EmbassyTimeSource, SEQUENCE_STEP_SIZE>,
+        RgbSequencer<'t, EmbassyInstant, AnyLed<'t>, EmbassyTimeSource, SEQUENCE_STEP_CAPACITY>,
         CAPACITY
     >,
     time_source: &'t EmbassyTimeSource,
@@ -118,7 +126,7 @@ impl<'t, const CAPACITY: usize> SequencerCollection<'t, CAPACITY> {
     }
     
     /// Get a mutable reference to a sequencer by LED ID
-    fn get_mut(&mut self, led_id: LedId) -> Option<&mut RgbSequencer<'t, EmbassyInstant, AnyLed<'t>, EmbassyTimeSource, SEQUENCE_STEP_SIZE>> {
+    fn get_mut(&mut self, led_id: LedId) -> Option<&mut RgbSequencer<'t, EmbassyInstant, AnyLed<'t>, EmbassyTimeSource, SEQUENCE_STEP_CAPACITY>> {
         let index = match led_id {
             LedId::Led1 => 0,
             LedId::Led2 => 1,

@@ -4,7 +4,7 @@ use embassy_time::Duration;
 use palette::{Srgb, FromColor, Hsv};
 use rgb_sequencer::{RgbSequence, TransitionStyle, LoopCount, TimeDuration};
 
-use crate::types::{Mode, RgbCommand, BUTTON_SIGNAL, RGB_COMMAND_CHANNEL, EmbassyDuration, SEQUENCE_STEP_SIZE};
+use crate::types::{Mode, RgbCommand, BUTTON_SIGNAL, RGB_COMMAND_CHANNEL, EmbassyDuration, SEQUENCE_STEP_CAPACITY};
 
 /// Sine-based breathing effect function
 /// 
@@ -57,7 +57,7 @@ fn continuous_timing(_elapsed: EmbassyDuration) -> Option<EmbassyDuration> {
 /// Uses a sine wave to create a smooth breathing effect, demonstrating
 /// the function-based sequence feature. The brightness oscillates between
 /// 10% and 100% over a 4-second cycle.
-fn create_breathing_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_SIZE> {
+fn create_breathing_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACITY> {
     let white = Srgb::new(1.0, 1.0, 1.0);
     
     RgbSequence::from_function(
@@ -68,7 +68,7 @@ fn create_breathing_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_SIZ
 }
 
 /// Create a rainbow cycle sequence
-fn create_rainbow_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_SIZE> {
+fn create_rainbow_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACITY> {
     RgbSequence::new()
         .step(
             Srgb::from_color(Hsv::new(0.0, 1.0, 1.0)),
@@ -91,7 +91,7 @@ fn create_rainbow_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_SIZE>
 }
 
 /// Create a police lights sequence
-fn create_police_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_SIZE> {
+fn create_police_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACITY> {
     let red = Srgb::new(1.0, 0.0, 0.0);
     let blue = Srgb::new(0.0, 0.0, 1.0);
     let off = Srgb::new(0.0, 0.0, 0.0);
@@ -111,7 +111,7 @@ fn create_police_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_SIZE> 
 }
 
 /// Get the sequence for a given mode
-fn get_sequence_for_mode(mode: Mode) -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_SIZE> {
+fn get_sequence_for_mode(mode: Mode) -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACITY> {
     match mode {
         Mode::Rainbow => create_rainbow_sequence(),
         Mode::Police => create_police_sequence(),

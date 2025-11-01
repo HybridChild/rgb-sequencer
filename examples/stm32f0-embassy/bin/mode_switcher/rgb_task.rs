@@ -6,7 +6,7 @@ use embassy_futures::select::{select, Either};
 use palette::Srgb;
 use rgb_sequencer::{RgbSequencer, RgbLed};
 
-use crate::types::{RgbCommand, RGB_COMMAND_CHANNEL, EmbassyInstant, EmbassyTimeSource, SEQUENCE_STEP_SIZE};
+use crate::types::{RgbCommand, RGB_COMMAND_CHANNEL, EmbassyInstant, EmbassyTimeSource, SEQUENCE_STEP_CAPACITY};
 
 // ============================================================================
 // PWM-based RGB LED implementation for Embassy
@@ -70,7 +70,7 @@ pub async fn rgb_task(
     let time_source = EmbassyTimeSource::new();
     
     // Create sequencer
-    let mut sequencer = RgbSequencer::<EmbassyInstant, _, _, SEQUENCE_STEP_SIZE>::new(led_1, &time_source);
+    let mut sequencer = RgbSequencer::<EmbassyInstant, _, _, SEQUENCE_STEP_CAPACITY>::new(led_1, &time_source);
     
     info!("Sequencer created");
     
@@ -106,7 +106,7 @@ pub async fn rgb_task(
 
 /// Service the sequencer and return the appropriate delay.
 fn service_and_get_delay(
-    sequencer: &mut RgbSequencer<EmbassyInstant, EmbassyPwmRgbLed<TIM3>, EmbassyTimeSource, SEQUENCE_STEP_SIZE>
+    sequencer: &mut RgbSequencer<EmbassyInstant, EmbassyPwmRgbLed<TIM3>, EmbassyTimeSource, SEQUENCE_STEP_CAPACITY>
 ) -> Duration {
     if !sequencer.is_running() {
         return Duration::from_secs(3600);

@@ -36,7 +36,7 @@ pub type Led1 = PwmRgbLed<
 >;
 
 /// Maximum number of steps that can be stored in a sequence
-pub const SEQUENCE_STEP_SIZE: usize = 8;
+pub const SEQUENCE_STEP_CAPACITY: usize = 8;
 pub const FRAME_RATE_MS: u64 = 16;
 
 /// Duration type using milliseconds
@@ -168,11 +168,11 @@ fn main() -> ! {
 
     rprintln!("=== Hardware Ready ===");
 
-    let mut sequencer: RgbSequencer<BlinkyInstant, Led1, BlinkyTimeSource, SEQUENCE_STEP_SIZE>
+    let mut sequencer: RgbSequencer<BlinkyInstant, Led1, BlinkyTimeSource, SEQUENCE_STEP_CAPACITY>
         = RgbSequencer::new(led_1, &time_source);
 
     // Create a sequence
-    let sequence = RgbSequence::<BlinkyDuration, SEQUENCE_STEP_SIZE>::new()
+    let sequence = RgbSequence::<BlinkyDuration, SEQUENCE_STEP_CAPACITY>::new()
         .step(Srgb::from_color(Hsv::new(60.0, 1.0, 1.0)), BlinkyDuration(0), TransitionStyle::Step,)  // Yellow
         .step(COLOR_OFF, BlinkyDuration(1000), TransitionStyle::Linear,)                              // Fade out
         .step(Srgb::from_color(Hsv::new(180.0, 1.0, 1.0)), BlinkyDuration(0), TransitionStyle::Step,) // Cyan

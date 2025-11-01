@@ -31,7 +31,7 @@ impl Mode {
 /// Commands that can be sent to the RGB task
 pub enum RgbCommand {
     /// Load a new sequence
-    Load(RgbSequence<EmbassyDuration, SEQUENCE_STEP_SIZE>),
+    Load(RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACITY>),
 }
 
 /// Signal from button_task to app_logic_task when button is pressed
@@ -41,4 +41,4 @@ pub static BUTTON_SIGNAL: Signal<ThreadModeRawMutex, ()> = Signal::new();
 pub static RGB_COMMAND_CHANNEL: Channel<ThreadModeRawMutex, RgbCommand, 2> = Channel::new();
 
 /// Maximum number of steps that can be stored in a sequence
-pub const SEQUENCE_STEP_SIZE: usize = 8;
+pub const SEQUENCE_STEP_CAPACITY: usize = 8;
