@@ -39,7 +39,7 @@ palette = { version = "0.7.6", default-features = false, features = ["libm"] }
 use rgb_sequencer::{RgbSequencer, RgbSequence, RgbLed, TimeSource, TransitionStyle, LoopCount};
 use palette::Srgb;
 
-// 1. Implement RgbLed trait for your hardware
+// 1. Implement the RgbLed trait for your hardware
 struct MyLed {
     // Your GPIO pins, PWM channels, etc.
 }
@@ -51,7 +51,7 @@ impl RgbLed for MyLed {
     }
 }
 
-// 2. Implement TimeSource trait for your time system
+// 2. Implement the TimeSource trait for your timing system
 struct MyTimer;
 impl TimeSource<MyInstant> for MyTimer {
     fn now(&self) -> MyInstant {
@@ -100,4 +100,4 @@ loop {
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/HybridChild/rgb-sequencer/blob/main/LICENSE) file for details.
