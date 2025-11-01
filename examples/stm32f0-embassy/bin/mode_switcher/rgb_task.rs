@@ -6,7 +6,7 @@ use embassy_futures::select::{select, Either};
 use palette::Srgb;
 use rgb_sequencer::{RgbSequencer, RgbLed};
 
-use crate::types::{RgbCommand, RGB_COMMAND_CHANNEL, EmbassyInstant, EmbassyTimeSource, SEQUENCE_STEP_CAPACITY};
+use crate::types::{RGB_COMMAND_CHANNEL, EmbassyInstant, EmbassyTimeSource, SEQUENCE_STEP_CAPACITY};
 
 // ============================================================================
 // PWM-based RGB LED implementation for Embassy
@@ -84,17 +84,26 @@ pub async fn rgb_task(
             Timer::after(next_service_delay)
         ).await {
             Either::First(command) => {
-                match command {
-                    RgbCommand::Load(sequence) => {
-                        info!("Loading sequence");
-                        sequencer.load(sequence);
+                info!("Handling command");
+                
+                // Use the library's handle_action method!
+                // The Load action will load and start the sequence
+                match command.action {
+                    rgb_sequencer::SequencerAction::Load(seq) => {
+                        sequencer.load(seq);
                         if let Err(e) = sequencer.start() {
                             info!("Start error: {:?}", e);
                         }
-                        // Service to set color and get delay
-                        next_service_delay = service_and_get_delay(&mut sequencer);
+                    }
+                    _ => {
+                        if let Err(e) = sequencer.handle_action(command.action) {
+                            info!("Action error: {:?}", e);
+                        }
                     }
                 }
+                
+                // Service to set color and get delay
+                next_service_delay = service_and_get_delay(&mut sequencer);
             }
             Either::Second(_) => {
                 // Time to service the sequencer

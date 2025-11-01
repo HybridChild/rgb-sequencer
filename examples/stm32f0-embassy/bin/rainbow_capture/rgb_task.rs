@@ -7,15 +7,7 @@ use heapless::Vec;
 use palette::Srgb;
 use rgb_sequencer::{RgbSequencer, RgbLed};
 
-use crate::types::{
-    RgbCommand,
-    RGB_COMMAND_CHANNEL,
-    EmbassyDuration,
-    EmbassyInstant,
-    EmbassyTimeSource,
-    LedId,
-    SEQUENCE_STEP_CAPACITY,
-};
+use crate::types::{ExtendedCommand, RGB_COMMAND_CHANNEL, EmbassyDuration, EmbassyInstant, EmbassyTimeSource, SEQUENCE_STEP_CAPACITY, LedId};
 
 // ============================================================================
 // PWM-based RGB LED implementation for Embassy
@@ -226,51 +218,24 @@ pub async fn rgb_task(
     }
 }
 
-/// Handle incoming commands
+/// Handle incoming commands using the library's handle_action method
 fn handle_command(
-    command: RgbCommand,
+    command: ExtendedCommand,
     collection: &mut SequencerCollection<4>,
 ) {
     match command {
-        RgbCommand::Load { led_id, sequence } => {
-            info!("Loading sequence on {:?}", led_id);
-            if let Some(sequencer) = collection.get_mut(led_id) {
-                sequencer.load(sequence);
-            } else {
-                info!("Invalid LED ID: {:?}", led_id);
-            }
-        }
-        RgbCommand::Start { led_id } => {
-            info!("Starting {:?}", led_id);
-            if let Some(sequencer) = collection.get_mut(led_id) {
-                if let Err(e) = sequencer.start() {
-                    info!("Start error on {:?}: {:?}", led_id, e);
+        ExtendedCommand::Sequencer(cmd) => {
+            info!("Handling sequencer command for {:?}", cmd.led_id);
+            if let Some(sequencer) = collection.get_mut(cmd.led_id) {
+                // Use the library's handle_action method!
+                if let Err(e) = sequencer.handle_action(cmd.action) {
+                    info!("Action error on {:?}: {:?}", cmd.led_id, e);
                 }
             } else {
-                info!("Invalid LED ID: {:?}", led_id);
+                info!("Invalid LED ID: {:?}", cmd.led_id);
             }
         }
-        RgbCommand::Pause { led_id } => {
-            info!("Pausing {:?}", led_id);
-            if let Some(sequencer) = collection.get_mut(led_id) {
-                if let Err(e) = sequencer.pause() {
-                    info!("Pause error on {:?}: {:?}", led_id, e);
-                }
-            } else {
-                info!("Invalid LED ID: {:?}", led_id);
-            }
-        }
-        RgbCommand::Resume { led_id } => {
-            info!("Resuming {:?}", led_id);
-            if let Some(sequencer) = collection.get_mut(led_id) {
-                if let Err(e) = sequencer.resume() {
-                    info!("Resume error on {:?}: {:?}", led_id, e);
-                }
-            } else {
-                info!("Invalid LED ID: {:?}", led_id);
-            }
-        }
-        RgbCommand::GetColor { led_id, response } => {
+        ExtendedCommand::GetColor { led_id, response } => {
             if let Some(sequencer) = collection.get_mut(led_id) {
                 let color = sequencer.current_color();
                 info!("Color query for {:?}: R={} G={} B={}", 

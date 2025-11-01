@@ -2,9 +2,9 @@ use defmt::info;
 use embassy_stm32::gpio::Output;
 use embassy_time::Duration;
 use palette::{Srgb, FromColor, Hsv};
-use rgb_sequencer::{RgbSequence, TransitionStyle, LoopCount, TimeDuration};
+use rgb_sequencer::{RgbSequence, TransitionStyle, LoopCount, TimeDuration, SequencerCommand, SequencerAction};
 
-use crate::types::{Mode, RgbCommand, BUTTON_SIGNAL, RGB_COMMAND_CHANNEL, EmbassyDuration, SEQUENCE_STEP_CAPACITY};
+use crate::types::{Mode, BUTTON_SIGNAL, RGB_COMMAND_CHANNEL, EmbassyDuration, SEQUENCE_STEP_CAPACITY};
 
 /// Sine-based breathing effect function
 /// 
@@ -143,11 +143,14 @@ pub async fn app_logic_task(mut onboard_led: Output<'static>) {
     
     let mut current_mode = Mode::Rainbow;
     
-    // Load initial sequence
+    // Load initial sequence using library's SequencerCommand
     info!("Loading initial mode: {:?}", current_mode);
     let initial_sequence = get_sequence_for_mode(current_mode);
     RGB_COMMAND_CHANNEL
-        .send(RgbCommand::Load(initial_sequence))
+        .send(SequencerCommand::new(
+            (), // Unit LED ID since we only have one LED
+            SequencerAction::Load(initial_sequence),
+        ))
         .await;
     
     update_mode_indicator(&mut onboard_led, current_mode);
@@ -164,10 +167,13 @@ pub async fn app_logic_task(mut onboard_led: Output<'static>) {
         // Update onboard LED indicator
         update_mode_indicator(&mut onboard_led, current_mode);
         
-        // Create and send new sequence
+        // Create and send new sequence using library's SequencerCommand
         let new_sequence = get_sequence_for_mode(current_mode);
         RGB_COMMAND_CHANNEL
-            .send(RgbCommand::Load(new_sequence))
+            .send(SequencerCommand::new(
+                (),
+                SequencerAction::Load(new_sequence),
+            ))
             .await;
         
         info!("New sequence sent to RGB task");

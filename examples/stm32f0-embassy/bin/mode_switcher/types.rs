@@ -1,7 +1,7 @@
 use embassy_sync::channel::Channel;
 use embassy_sync::signal::Signal;
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
-use rgb_sequencer::RgbSequence;
+use rgb_sequencer::SequencerCommand;
 
 // Re-export the time types from the library
 pub use stm32f0_embassy::time_wrapper::{EmbassyDuration, EmbassyInstant, EmbassyTimeSource};
@@ -28,17 +28,15 @@ impl Mode {
     }
 }
 
-/// Commands that can be sent to the RGB task
-pub enum RgbCommand {
-    /// Load a new sequence
-    Load(RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACITY>),
-}
+/// Since mode_switcher only has one LED, we use a unit LED ID
+pub type LedId = ();
 
 /// Signal from button_task to app_logic_task when button is pressed
 pub static BUTTON_SIGNAL: Signal<ThreadModeRawMutex, ()> = Signal::new();
 
 /// Channel for sending commands from app_logic_task to rgb_task
-pub static RGB_COMMAND_CHANNEL: Channel<ThreadModeRawMutex, RgbCommand, 2> = Channel::new();
+/// Uses the library's SequencerCommand type
+pub static RGB_COMMAND_CHANNEL: Channel<ThreadModeRawMutex, SequencerCommand<LedId, EmbassyDuration, SEQUENCE_STEP_CAPACITY>, 2> = Channel::new();
 
 /// Maximum number of steps that can be stored in a sequence
 pub const SEQUENCE_STEP_CAPACITY: usize = 8;
