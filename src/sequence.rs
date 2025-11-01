@@ -611,7 +611,7 @@ mod tests {
 
         let (_, timing) = seq.evaluate(TestDuration(1000));
         assert_eq!(timing, None);
-        assert!(seq.is_complete(TestDuration(1000)));
+        assert!(seq.has_completed(TestDuration(1000)));
     }
 
     #[test]
