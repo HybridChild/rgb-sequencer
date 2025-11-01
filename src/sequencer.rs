@@ -1,3 +1,9 @@
+//! RGB LED sequencer with state management and timing control.
+//!
+//! Provides [`RgbSequencer`] which manages a single RGB LED through timed sequences,
+//! handling state transitions, timing coordination, and LED updates. Also defines
+//! the [`RgbLed`] trait for hardware abstraction.
+
 use crate::sequence::RgbSequence;
 use crate::command::SequencerAction;
 use crate::time::{TimeInstant, TimeSource};

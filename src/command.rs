@@ -1,3 +1,8 @@
+//! Command-based control structures for sequencer operations.
+//!
+//! Provides [`SequencerAction`] and [`SequencerCommand`] for command-based control,
+//! enabling patterns like message passing and multi-LED routing in task-based systems.
+
 use crate::sequence::RgbSequence;
 use crate::time::TimeDuration;
 

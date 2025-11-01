@@ -1,3 +1,10 @@
+//! RGB color sequence definitions and evaluation logic.
+//!
+//! Provides [`RgbSequence`] for defining LED animations through either step-based
+//! color waypoints or function-based algorithmic computation. Also includes
+//! [`SequenceBuilder`] for ergonomic sequence construction and [`StepPosition`]
+//! for tracking position within a sequence.
+
 use crate::time::TimeDuration;
 use crate::types::{LoopCount, SequenceError, SequenceStep, TransitionStyle};
 use crate::COLOR_OFF;

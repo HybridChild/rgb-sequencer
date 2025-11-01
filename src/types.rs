@@ -1,3 +1,8 @@
+//! Core type definitions for sequence construction and configuration.
+//!
+//! Defines [`TransitionStyle`], [`LoopCount`], [`SequenceStep`], and [`SequenceError`]
+//! used by [`RgbSequence`](crate::sequence::RgbSequence) to construct animations.
+
 use crate::time::TimeDuration;
 use palette::Srgb;
 
