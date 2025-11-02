@@ -70,7 +70,7 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
     /// reused with different colors.
     ///
     /// # Arguments
-    /// * `start_color` - The base color passed to the color function
+    /// * `base_color` - The base color passed to the color function
     /// * `color_fn` - Function that computes color based on start color and elapsed time
     /// * `timing_fn` - Function that returns when next service is needed
     ///   - `Some(Duration::ZERO)` = continuous updates (every frame)
