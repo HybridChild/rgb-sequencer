@@ -1,0 +1,19 @@
+[package]
+name = "rgb-sequencer-tools"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+rgb-sequencer = { path = "..", features = ["std"] }
+palette = { version = "0.7.6", features = ["std"] }
+embassy-time = "0.5.0"
+
+[[bin]]
+name = "sequence_memory_calculator"
+path = "sequence_memory_calculator.rs"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
