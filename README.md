@@ -617,6 +617,37 @@ These methods are useful for:
 - **UI feedback**: Displaying sequence progress to users
 - **Debugging**: Inspecting sequence state during development
 
+## Choosing Sequence Capacity
+
+The const generic parameter `N` determines how many steps a sequence can hold:
+
+```rust
+RgbSequencer<MyInstant, MyLed, MyTimer, 8>   // Up to 8 steps
+RgbSequencer<MyInstant, MyLed, MyTimer, 16>  // Up to 16 steps
+RgbSequencer<MyInstant, MyLed, MyTimer, 32>  // Up to 32 steps
+```
+
+### Guidelines
+
+- **Start with 8**: Sufficient for most simple animations (blinks, pulses, basic cycles)
+- **Use 16**: For complex multi-color sequences (rainbow cycles, multi-stage effects)
+- **Use 32+**: For elaborate shows or data-driven animations
+- **Function-based**: Don't need any steps — they compute colors algorithmically
+
+### Memory Impact
+
+Each step stores:
+- `Srgb` (12 bytes: 3x f32)
+- `Duration` (varies by implementation, typically 4-8 bytes)
+- `TransitionStyle` (1 byte enum)
+- Padding (depends on alignment)
+
+Example: With 8-byte durations, a 16-step sequence uses approximately 456 bytes of stack memory.
+
+**Calculate Exact Sizes**: Use the [memory calculator tool](tools/README.md#sequence_memory_calculator) to see detailed breakdowns for different capacities and duration types.
+
+**Tip**: Different sequencers can have different capacities. Choose based on each LED's animation complexity.
+
 # License
 
 This project is licensed under the MIT License - see the [LICENSE](https://github.com/HybridChild/rgb-sequencer/blob/main/LICENSE) file for details.
