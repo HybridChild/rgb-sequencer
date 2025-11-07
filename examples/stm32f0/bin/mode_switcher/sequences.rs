@@ -112,14 +112,14 @@ pub fn create_rainbow_sequence() -> RgbSequence<HalDuration, 16> {
 }
 
 /// Create a police lights sequence
-/// 
+///
 /// Alternates between red flashes and blue flashes with off periods,
 /// creating a police siren effect. Loops infinitely.
 pub fn create_police_sequence() -> RgbSequence<HalDuration, 16> {
     let red = Srgb::new(1.0, 0.0, 0.0);
     let blue = Srgb::new(0.0, 0.0, 1.0);
     let off = Srgb::new(0.0, 0.0, 0.0);
-    
+
     RgbSequence::new()
         .step(red, HalDuration(100), TransitionStyle::Step)
         .step(off, HalDuration(100), TransitionStyle::Step)
@@ -132,4 +132,75 @@ pub fn create_police_sequence() -> RgbSequence<HalDuration, 16> {
         .loop_count(LoopCount::Infinite)
         .build()
         .unwrap()
+}
+
+/// Flickering flame effect function
+///
+/// Simulates a flickering flame by combining multiple sine waves at different
+/// frequencies to create pseudo-random variations in brightness and color temperature.
+/// The flame color shifts between deep orange and bright yellow-orange while the
+/// brightness flickers irregularly.
+///
+/// # Arguments
+/// * `base_color` - The base color to modulate (typically orange)
+/// * `elapsed` - Time elapsed since sequence started
+///
+/// # Returns
+/// The color with modulated brightness and temperature to simulate flame flicker
+fn flame_flicker(base_color: Srgb, elapsed: HalDuration) -> Srgb {
+    let elapsed_ms = elapsed.as_millis();
+
+    // Use multiple sine waves at different frequencies to create pseudo-random flicker
+    // Main flicker: fast, irregular brightness changes (50-150ms period)
+    let fast_angle = (elapsed_ms as f32 * 0.041) * 2.0 * core::f32::consts::PI; // ~24 Hz
+    let fast_flicker = libm::sinf(fast_angle);
+
+    // Medium flicker: adds complexity (200-400ms period)
+    let med_angle = (elapsed_ms as f32 * 0.0087) * 2.0 * core::f32::consts::PI; // ~8.7 Hz
+    let med_flicker = libm::sinf(med_angle);
+
+    // Slow wave: gentle overall brightness variation (1-2s period)
+    let slow_angle = (elapsed_ms as f32 * 0.0013) * 2.0 * core::f32::consts::PI; // ~1.3 Hz
+    let slow_wave = libm::sinf(slow_angle);
+
+    // Color temperature variation (flame shifts between deep orange and bright yellow)
+    let color_angle = (elapsed_ms as f32 * 0.0031) * 2.0 * core::f32::consts::PI; // ~3.1 Hz
+    let color_shift = libm::sinf(color_angle);
+
+    // Combine flickers with different weights
+    // Fast flicker dominates (50%), medium adds complexity (30%), slow adds drift (20%)
+    let combined_flicker = 0.5 * fast_flicker + 0.3 * med_flicker + 0.2 * slow_wave;
+
+    // Map to brightness range: 0.5 (50%) to 1.0 (100%)
+    // Flames are never completely dim, but flicker noticeably
+    let brightness = 0.5 + 0.25 * (1.0 + combined_flicker);
+
+    // Color temperature: shift between deep orange (more red) and bright yellow-orange
+    // Positive color_shift = more yellow (hotter), negative = more red (cooler flame)
+    let red_component = base_color.red * brightness;
+    let green_component = base_color.green * brightness * (1.0 + 0.15 * color_shift);
+    let blue_component = base_color.blue * brightness * (1.0 + 0.3 * color_shift);
+
+    Srgb::new(
+        red_component.min(1.0),
+        green_component.min(1.0),
+        blue_component.min(1.0),
+    )
+}
+
+/// Create a flickering flame sequence using function-based animation
+///
+/// Simulates a realistic candle or torch flame with irregular flickering.
+/// The effect combines multiple sine waves at different frequencies to create
+/// complex, pseudo-random brightness and color temperature variations.
+/// The flame stays within orange/yellow tones and never goes completely dark.
+pub fn create_flame_sequence() -> RgbSequence<HalDuration, 16> {
+    // Base flame color: warm orange
+    let flame_orange = Srgb::new(1.0, 0.4, 0.0);
+
+    RgbSequence::from_function(
+        flame_orange,
+        flame_flicker,
+        continuous_timing,
+    )
 }

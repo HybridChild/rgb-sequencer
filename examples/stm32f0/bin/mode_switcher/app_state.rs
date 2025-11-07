@@ -6,7 +6,7 @@ use rgb_sequencer::{RgbSequencer, SequencerState, TimeDuration, TimeSource};
 
 use crate::button::ButtonDebouncer;
 use crate::hardware_setup::{HardwareContext, Led1};
-use crate::sequences::{create_breathing_sequence, create_rainbow_sequence, create_police_sequence};
+use crate::sequences::{create_breathing_sequence, create_rainbow_sequence, create_police_sequence, create_flame_sequence};
 
 /// Type aliases for the sequencers
 type Sequencer<'a> = RgbSequencer<'a, HalInstant, Led1, HalTimeSource, 16>;
@@ -20,6 +20,8 @@ pub enum Mode {
     Rainbow,
     /// Red/Blue alternating police lights effect
     Police,
+    /// Flickering flame effect
+    Flame,
 }
 
 impl Mode {
@@ -28,7 +30,8 @@ impl Mode {
         match self {
             Mode::Breathing => Mode::Rainbow,
             Mode::Rainbow => Mode::Police,
-            Mode::Police => Mode::Breathing,
+            Mode::Police => Mode::Flame,
+            Mode::Flame => Mode::Breathing,
         }
     }
 }
@@ -71,20 +74,21 @@ impl<'a> AppState<'a> {
     /// Load a new mode to the sequencer
     fn load_mode(&mut self, mode: Mode) {
         rprintln!("Switching to mode: {:?}", mode);
-        
+
         let sequence = match mode {
             Mode::Breathing => create_breathing_sequence(),  // Now uses function-based sine wave!
             Mode::Rainbow => create_rainbow_sequence(),
             Mode::Police => create_police_sequence(),
+            Mode::Flame => create_flame_sequence(),
         };
-        
+
         // Load and start the sequencer
         self.sequencer.load(sequence);
         self.sequencer.start().unwrap();
-        
+
         // Update onboard LED indicator
         self.update_mode_indicator(mode);
-        
+
         self.current_mode = mode;
     }
 
@@ -100,7 +104,11 @@ impl<'a> AppState<'a> {
                 self.onboard_led.set_high().unwrap();
             }
             Mode::Police => {
-                // Mode 3: LED on
+                // Mode 3: LED off
+                self.onboard_led.set_low().unwrap();
+            }
+            Mode::Flame => {
+                // Mode 4: LED on
                 self.onboard_led.set_high().unwrap();
             }
         }

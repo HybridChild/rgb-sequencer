@@ -15,6 +15,8 @@ pub enum Mode {
     Police,
     /// Slow breathing white effect
     Breathing,
+    /// Flickering flame effect
+    Flame,
 }
 
 impl Mode {
@@ -23,7 +25,8 @@ impl Mode {
         match self {
             Mode::Breathing => Mode::Rainbow,
             Mode::Rainbow => Mode::Police,
-            Mode::Police => Mode::Breathing,
+            Mode::Police => Mode::Flame,
+            Mode::Flame => Mode::Breathing,
         }
     }
 }

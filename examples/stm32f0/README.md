@@ -127,11 +127,11 @@ cargo run --release --bin blinky
 
 ### mode_switcher
 
-An RGB LED controller demonstrating mode switching with different animations. **Features function-based sequences** using sine wave mathematics for the breathing effect.
+An RGB LED controller demonstrating mode switching with different animations. **Features function-based sequences** using sine wave mathematics for the breathing and flame effects.
 
 **Features:**
-- **Three display modes**: Breathing (sine wave), Rainbow, and Police
-- **Function-based breathing sequence**: Uses algorithmic sine wave animation instead of step-based interpolation
+- **Four display modes**: Breathing (sine wave), Rainbow, Police, and Flame (flickering)
+- **Function-based sequences**: Uses algorithmic animation for breathing and flame effects instead of step-based interpolation
 - **Mode indicator**: Onboard LED (PA5) indicates current mode
 - Uses SysTick timer for precise 1ms timing
 - Efficient power management with WFI (Wait For Interrupt)
@@ -139,24 +139,28 @@ An RGB LED controller demonstrating mode switching with different animations. **
 
 **What you'll learn:**
 - **Function-based sequences**: How to create algorithmic animations using custom functions
-- **Sine wave mathematics**: Applying trigonometric functions for smooth breathing effects
+- **Sine wave mathematics**: Applying trigonometric functions for smooth breathing and flickering flame effects
+- **Multi-frequency animation**: Combining multiple sine waves to create complex, pseudo-random effects
 - Dynamic sequence loading and mode switching
 - Mode state management
 - Efficient sequencer servicing with optimal timing hints
 
 **Technical Highlights:**
-The breathing mode demonstrates the library's function-based sequence feature, where a sine wave function computes LED brightness algorithmically based on elapsed time. This approach:
-- Allows the same function to be reused with different colors
+The breathing and flame modes demonstrate the library's function-based sequence feature, where mathematical functions compute LED color and brightness algorithmically based on elapsed time. This approach:
+- **Breathing**: Uses a single sine wave for smooth, periodic brightness oscillation
+- **Flame**: Combines multiple sine waves at different frequencies (fast, medium, slow) to create realistic flickering with color temperature variation
+- Allows the same functions to be reused with different base colors
 - Provides smooth, natural-looking animations through mathematical curves
 - Uses `libm` for `no_std` sine calculations
 - Returns to the sequencer continuously for frame-by-frame updates
 
 **Behavior:**
 1. On startup, the RGB LED begins rainbow animation
-3. Press button → switches to police mode (red/blue alternating)
-2. Press again → switches to breathing mode (gentle white fade using sine wave)
-4. Press again → back to rainbow animation (cycle repeats)
-5. Onboard LED indicates mode: off = breathing, on = rainbow/police
+2. Press button → switches to police mode (red/blue alternating)
+3. Press again → switches to flame mode (flickering orange/yellow fire effect)
+4. Press again → switches to breathing mode (gentle white fade using sine wave)
+5. Press again → back to rainbow animation (cycle repeats)
+6. Onboard LED indicates mode: off = breathing, on = rainbow/police/flame
 
 **Run:**
 ```bash

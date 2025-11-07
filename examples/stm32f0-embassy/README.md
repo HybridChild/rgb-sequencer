@@ -72,11 +72,11 @@ let led = EmbassyPwmRgbLed::new(pwm, max_duty, false);
 
 ### mode_switcher
 
-A single-LED controller demonstrating Embassy's async task architecture with mode switching. **Features function-based sequences** using sine wave mathematics for the breathing effect.
+A single-LED controller demonstrating Embassy's async task architecture with mode switching. **Features function-based sequences** using sine wave mathematics for the breathing and flame effects.
 
 **Features:**
-- **Single RGB LED**: Controls one RGB LED with three different animation modes: Rainbow, Police, and Breathing
-- **Function-based breathing sequence**: Uses algorithmic sine wave animation instead of step-based interpolation
+- **Single RGB LED**: Controls one RGB LED with four different animation modes: Rainbow, Police, Flame, and Breathing
+- **Function-based sequences**: Uses algorithmic animation for breathing and flame effects instead of step-based interpolation
 - **Task-based architecture**: Three async tasks (button, app_logic, rgb)
 - **Inter-task communication**: Channels and signals for coordinated control
 - **Mode indicator**: Onboard LED shows current mode state
@@ -86,14 +86,17 @@ A single-LED controller demonstrating Embassy's async task architecture with mod
 **What you'll learn:**
 - **Embassy async patterns**: How to structure multi-task applications with channels and signals
 - **Function-based sequences**: How to create algorithmic animations using custom functions
-- **Sine wave mathematics**: Applying trigonometric functions for smooth breathing effects
+- **Sine wave mathematics**: Applying trigonometric functions for smooth breathing and flickering flame effects
+- **Multi-frequency animation**: Combining multiple sine waves to create complex, pseudo-random effects
 - Dynamic sequence loading and mode switching
 - Efficient sequencer servicing with optimal timing hints
 - Simple single-LED control with Embassy tasks
 
 **Technical Highlights:**
-The breathing mode demonstrates the library's function-based sequence feature, where a sine wave function computes LED brightness algorithmically based on elapsed time. This approach:
-- Allows the same function to be reused with different colors
+The breathing and flame modes demonstrate the library's function-based sequence feature, where mathematical functions compute LED color and brightness algorithmically based on elapsed time. This approach:
+- **Breathing**: Uses a single sine wave for smooth, periodic brightness oscillation
+- **Flame**: Combines multiple sine waves at different frequencies (fast, medium, slow) to create realistic flickering with color temperature variation
+- Allows the same functions to be reused with different base colors
 - Provides smooth, natural-looking animations through mathematical curves
 - Uses `libm` for `no_std` sine calculations
 - Integrates seamlessly with Embassy's async runtime for continuous frame-by-frame updates
@@ -101,9 +104,10 @@ The breathing mode demonstrates the library's function-based sequence feature, w
 **Behavior:**
 1. On startup, LED begins rainbow animation (synchronized)
 2. Press button → switches to police mode (red/blue alternating)
-3. Press again → breathing mode (gentle white fade using sine wave)
-4. Press again → back to rainbow mode
-5. Onboard LED indicates mode: low when breathing, high when rainbow/police
+3. Press again → switches to flame mode (flickering orange/yellow fire effect)
+4. Press again → switches to breathing mode (gentle white fade using sine wave)
+5. Press again → back to rainbow mode (cycle repeats)
+6. Onboard LED indicates mode: low when breathing, high when rainbow/police/flame
 
 **Run:**
 ```bash
