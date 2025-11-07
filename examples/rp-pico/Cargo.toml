@@ -11,6 +11,17 @@ rp2040-hal = { version = "0.11.0", features = ["rt", "critical-section-impl"] }
 rp2040-boot2 = "0.3.0"
 rp-pico = "0.9.0"
 panic-halt = "1.0.0"
+rtt-target = "0.6.2"
+libm = "0.2"
+
+[dependencies.palette]
+version = "0.7.6"
+default-features = false
+features = ["libm"]
+
+[dependencies.rgb-sequencer]
+path = "../.."
+default-features = false
 
 [lib]
 name = "rp_pico_examples"
