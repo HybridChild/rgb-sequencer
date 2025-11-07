@@ -10,8 +10,8 @@ palette = { version = "0.7.6", features = ["std"] }
 embassy-time = "0.5.0"
 
 [[bin]]
-name = "sequence_memory_calculator"
-path = "sequence_memory_calculator.rs"
+name = "memory_calculator"
+path = "memory_calculator.rs"
 
 [profile.release]
 opt-level = "z"

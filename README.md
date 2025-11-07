@@ -636,17 +636,7 @@ RgbSequencer<MyInstant, MyLed, MyTimer, 32>  // Up to 32 steps
 
 ### Memory Impact
 
-Each step stores:
-- `Srgb` (12 bytes: 3x f32)
-- `Duration` (varies by implementation, typically 4-8 bytes)
-- `TransitionStyle` (1 byte enum)
-- Padding (depends on alignment)
-
-Example: With 8-byte durations, a 16-step sequence uses approximately 456 bytes of stack memory.
-
-**Calculate Exact Sizes**: Use the [memory calculator tool](tools/README.md#sequence_memory_calculator) to see detailed breakdowns for different capacities and duration types.
-
-**Tip**: Different sequencers can have different capacities. Choose based on each LED's animation complexity.
+**Calculate Exact Sizes**: Use the [memory calculator tool](tools/README.md#memory_calculator) to see detailed breakdowns for different capacities and duration types.
 
 # License
 
