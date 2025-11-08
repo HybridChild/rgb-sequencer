@@ -5,12 +5,11 @@ use cortex_m::delay::Delay;
 use panic_halt as _;
 use rp_pico::entry;
 use rp_pico::hal::{
+    Clock, Sio,
     clocks::init_clocks_and_plls,
     pac,
-    pwm::{Channel, FreeRunning, Pwm1, Pwm2, Slice, A, B},
+    pwm::{A, B, Channel, FreeRunning, Pwm1, Pwm2, Slice},
     watchdog::Watchdog,
-    Clock,
-    Sio,
 };
 use rtt_target::{rprintln, rtt_init_print};
 
@@ -19,15 +18,8 @@ use palette::{FromColor, Hsv, Srgb};
 use rp_pico_examples::rgb_led::PwmRgbLed;
 
 use rgb_sequencer::{
-    RgbSequence,
-    RgbSequencer,
-    LoopCount,
-    TransitionStyle,
-    ServiceTiming,
-    TimeDuration,
-    TimeInstant,
-    TimeSource,
-    COLOR_OFF,
+    COLOR_OFF, LoopCount, RgbSequence, RgbSequencer, ServiceTiming, TimeDuration, TimeInstant,
+    TimeSource, TransitionStyle,
 };
 
 /// Maximum number of steps that can be stored in a sequence
@@ -187,12 +179,8 @@ fn main() -> ! {
     rprintln!("=== Hardware Ready ===");
 
     // Create sequencer
-    let mut sequencer: RgbSequencer<
-        BlinkyInstant,
-        Led1,
-        BlinkyTimeSource,
-        SEQUENCE_STEP_CAPACITY,
-    > = RgbSequencer::new(led_1, &time_source);
+    let mut sequencer: RgbSequencer<BlinkyInstant, Led1, BlinkyTimeSource, SEQUENCE_STEP_CAPACITY> =
+        RgbSequencer::new(led_1, &time_source);
 
     // Create a sequence
     let sequence = RgbSequence::<BlinkyDuration, SEQUENCE_STEP_CAPACITY>::new()

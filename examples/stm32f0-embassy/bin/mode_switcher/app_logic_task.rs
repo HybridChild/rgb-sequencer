@@ -1,40 +1,44 @@
 use defmt::info;
 use embassy_stm32::gpio::Output;
 use embassy_time::Duration;
-use palette::{Srgb, FromColor, Hsv};
-use rgb_sequencer::{RgbSequence, TransitionStyle, LoopCount, TimeDuration, SequencerCommand, SequencerAction};
+use palette::{FromColor, Hsv, Srgb};
+use rgb_sequencer::{
+    LoopCount, RgbSequence, SequencerAction, SequencerCommand, TimeDuration, TransitionStyle,
+};
 
-use crate::types::{Mode, BUTTON_SIGNAL, RGB_COMMAND_CHANNEL, EmbassyDuration, SEQUENCE_STEP_CAPACITY};
+use crate::types::{
+    BUTTON_SIGNAL, EmbassyDuration, Mode, RGB_COMMAND_CHANNEL, SEQUENCE_STEP_CAPACITY,
+};
 
 /// Sine-based breathing effect function
-/// 
+///
 /// Modulates the brightness of a base color using a sine wave to create
 /// a smooth breathing effect. The brightness oscillates between 10% and 100%
 /// over a 4-second cycle (2 seconds fade up, 2 seconds fade down).
-/// 
+///
 /// # Arguments
 /// * `base_color` - The color to modulate (typically white)
 /// * `elapsed` - Time elapsed since sequence started
-/// 
+///
 /// # Returns
 /// The color with modulated brightness based on sine wave position
 fn breathing_sine_wave(base_color: Srgb, elapsed: EmbassyDuration) -> Srgb {
     // Breathing cycle period in milliseconds (4 seconds total)
     const PERIOD_MS: u64 = 4000;
-    
+
     // Calculate position within the current breathing cycle (0.0 to 1.0)
     let elapsed_ms = elapsed.as_millis();
     let time_in_cycle = (elapsed_ms % PERIOD_MS) as f32 / PERIOD_MS as f32;
-    
+
     // Convert to angle in radians (0 to 2π)
     let angle = time_in_cycle * 2.0 * core::f32::consts::PI;
-    
+
     // Calculate brightness using sine wave
     // sin(angle) ranges from -1 to 1
     // We transform it to range from 0.1 (dim) to 1.0 (bright)
     let sine_value = libm::sinf(angle);
     let brightness = 0.1 + 0.45 * (1.0 + sine_value);
-    
+
     // Apply brightness to the base color
     Srgb::new(
         base_color.red * brightness,
@@ -44,7 +48,7 @@ fn breathing_sine_wave(base_color: Srgb, elapsed: EmbassyDuration) -> Srgb {
 }
 
 /// Timing function for continuous animation
-/// 
+///
 /// Returns Some(Duration::ZERO) to indicate that the animation should be
 /// serviced continuously (every frame) for smooth transitions. Never returns
 /// None since this is an infinite animation.
@@ -53,18 +57,14 @@ fn continuous_timing(_elapsed: EmbassyDuration) -> Option<EmbassyDuration> {
 }
 
 /// Create a breathing white sequence using function-based animation
-/// 
+///
 /// Uses a sine wave to create a smooth breathing effect, demonstrating
 /// the function-based sequence feature. The brightness oscillates between
 /// 10% and 100% over a 4-second cycle.
 fn create_breathing_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACITY> {
     let white = Srgb::new(1.0, 1.0, 1.0);
-    
-    RgbSequence::from_function(
-        white,
-        breathing_sine_wave,
-        continuous_timing,
-    )
+
+    RgbSequence::from_function(white, breathing_sine_wave, continuous_timing)
 }
 
 /// Create a rainbow cycle sequence
@@ -97,14 +97,46 @@ fn create_police_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACI
     let off = Srgb::new(0.0, 0.0, 0.0);
 
     RgbSequence::builder()
-        .step(red, EmbassyDuration(Duration::from_millis(100)), TransitionStyle::Step)
-        .step(off, EmbassyDuration(Duration::from_millis(100)), TransitionStyle::Step)
-        .step(red, EmbassyDuration(Duration::from_millis(100)), TransitionStyle::Step)
-        .step(off, EmbassyDuration(Duration::from_millis(100)), TransitionStyle::Step)
-        .step(blue, EmbassyDuration(Duration::from_millis(100)), TransitionStyle::Step)
-        .step(off, EmbassyDuration(Duration::from_millis(100)), TransitionStyle::Step)
-        .step(blue, EmbassyDuration(Duration::from_millis(100)), TransitionStyle::Step)
-        .step(off, EmbassyDuration(Duration::from_millis(100)), TransitionStyle::Step)
+        .step(
+            red,
+            EmbassyDuration(Duration::from_millis(100)),
+            TransitionStyle::Step,
+        )
+        .step(
+            off,
+            EmbassyDuration(Duration::from_millis(100)),
+            TransitionStyle::Step,
+        )
+        .step(
+            red,
+            EmbassyDuration(Duration::from_millis(100)),
+            TransitionStyle::Step,
+        )
+        .step(
+            off,
+            EmbassyDuration(Duration::from_millis(100)),
+            TransitionStyle::Step,
+        )
+        .step(
+            blue,
+            EmbassyDuration(Duration::from_millis(100)),
+            TransitionStyle::Step,
+        )
+        .step(
+            off,
+            EmbassyDuration(Duration::from_millis(100)),
+            TransitionStyle::Step,
+        )
+        .step(
+            blue,
+            EmbassyDuration(Duration::from_millis(100)),
+            TransitionStyle::Step,
+        )
+        .step(
+            off,
+            EmbassyDuration(Duration::from_millis(100)),
+            TransitionStyle::Step,
+        )
         .loop_count(LoopCount::Infinite)
         .build()
         .unwrap()
@@ -174,11 +206,7 @@ fn create_flame_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACIT
     // Base flame color: warm orange
     let flame_orange = Srgb::new(1.0, 0.4, 0.0);
 
-    RgbSequence::from_function(
-        flame_orange,
-        flame_flicker,
-        continuous_timing,
-    )
+    RgbSequence::from_function(flame_orange, flame_flicker, continuous_timing)
 }
 
 /// Get the sequence for a given mode
@@ -216,9 +244,9 @@ fn update_mode_indicator(led: &mut Output<'static>, mode: Mode) {
 #[embassy_executor::task]
 pub async fn app_logic_task(mut onboard_led: Output<'static>) {
     info!("Starting app logic task...");
-    
+
     let mut current_mode = Mode::Rainbow;
-    
+
     // Load initial sequence using library's SequencerCommand
     info!("Loading initial mode: {:?}", current_mode);
     let initial_sequence = get_sequence_for_mode(current_mode);
@@ -228,21 +256,21 @@ pub async fn app_logic_task(mut onboard_led: Output<'static>) {
             SequencerAction::Load(initial_sequence),
         ))
         .await;
-    
+
     update_mode_indicator(&mut onboard_led, current_mode);
-    
+
     loop {
         // Wait for button press signal
         BUTTON_SIGNAL.wait().await;
         info!("Button press received, cycling mode...");
-        
+
         // Cycle to next mode
         current_mode = current_mode.next();
         info!("New mode: {:?}", current_mode);
-        
+
         // Update onboard LED indicator
         update_mode_indicator(&mut onboard_led, current_mode);
-        
+
         // Create and send new sequence using library's SequencerCommand
         let new_sequence = get_sequence_for_mode(current_mode);
         RGB_COMMAND_CHANNEL
@@ -251,7 +279,7 @@ pub async fn app_logic_task(mut onboard_led: Output<'static>) {
                 SequencerAction::Load(new_sequence),
             ))
             .await;
-        
+
         info!("New sequence sent to RGB task");
     }
 }

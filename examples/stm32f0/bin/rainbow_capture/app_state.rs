@@ -1,12 +1,15 @@
 use rtt_target::rprintln;
 use stm32f0xx_hal::prelude::*;
 
-use stm32f0_examples::time_source::{HalTimeSource, HalInstant, HalDuration};
-use rgb_sequencer::{RgbSequencer, RgbSequence, ServiceTiming, TransitionStyle, SequencerState, TimeDuration, TimeSource, COLOR_OFF};
+use rgb_sequencer::{
+    COLOR_OFF, RgbSequence, RgbSequencer, SequencerState, ServiceTiming, TimeDuration, TimeSource,
+    TransitionStyle,
+};
+use stm32f0_examples::time_source::{HalDuration, HalInstant, HalTimeSource};
 
 use crate::button::ButtonDebouncer;
 use crate::hardware_setup::{HardwareContext, Led1, Led2};
-use crate::sequences::{create_rainbow_sequence, SEQUENCE_STEP_CAPACITY};
+use crate::sequences::{SEQUENCE_STEP_CAPACITY, create_rainbow_sequence};
 
 /// Type aliases for the sequencers
 type Sequencer1<'a> = RgbSequencer<'a, HalInstant, Led1, HalTimeSource, SEQUENCE_STEP_CAPACITY>;
@@ -34,10 +37,10 @@ impl<'a> AppState<'a> {
             .step(COLOR_OFF, HalDuration(0), TransitionStyle::Step)
             .build()
             .unwrap();
-        
+
         sequencer_1.load(sequence_1);
         sequencer_1.start().unwrap();
-        
+
         sequencer_2.load(sequence_2);
         sequencer_2.start().unwrap();
 
@@ -60,7 +63,7 @@ impl<'a> AppState<'a> {
         match self.sequencer_1.get_state() {
             SequencerState::Running => {
                 rprintln!("Pausing LED 1 and capturing color to LED 2");
-                
+
                 if let Err(e) = self.sequencer_1.pause() {
                     rprintln!("Pause error LED 1: {:?}", e);
                     return;
@@ -69,28 +72,35 @@ impl<'a> AppState<'a> {
                 // Capture color and create smooth transition
                 let old_color = self.sequencer_2.current_color();
                 let captured_color = self.sequencer_1.current_color();
-                
-                rprintln!("Captured: R={:.2} G={:.2} B={:.2}", 
-                         captured_color.red, captured_color.green, captured_color.blue);
-                
+
+                rprintln!(
+                    "Captured: R={:.2} G={:.2} B={:.2}",
+                    captured_color.red,
+                    captured_color.green,
+                    captured_color.blue
+                );
+
                 let transition_sequence = RgbSequence::builder()
                     .start_color(old_color)
                     .step(captured_color, HalDuration(2000), TransitionStyle::Linear)
                     .build()
                     .unwrap();
-                
+
                 self.sequencer_2.load(transition_sequence);
                 self.sequencer_2.start().unwrap();
             }
             SequencerState::Paused => {
                 rprintln!("Resuming LED 1 animation");
-                
+
                 if let Err(e) = self.sequencer_1.resume() {
                     rprintln!("Resume error LED 1: {:?}", e);
                 }
             }
             _ => {
-                rprintln!("Cannot pause/resume from state: {:?}", self.sequencer_1.get_state());
+                rprintln!(
+                    "Cannot pause/resume from state: {:?}",
+                    self.sequencer_1.get_state()
+                );
             }
         }
     }
@@ -136,10 +146,15 @@ impl<'a> AppState<'a> {
     }
 
     /// Helper to find the most urgent timing between two ServiceTimings
-    fn most_urgent(a: ServiceTiming<HalDuration>, b: ServiceTiming<HalDuration>) -> ServiceTiming<HalDuration> {
+    fn most_urgent(
+        a: ServiceTiming<HalDuration>,
+        b: ServiceTiming<HalDuration>,
+    ) -> ServiceTiming<HalDuration> {
         match (a, b) {
             // Continuous is always most urgent
-            (ServiceTiming::Continuous, _) | (_, ServiceTiming::Continuous) => ServiceTiming::Continuous,
+            (ServiceTiming::Continuous, _) | (_, ServiceTiming::Continuous) => {
+                ServiceTiming::Continuous
+            }
             // Between two delays, choose the shorter one
             (ServiceTiming::Delay(d1), ServiceTiming::Delay(d2)) => {
                 if d1.as_millis() < d2.as_millis() {
@@ -159,8 +174,9 @@ impl<'a> AppState<'a> {
     fn is_button_pressed(&mut self) -> bool {
         let button_is_low = self.button.is_low().unwrap();
         let current_time = self.time_source.now();
-        
-        self.button_debouncer.check_press(button_is_low, current_time.as_millis())
+
+        self.button_debouncer
+            .check_press(button_is_low, current_time.as_millis())
     }
 
     /// Sleep until next service time is needed

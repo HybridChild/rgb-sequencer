@@ -3,13 +3,13 @@ use critical_section::Mutex;
 use rgb_sequencer::{TimeDuration, TimeInstant, TimeSource};
 
 /// Global millisecond counter incremented by SysTick interrupt
-/// 
+///
 /// This counter is automatically incremented every millisecond by the SysTick
 /// interrupt handler. It wraps after ~49.7 days of continuous operation.
 static MILLIS_COUNTER: Mutex<Cell<u32>> = Mutex::new(Cell::new(0));
 
 /// Increments the global millisecond counter.
-/// 
+///
 /// This function should be called from the SysTick interrupt handler every 1ms.
 /// It's marked as `pub` so it can be accessed from the interrupt handler in main.rs.
 pub fn tick() {
@@ -74,7 +74,7 @@ impl TimeInstant for HalInstant {
 }
 
 /// Time source that provides current time instants based on SysTick
-/// 
+///
 /// This time source reads from a global counter that's automatically incremented
 /// by the SysTick interrupt handler every millisecond. No manual tick() calls needed!
 pub struct HalTimeSource;
@@ -87,8 +87,6 @@ impl HalTimeSource {
 
 impl TimeSource<HalInstant> for HalTimeSource {
     fn now(&self) -> HalInstant {
-        critical_section::with(|cs| {
-            HalInstant(MILLIS_COUNTER.borrow(cs).get())
-        })
+        critical_section::with(|cs| HalInstant(MILLIS_COUNTER.borrow(cs).get()))
     }
 }

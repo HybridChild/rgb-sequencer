@@ -5,9 +5,9 @@
 //! [`SequenceBuilder`] for ergonomic sequence construction and [`StepPosition`]
 //! for tracking position within a sequence.
 
+use crate::COLOR_OFF;
 use crate::time::TimeDuration;
 use crate::types::{LoopCount, SequenceError, SequenceStep, TransitionStyle};
-use crate::COLOR_OFF;
 use heapless::Vec;
 use palette::{Mix, Srgb};
 
@@ -51,7 +51,7 @@ pub struct RgbSequence<D: TimeDuration, const N: usize> {
     start_color: Option<Srgb>,
     landing_color: Option<Srgb>,
     loop_duration: D,
-    
+
     // Optional function-based animation (overrides step-based logic)
     color_fn: Option<fn(Srgb, D) -> Srgb>,
     timing_fn: Option<fn(D) -> Option<D>>,
@@ -148,12 +148,8 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
     #[inline]
     fn handle_zero_duration_sequence(&self, elapsed: D) -> StepPosition<D> {
         let is_complete = elapsed.as_millis() > 0;
-        let step_index = if is_complete {
-            self.steps.len() - 1
-        } else {
-            0
-        };
-        
+        let step_index = if is_complete { self.steps.len() - 1 } else { 0 };
+
         StepPosition {
             step_index,
             time_in_step: D::ZERO,
@@ -171,7 +167,7 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
             LoopCount::Finite(count) => count,
             LoopCount::Infinite => 0,
         };
-        
+
         StepPosition {
             step_index: last_index,
             time_in_step: self.steps[last_index].duration,
@@ -210,15 +206,13 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
         let mut accumulated_time = D::ZERO;
 
         for (step_idx, step) in self.steps.iter().enumerate() {
-            let step_end_time = D::from_millis(
-                accumulated_time.as_millis() + step.duration.as_millis(),
-            );
+            let step_end_time =
+                D::from_millis(accumulated_time.as_millis() + step.duration.as_millis());
 
             if time_in_loop.as_millis() < step_end_time.as_millis() {
                 // Found the step containing time_in_loop
-                let time_in_step = D::from_millis(
-                    time_in_loop.as_millis() - accumulated_time.as_millis(),
-                );
+                let time_in_step =
+                    D::from_millis(time_in_loop.as_millis() - accumulated_time.as_millis());
                 let time_until_end = step_end_time.saturating_sub(time_in_loop);
 
                 return StepPosition {
@@ -271,11 +265,11 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
             && position.current_loop == 0
             && self.start_color.is_some()
         {
-            self.start_color.unwrap()  // Case 1
+            self.start_color.unwrap() // Case 1
         } else if position.step_index == 0 {
-            self.steps.last().unwrap().color  // Case 2
+            self.steps.last().unwrap().color // Case 2
         } else {
-            self.steps[position.step_index - 1].color  // Case 3
+            self.steps[position.step_index - 1].color // Case 3
         };
 
         let duration_millis = step.duration.as_millis();
@@ -300,7 +294,7 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
         }
 
         let loop_millis = self.loop_duration.as_millis();
-        
+
         if loop_millis == 0 {
             return Some(self.handle_zero_duration_sequence(elapsed));
         }
@@ -343,7 +337,8 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
     #[inline]
     fn color_at_position(&self, position: &StepPosition<D>) -> Srgb {
         if position.is_complete {
-            return self.landing_color
+            return self
+                .landing_color
                 .unwrap_or(self.steps.last().unwrap().color);
         }
 
@@ -351,9 +346,7 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
 
         match step.transition {
             TransitionStyle::Step => step.color,
-            TransitionStyle::Linear => {
-                self.interpolate_color(position, step)
-            }
+            TransitionStyle::Linear => self.interpolate_color(position, step),
         }
     }
 
@@ -471,13 +464,12 @@ impl<D: TimeDuration, const N: usize> SequenceBuilder<D, N> {
     ///
     /// # Panics
     /// Panics if the sequence is full (capacity `N` has been reached).
-    pub fn step(
-        mut self,
-        color: Srgb,
-        duration: D,
-        transition: TransitionStyle,
-    ) -> Self {
-        if self.steps.push(SequenceStep::new(color, duration, transition)).is_err() {
+    pub fn step(mut self, color: Srgb, duration: D, transition: TransitionStyle) -> Self {
+        if self
+            .steps
+            .push(SequenceStep::new(color, duration, transition))
+            .is_err()
+        {
             panic!("sequence capacity ({}) exceeded - cannot add more steps", N);
         }
         self
@@ -523,9 +515,7 @@ impl<D: TimeDuration, const N: usize> SequenceBuilder<D, N> {
         }
 
         for step in &self.steps {
-            if step.duration.as_millis() == 0
-                && step.transition == TransitionStyle::Linear
-            {
+            if step.duration.as_millis() == 0 && step.transition == TransitionStyle::Linear {
                 return Err(SequenceError::ZeroDurationWithLinear);
             }
         }
@@ -620,11 +610,7 @@ mod tests {
     fn function_based_sequence_applies_function_to_base_color() {
         // Brightness modulation function - works with any base color
         fn brightness_pulse(base: Srgb, elapsed: TestDuration) -> Srgb {
-            let brightness = if elapsed.as_millis() < 500 {
-                0.5
-            } else {
-                1.0
-            };
+            let brightness = if elapsed.as_millis() < 500 { 0.5 } else { 1.0 };
             Srgb::new(
                 base.red * brightness,
                 base.green * brightness,
@@ -641,17 +627,11 @@ mod tests {
         }
 
         // Same function, different colors
-        let red_pulse = RgbSequence::<TestDuration, 8>::from_function(
-            RED,
-            brightness_pulse,
-            test_timing,
-        );
+        let red_pulse =
+            RgbSequence::<TestDuration, 8>::from_function(RED, brightness_pulse, test_timing);
 
-        let blue_pulse = RgbSequence::<TestDuration, 8>::from_function(
-            BLUE,
-            brightness_pulse,
-            test_timing,
-        );
+        let blue_pulse =
+            RgbSequence::<TestDuration, 8>::from_function(BLUE, brightness_pulse, test_timing);
 
         assert!(red_pulse.is_function_based());
         assert_eq!(red_pulse.start_color(), Some(RED));
@@ -738,10 +718,10 @@ mod tests {
 
         let (color, _) = sequence.evaluate(TestDuration(0));
         assert!(colors_equal(color, RED));
-        
+
         let (color, _) = sequence.evaluate(TestDuration(500));
         assert!(colors_equal(color, RED));
-        
+
         let (color, _) = sequence.evaluate(TestDuration(999));
         assert!(colors_equal(color, RED));
     }
@@ -779,19 +759,19 @@ mod tests {
 
         let (color, _) = sequence.evaluate(TestDuration(0));
         assert!(colors_equal(color, BLUE));
-        
+
         let (color, _) = sequence.evaluate(TestDuration(500));
         assert!(colors_equal(color, expected_middle));
-        
+
         let (color, _) = sequence.evaluate(TestDuration(999));
         assert!(colors_equal(color, RED));
-        
+
         let (color, _) = sequence.evaluate(TestDuration(3000));
         assert!(colors_equal(color, BLUE));
-        
+
         let (color, _) = sequence.evaluate(TestDuration(3500));
         assert!(colors_equal(color, expected_middle));
-        
+
         let (color, _) = sequence.evaluate(TestDuration(3999));
         assert!(colors_equal(color, RED));
     }
@@ -895,10 +875,10 @@ mod tests {
 
         let (color, _) = sequence.evaluate(TestDuration(50));
         assert!(colors_equal(color, RED));
-        
+
         let (color, _) = sequence.evaluate(TestDuration(150));
         assert!(colors_equal(color, GREEN));
-        
+
         let (color, _) = sequence.evaluate(TestDuration(250));
         assert!(colors_equal(color, BLUE));
     }
@@ -912,17 +892,17 @@ mod tests {
             .landing_color(BLACK)
             .build()
             .unwrap();
-        
+
         let (color, _) = sequence.evaluate(TestDuration(50));
         assert!(colors_equal(color, RED));
-        
+
         let (color, _) = sequence.evaluate(TestDuration(350));
         assert!(colors_equal(color, GREEN));
-        
+
         let (color, timing) = sequence.evaluate(TestDuration(400));
         assert!(colors_equal(color, BLACK));
         assert_eq!(timing, None);
-        
+
         let (color, _) = sequence.evaluate(TestDuration(1000));
         assert!(colors_equal(color, BLACK));
     }
@@ -939,17 +919,17 @@ mod tests {
 
         let (color, _) = sequence.evaluate(TestDuration(50));
         assert!(colors_equal(color, RED));
-        
+
         let (color, _) = sequence.evaluate(TestDuration(450));
         assert!(colors_equal(color, GREEN));
-        
+
         let (color, _) = sequence.evaluate(TestDuration(600));
         assert!(colors_equal(color, BLUE));
-        
+
         let (color, _) = sequence.evaluate(TestDuration(1000));
         assert!(colors_equal(color, BLUE));
     }
-    
+
     #[test]
     fn infinite_loop_never_completes() {
         let sequence = RgbSequence::<TestDuration, 8>::builder()
@@ -962,10 +942,10 @@ mod tests {
 
         let (color, _) = sequence.evaluate(TestDuration(50));
         assert!(colors_equal(color, RED));
-        
+
         let (color, _) = sequence.evaluate(TestDuration(350));
         assert!(colors_equal(color, GREEN));
-        
+
         let (color, _) = sequence.evaluate(TestDuration(10050));
         assert!(colors_equal(color, RED));
     }
@@ -1062,11 +1042,7 @@ mod tests {
             Some(TestDuration::ZERO)
         }
 
-        let sequence = RgbSequence::<TestDuration, 8>::from_function(
-            RED,
-            test_color,
-            test_timing,
-        );
+        let sequence = RgbSequence::<TestDuration, 8>::from_function(RED, test_color, test_timing);
 
         assert!(sequence.is_function_based());
         assert_eq!(sequence.step_count(), 0);

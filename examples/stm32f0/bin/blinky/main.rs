@@ -5,10 +5,10 @@ use cortex_m_rt::entry;
 use panic_halt as _;
 use rtt_target::{rprintln, rtt_init_print};
 
-use palette::{Srgb, FromColor, Hsv};
+use palette::{FromColor, Hsv, Srgb};
 use stm32f0xx_hal::{
     delay::Delay,
-    gpio::{gpioa, gpiob, Input},
+    gpio::{Input, gpioa, gpiob},
     pac,
     prelude::*,
     pwm,
@@ -18,15 +18,8 @@ use stm32f0xx_hal::{
 use stm32f0_examples::rgb_led::PwmRgbLed;
 
 use rgb_sequencer::{
-    RgbSequence,
-    RgbSequencer,
-    LoopCount,
-    TransitionStyle,
-    ServiceTiming,
-    TimeDuration,
-    TimeInstant,
-    TimeSource,
-    COLOR_OFF,
+    COLOR_OFF, LoopCount, RgbSequence, RgbSequencer, ServiceTiming, TimeDuration, TimeInstant,
+    TimeSource, TransitionStyle,
 };
 
 /// Type alias for LED 1
@@ -81,7 +74,7 @@ impl TimeInstant for BlinkyInstant {
 }
 
 /// Simple time source that increments on each call
-/// 
+///
 /// This works because we call `now()` only after each service/delay cycle,
 /// so the time advances naturally with the delays.
 pub struct BlinkyTimeSource {
@@ -109,15 +102,12 @@ impl TimeSource<BlinkyInstant> for BlinkyTimeSource {
 }
 
 /// Configure the system clock
-fn configure_clock(
-    flash: &mut pac::FLASH,
-    rcc: pac::RCC,
-) -> stm32f0xx_hal::rcc::Rcc {
+fn configure_clock(flash: &mut pac::FLASH, rcc: pac::RCC) -> stm32f0xx_hal::rcc::Rcc {
     let rcc = rcc.configure().freeze(flash);
-    
+
     let sysclk_freq = rcc.clocks.sysclk();
     rprintln!("System clock configured: {} Hz", sysclk_freq.0);
-    
+
     rcc
 }
 
@@ -136,12 +126,12 @@ fn setup_led1(
             pb0.into_alternate_af1(cs),
         )
     });
-    
+
     let pwm_freq = Hertz(1_000);
     let (red, green, blue) = pwm::tim3(tim3, pins, rcc, pwm_freq);
-    
+
     rprintln!("LED 1 configured on TIM3 (PA6, PA7, PB0)");
-    
+
     // Common anode = true
     PwmRgbLed::new(red, green, blue, true)
 }
@@ -169,17 +159,29 @@ fn main() -> ! {
 
     rprintln!("=== Hardware Ready ===");
 
-    let mut sequencer: RgbSequencer<BlinkyInstant, Led1, BlinkyTimeSource, SEQUENCE_STEP_CAPACITY>
-        = RgbSequencer::new(led_1, &time_source);
+    let mut sequencer: RgbSequencer<BlinkyInstant, Led1, BlinkyTimeSource, SEQUENCE_STEP_CAPACITY> =
+        RgbSequencer::new(led_1, &time_source);
 
     // Create a sequence
     let sequence = RgbSequence::<BlinkyDuration, SEQUENCE_STEP_CAPACITY>::new()
-        .step(Srgb::from_color(Hsv::new(60.0, 1.0, 1.0)), BlinkyDuration(0), TransitionStyle::Step,)  // Yellow
-        .step(COLOR_OFF, BlinkyDuration(1000), TransitionStyle::Linear,)                              // Fade out
-        .step(Srgb::from_color(Hsv::new(180.0, 1.0, 1.0)), BlinkyDuration(0), TransitionStyle::Step,) // Cyan
-        .step(COLOR_OFF, BlinkyDuration(1000), TransitionStyle::Linear,)                              // Fade out
-        .step(Srgb::from_color(Hsv::new(300.0, 1.0, 1.0)), BlinkyDuration(0), TransitionStyle::Step,) // Purple
-        .step(COLOR_OFF, BlinkyDuration(1000), TransitionStyle::Linear,)                              // Fade out
+        .step(
+            Srgb::from_color(Hsv::new(60.0, 1.0, 1.0)),
+            BlinkyDuration(0),
+            TransitionStyle::Step,
+        ) // Yellow
+        .step(COLOR_OFF, BlinkyDuration(1000), TransitionStyle::Linear) // Fade out
+        .step(
+            Srgb::from_color(Hsv::new(180.0, 1.0, 1.0)),
+            BlinkyDuration(0),
+            TransitionStyle::Step,
+        ) // Cyan
+        .step(COLOR_OFF, BlinkyDuration(1000), TransitionStyle::Linear) // Fade out
+        .step(
+            Srgb::from_color(Hsv::new(300.0, 1.0, 1.0)),
+            BlinkyDuration(0),
+            TransitionStyle::Step,
+        ) // Purple
+        .step(COLOR_OFF, BlinkyDuration(1000), TransitionStyle::Linear) // Fade out
         .loop_count(LoopCount::Infinite)
         .build()
         .unwrap();
@@ -209,7 +211,7 @@ fn main() -> ! {
     }
 
     rprintln!("Sequence complete");
-    
+
     loop {
         cortex_m::asm::wfi();
     }

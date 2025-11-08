@@ -4,10 +4,10 @@
 //! handling state transitions, timing coordination, and LED updates. Also defines
 //! the [`RgbLed`] trait for hardware abstraction.
 
-use crate::sequence::RgbSequence;
+use crate::COLOR_OFF;
 use crate::command::SequencerAction;
+use crate::sequence::RgbSequence;
 use crate::time::{TimeDuration, TimeInstant, TimeSource};
-use crate::{COLOR_OFF};
 use palette::Srgb;
 
 /// Trait for abstracting RGB LED hardware.
@@ -108,7 +108,7 @@ impl std::error::Error for SequencerError {}
 /// Each sequencer owns an LED and executes sequences independently. The sequencer
 /// tracks timing, calculates colors, and updates the LED hardware.
 ///
-/// Supports both step-based sequences (pre-defined color transitions) and 
+/// Supports both step-based sequences (pre-defined color transitions) and
 /// function-based sequences (algorithmic animations). Both types work seamlessly
 /// with the same sequencer interface.
 ///
@@ -128,9 +128,7 @@ pub struct RgbSequencer<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N
     current_color: Srgb,
 }
 
-impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
-    RgbSequencer<'t, I, L, T, N>
-{
+impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequencer<'t, I, L, T, N> {
     /// Creates a new idle sequencer with LED turned off.
     pub fn new(mut led: L, time_source: &'t T) -> Self {
         led.set_color(COLOR_OFF);
@@ -290,10 +288,10 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
                 self.start_time = None;
                 self.pause_start_time = None;
                 self.state = SequencerState::Loaded;
-                
+
                 self.led.set_color(COLOR_OFF);
                 self.current_color = COLOR_OFF;
-                
+
                 Ok(())
             }
             _ => Err(SequencerError::InvalidState {
@@ -355,7 +353,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
         self.start_time = None;
         self.pause_start_time = None;
         self.state = SequencerState::Idle;
-        
+
         self.led.set_color(COLOR_OFF);
         self.current_color = COLOR_OFF;
     }
@@ -398,10 +396,10 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
 mod tests {
     use super::*;
     use crate::sequence::RgbSequence;
-    use crate::types::{LoopCount, TransitionStyle};
     use crate::time::{TimeDuration, TimeInstant};
-    use palette::Srgb;
+    use crate::types::{LoopCount, TransitionStyle};
     use heapless::Vec;
+    use palette::Srgb;
     extern crate std;
     use std::format;
 
@@ -508,7 +506,8 @@ mod tests {
     fn start_requires_loaded_state() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         // Try to start from Idle state (no sequence loaded)
         let result = sequencer.start();
@@ -519,7 +518,8 @@ mod tests {
     fn pause_requires_running_state() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
@@ -537,7 +537,8 @@ mod tests {
     fn resume_requires_paused_state() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
@@ -555,7 +556,8 @@ mod tests {
     fn service_requires_running_state() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
@@ -573,7 +575,8 @@ mod tests {
     fn loading_and_starting_sequence_updates_led_color() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
@@ -594,7 +597,8 @@ mod tests {
     fn service_correctly_progresses_through_multiple_steps() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
@@ -630,7 +634,8 @@ mod tests {
     fn function_based_sequence_computes_colors_correctly() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         fn brightness_pulse(base: Srgb, elapsed: TestDuration) -> Srgb {
             let brightness = if elapsed.as_millis() < 500 { 0.5 } else { 1.0 };
@@ -645,17 +650,17 @@ mod tests {
             Some(TestDuration::ZERO)
         }
 
-        let sequence = RgbSequence::<TestDuration, 8>::from_function(
-            RED,
-            brightness_pulse,
-            continuous,
-        );
+        let sequence =
+            RgbSequence::<TestDuration, 8>::from_function(RED, brightness_pulse, continuous);
 
         sequencer.load(sequence);
         sequencer.start().unwrap();
 
         // At start - 50% brightness
-        assert!(colors_equal(sequencer.current_color(), Srgb::new(0.5, 0.0, 0.0)));
+        assert!(colors_equal(
+            sequencer.current_color(),
+            Srgb::new(0.5, 0.0, 0.0)
+        ));
 
         // After 500ms - full brightness
         timer.advance(TestDuration(500));
@@ -667,7 +672,8 @@ mod tests {
     fn pause_resume_maintains_position() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
@@ -706,7 +712,8 @@ mod tests {
     fn stop_turns_off_led_and_returns_to_loaded() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
@@ -726,7 +733,8 @@ mod tests {
     fn clear_removes_sequence_and_returns_to_idle() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
@@ -746,7 +754,8 @@ mod tests {
     fn service_returns_correct_delay_for_step_transition() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
@@ -766,7 +775,8 @@ mod tests {
     fn service_returns_continuous_timing_for_linear_transition() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
@@ -790,7 +800,8 @@ mod tests {
     fn finite_sequence_completes_and_transitions_to_complete_state() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
@@ -816,7 +827,8 @@ mod tests {
     fn restart_from_running_state() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
@@ -844,7 +856,8 @@ mod tests {
     fn restart_from_paused_state() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
@@ -868,7 +881,8 @@ mod tests {
     fn restart_from_complete_state() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
@@ -893,7 +907,8 @@ mod tests {
     fn restart_from_invalid_state_fails() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         // Try restart from Idle
         let result = sequencer.restart();
@@ -914,7 +929,8 @@ mod tests {
     fn handle_action_dispatches_all_action_types_correctly() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
@@ -962,7 +978,8 @@ mod tests {
     fn query_methods_return_correct_state_and_timing_info() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         // Initial state queries
         assert_eq!(sequencer.get_state(), SequencerState::Idle);
@@ -1000,7 +1017,8 @@ mod tests {
     fn stop_from_paused_state() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
@@ -1022,7 +1040,8 @@ mod tests {
     fn stop_from_complete_state() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
@@ -1046,7 +1065,8 @@ mod tests {
     fn led_only_updates_when_color_changes() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
@@ -1075,7 +1095,8 @@ mod tests {
     fn resume_handles_timer_overflow_gracefully() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
@@ -1119,7 +1140,8 @@ mod tests {
     fn comprehensive_state_transitions() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
@@ -1185,7 +1207,8 @@ mod tests {
     fn loading_new_sequence_replaces_existing_and_resets_state() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         let sequence1 = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
@@ -1215,7 +1238,8 @@ mod tests {
     fn multiple_service_calls_without_time_advancement_are_safe() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
@@ -1237,7 +1261,8 @@ mod tests {
     fn sequence_with_mixed_zero_and_nonzero_durations_works_correctly() {
         let led = MockLed::new();
         let timer = MockTimeSource::new();
-        let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(0), TransitionStyle::Step)

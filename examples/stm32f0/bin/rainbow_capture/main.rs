@@ -7,10 +7,10 @@ use rtt_target::{rprintln, rtt_init_print};
 
 use stm32f0_examples::time_source::HalTimeSource;
 
-mod button;
-mod sequences;
-mod hardware_setup;
 mod app_state;
+mod button;
+mod hardware_setup;
+mod sequences;
 
 use app_state::AppState;
 
@@ -35,7 +35,7 @@ fn main() -> ! {
 
     // Initialize application state and run
     let mut app = AppState::new(hw, &time_source);
-    
+
     // Run the main application loop (never returns)
     app.run()
 }

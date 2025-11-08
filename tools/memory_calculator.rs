@@ -1,8 +1,8 @@
 #!/usr/bin/env rust-script
 //! Memory calculator for rgb-sequencer
-//! 
+//!
 //! This utility calculates and displays the exact memory footprint of RGB sequences
-//! and full RgbSequencer instances with different configurations. Run it to understand 
+//! and full RgbSequencer instances with different configurations. Run it to understand
 //! the memory implications of your sequence capacity and LED implementation choices.
 //!
 //! Usage:
@@ -11,11 +11,14 @@
 //! Or with rust-script:
 //!   rust-script sequence_memory_calculator.rs
 
-use std::mem::size_of;
-use rgb_sequencer::{RgbSequencer, RgbSequence, SequenceStep, TransitionStyle, LoopCount, TimeDuration, RgbLed, TimeSource, TimeInstant};
-use palette::Srgb;
 use embassy_time::Duration as EmbassyDurationInner;
 use embassy_time::Instant as EmbassyInstantInner;
+use palette::Srgb;
+use rgb_sequencer::{
+    LoopCount, RgbLed, RgbSequence, RgbSequencer, SequenceStep, TimeDuration, TimeInstant,
+    TimeSource, TransitionStyle,
+};
+use std::mem::size_of;
 
 // ============================================================================
 // Mock Duration Types
@@ -81,7 +84,7 @@ impl TimeDuration for EmbassyDuration {
 
     fn saturating_sub(self, other: Self) -> Self {
         EmbassyDuration(EmbassyDurationInner::from_ticks(
-            self.0.as_ticks().saturating_sub(other.0.as_ticks())
+            self.0.as_ticks().saturating_sub(other.0.as_ticks()),
         ))
     }
 }
@@ -247,48 +250,102 @@ fn print_header() {
 
 fn print_component_sizes() {
     println!("Component Sizes:");
-    println!("├─ Srgb:                          {} bytes", size_of::<Srgb>());
-    println!("├─ Option<Srgb>:                  {} bytes", size_of::<Option<Srgb>>());
-    println!("├─ TransitionStyle (enum):         {} bytes", size_of::<TransitionStyle>());
-    println!("├─ LoopCount (enum):               {} bytes", size_of::<LoopCount>());
-    println!("├─ Color function pointer:         {} bytes", size_of::<Option<fn(Srgb, Duration64) -> Srgb>>());
-    println!("└─ Timing function pointer:        {} bytes", size_of::<Option<fn(Duration64) -> Option<Duration64>>>());
+    println!(
+        "├─ Srgb:                          {} bytes",
+        size_of::<Srgb>()
+    );
+    println!(
+        "├─ Option<Srgb>:                  {} bytes",
+        size_of::<Option<Srgb>>()
+    );
+    println!(
+        "├─ TransitionStyle (enum):         {} bytes",
+        size_of::<TransitionStyle>()
+    );
+    println!(
+        "├─ LoopCount (enum):               {} bytes",
+        size_of::<LoopCount>()
+    );
+    println!(
+        "├─ Color function pointer:         {} bytes",
+        size_of::<Option<fn(Srgb, Duration64) -> Srgb>>()
+    );
+    println!(
+        "└─ Timing function pointer:        {} bytes",
+        size_of::<Option<fn(Duration64) -> Option<Duration64>>>()
+    );
     println!();
 }
 
 fn print_duration_sizes() {
     println!("Duration Type Sizes:");
-    println!("├─ u32 (milliseconds):             {} bytes", size_of::<Duration32>());
-    println!("├─ u64 (milliseconds):             {} bytes", size_of::<Duration64>());
-    println!("└─ Embassy Duration (ticks):       {} bytes", size_of::<EmbassyDuration>());
+    println!(
+        "├─ u32 (milliseconds):             {} bytes",
+        size_of::<Duration32>()
+    );
+    println!(
+        "├─ u64 (milliseconds):             {} bytes",
+        size_of::<Duration64>()
+    );
+    println!(
+        "└─ Embassy Duration (ticks):       {} bytes",
+        size_of::<EmbassyDuration>()
+    );
     println!();
 }
 
 fn print_instant_sizes() {
     println!("Instant Type Sizes:");
-    println!("├─ u32 (milliseconds):             {} bytes", size_of::<Instant32>());
-    println!("├─ u64 (milliseconds):             {} bytes", size_of::<Instant64>());
-    println!("└─ Embassy Instant (ticks):        {} bytes", size_of::<EmbassyInstant>());
+    println!(
+        "├─ u32 (milliseconds):             {} bytes",
+        size_of::<Instant32>()
+    );
+    println!(
+        "├─ u64 (milliseconds):             {} bytes",
+        size_of::<Instant64>()
+    );
+    println!(
+        "└─ Embassy Instant (ticks):        {} bytes",
+        size_of::<EmbassyInstant>()
+    );
     println!();
 }
 
 fn print_led_sizes() {
     println!("LED Implementation Sizes:");
-    println!("├─ SmallLed (GPIO):                {} bytes", size_of::<SmallLed>());
-    println!("├─ MediumLed (PWM):               {} bytes", size_of::<MediumLed>());
-    println!("└─ LargeLed (complex driver):     {} bytes", size_of::<LargeLed>());
+    println!(
+        "├─ SmallLed (GPIO):                {} bytes",
+        size_of::<SmallLed>()
+    );
+    println!(
+        "├─ MediumLed (PWM):               {} bytes",
+        size_of::<MediumLed>()
+    );
+    println!(
+        "└─ LargeLed (complex driver):     {} bytes",
+        size_of::<LargeLed>()
+    );
     println!();
 }
 
 fn print_step_sizes() {
     println!("Step Sizes (by duration type):");
-    println!("├─ SequenceStep<u32>:             {} bytes", size_of::<SequenceStep<Duration32>>());
-    println!("├─ SequenceStep<u64>:             {} bytes", size_of::<SequenceStep<Duration64>>());
-    println!("└─ SequenceStep<EmbassyDuration>: {} bytes", size_of::<SequenceStep<EmbassyDuration>>());
+    println!(
+        "├─ SequenceStep<u32>:             {} bytes",
+        size_of::<SequenceStep<Duration32>>()
+    );
+    println!(
+        "├─ SequenceStep<u64>:             {} bytes",
+        size_of::<SequenceStep<Duration64>>()
+    );
+    println!(
+        "└─ SequenceStep<EmbassyDuration>: {} bytes",
+        size_of::<SequenceStep<EmbassyDuration>>()
+    );
     println!();
 }
 
-fn print_sequence_table<D: TimeDuration + Copy>(duration_name: &str, capacities: &[usize]) 
+fn print_sequence_table<D: TimeDuration + Copy>(duration_name: &str, capacities: &[usize])
 where
     [(); 4]: Sized,
     [(); 8]: Sized,
@@ -301,9 +358,9 @@ where
     println!("│ Capacity │ Sequence     │ Storage Cost    │ Overhead       │");
     println!("│ (N)      │ Total Size   │ (Step size * N) │ (Fixed)        │");
     println!("├──────────┼──────────────┼─────────────────┼────────────────┤");
-    
+
     let step_size = size_of::<SequenceStep<D>>();
-    
+
     for &capacity in capacities {
         let total_size = match capacity {
             4 => size_of::<RgbSequence<D, 4>>(),
@@ -313,26 +370,21 @@ where
             64 => size_of::<RgbSequence<D, 64>>(),
             _ => continue,
         };
-        
+
         let storage_cost = step_size * capacity;
         let overhead = total_size - storage_cost;
-        
-        println!("│ {:^8} │ {:>10} B │ {:>13} B │ {:>12} B │", 
-                 capacity, 
-                 total_size, 
-                 storage_cost,
-                 overhead);
+
+        println!(
+            "│ {:^8} │ {:>10} B │ {:>13} B │ {:>12} B │",
+            capacity, total_size, storage_cost, overhead
+        );
     }
-    
+
     println!("└──────────┴──────────────┴─────────────────┴────────────────┘");
     println!();
 }
 
-fn print_sequencer_table<I, L, T>(
-    instant_name: &str, 
-    led_name: &str,
-    capacities: &[usize]
-) 
+fn print_sequencer_table<I, L, T>(instant_name: &str, led_name: &str, capacities: &[usize])
 where
     I: TimeInstant,
     I::Duration: TimeDuration,
@@ -344,12 +396,15 @@ where
     [(); 32]: Sized,
     [(); 64]: Sized,
 {
-    println!("RgbSequencer<{}, {}, N> Memory Usage:", instant_name, led_name);
+    println!(
+        "RgbSequencer<{}, {}, N> Memory Usage:",
+        instant_name, led_name
+    );
     println!("┌──────────┬──────────────┬─────────────────┬────────────────┐");
     println!("│ Capacity │ Sequencer    │ Sequence Size   │ Sequencer OH   │");
     println!("│ (N)      │ Total Size   │                 │ (Fixed)        │");
     println!("├──────────┼──────────────┼─────────────────┼────────────────┤");
-    
+
     for &capacity in capacities {
         let total_size = match capacity {
             4 => size_of::<RgbSequencer<I, L, T, 4>>(),
@@ -359,7 +414,7 @@ where
             64 => size_of::<RgbSequencer<I, L, T, 64>>(),
             _ => continue,
         };
-        
+
         let sequence_size = match capacity {
             4 => size_of::<RgbSequence<I::Duration, 4>>(),
             8 => size_of::<RgbSequence<I::Duration, 8>>(),
@@ -368,41 +423,40 @@ where
             64 => size_of::<RgbSequence<I::Duration, 64>>(),
             _ => continue,
         };
-        
+
         let sequencer_overhead = total_size - sequence_size;
-        
-        println!("│ {:^8} │ {:>10} B │ {:>13} B │ {:>12} B │", 
-                 capacity, 
-                 total_size, 
-                 sequence_size,
-                 sequencer_overhead);
+
+        println!(
+            "│ {:^8} │ {:>10} B │ {:>13} B │ {:>12} B │",
+            capacity, total_size, sequence_size, sequencer_overhead
+        );
     }
-    
+
     println!("└──────────┴──────────────┴─────────────────┴────────────────┘");
     println!();
 }
 
 fn main() {
     print_header();
-    
+
     // Component sizes
     print_component_sizes();
     print_duration_sizes();
     print_instant_sizes();
     print_led_sizes();
     print_step_sizes();
-    
+
     let capacities = vec![4, 8, 16, 32, 64];
-    
+
     println!("═══════════════════════════════════════════════════════════════");
     println!("                    SEQUENCE MEMORY USAGE                      ");
     println!("═══════════════════════════════════════════════════════════════");
     println!();
-    
+
     print_sequence_table::<Duration32>("u32", &capacities);
     print_sequence_table::<Duration64>("u64", &capacities);
     print_sequence_table::<EmbassyDuration>("EmbassyDuration", &capacities);
-    
+
     println!("═══════════════════════════════════════════════════════════════");
     println!("                   SEQUENCER MEMORY USAGE                      ");
     println!("═══════════════════════════════════════════════════════════════");
@@ -410,32 +464,32 @@ fn main() {
     println!("Note: Sequencer overhead includes LED, state, time tracking,");
     println!("      and the owned sequence (shown in 'Sequence Size').");
     println!();
-    
+
     // Show different LED implementation sizes with u64/Embassy timing
     println!("── With u64 Instant/Duration ──");
     println!();
-    print_sequencer_table::<Instant64, SmallLed, TimeSource64>(
-        "u64", "SmallLed", &capacities
-    );
-    print_sequencer_table::<Instant64, MediumLed, TimeSource64>(
-        "u64", "MediumLed", &capacities
-    );
-    print_sequencer_table::<Instant64, LargeLed, TimeSource64>(
-        "u64", "LargeLed", &capacities
-    );
-    
+    print_sequencer_table::<Instant64, SmallLed, TimeSource64>("u64", "SmallLed", &capacities);
+    print_sequencer_table::<Instant64, MediumLed, TimeSource64>("u64", "MediumLed", &capacities);
+    print_sequencer_table::<Instant64, LargeLed, TimeSource64>("u64", "LargeLed", &capacities);
+
     println!("── With Embassy Instant/Duration ──");
     println!();
     print_sequencer_table::<EmbassyInstant, SmallLed, EmbassyTimeSource>(
-        "Embassy", "SmallLed", &capacities
+        "Embassy",
+        "SmallLed",
+        &capacities,
     );
     print_sequencer_table::<EmbassyInstant, MediumLed, EmbassyTimeSource>(
-        "Embassy", "MediumLed", &capacities
+        "Embassy",
+        "MediumLed",
+        &capacities,
     );
     print_sequencer_table::<EmbassyInstant, LargeLed, EmbassyTimeSource>(
-        "Embassy", "LargeLed", &capacities
+        "Embassy",
+        "LargeLed",
+        &capacities,
     );
-    
+
     println!("═══════════════════════════════════════════════════════════════");
     println!("                      KEY INSIGHTS                             ");
     println!("═══════════════════════════════════════════════════════════════");
@@ -445,8 +499,10 @@ fn main() {
     println!("• LED implementation directly affects total memory");
     println!();
     println!("Architecture Note:");
-    println!("  Running on host ({}-bit). Embedded 32-bit targets will have", 
-             std::mem::size_of::<usize>() * 8);
+    println!(
+        "  Running on host ({}-bit). Embedded 32-bit targets will have",
+        std::mem::size_of::<usize>() * 8
+    );
     println!("  slightly smaller sizes due to pointer differences.");
     println!("  Step storage costs remain the same.");
     println!();

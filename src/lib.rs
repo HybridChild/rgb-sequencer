@@ -57,16 +57,16 @@
 // Re-export Srgb from palette for user convenience
 pub use palette::Srgb;
 
-pub mod time;
-pub mod types;
+pub mod command;
 pub mod sequence;
 pub mod sequencer;
-pub mod command;
+pub mod time;
+pub mod types;
 
-pub use sequence::{RgbSequence, SequenceBuilder, StepPosition};
-pub use types::{LoopCount, SequenceError, SequenceStep, TransitionStyle};
-pub use time::{TimeDuration, TimeInstant, TimeSource};
-pub use sequencer::{RgbSequencer, RgbLed, SequencerState, SequencerError, ServiceTiming};
 pub use command::{SequencerAction, SequencerCommand};
+pub use sequence::{RgbSequence, SequenceBuilder, StepPosition};
+pub use sequencer::{RgbLed, RgbSequencer, SequencerError, SequencerState, ServiceTiming};
+pub use time::{TimeDuration, TimeInstant, TimeSource};
+pub use types::{LoopCount, SequenceError, SequenceStep, TransitionStyle};
 
 pub const COLOR_OFF: Srgb = Srgb::new(0.0, 0.0, 0.0);

@@ -103,7 +103,7 @@ impl core::fmt::Display for SequenceError {
                 write!(f, "sequence must have at least one step")
             }
             SequenceError::ZeroDurationWithLinear => {
-                write!(f, "zero-duration steps must use Step transition" )
+                write!(f, "zero-duration steps must use Step transition")
             }
         }
     }

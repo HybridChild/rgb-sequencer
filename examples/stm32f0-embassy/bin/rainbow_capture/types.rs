@@ -1,8 +1,8 @@
+use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_sync::signal::Signal;
-use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
-use rgb_sequencer::SequencerCommand;
 use palette::Srgb;
+use rgb_sequencer::SequencerCommand;
 
 // Re-export the time types from the library
 pub use stm32f0_embassy::time_wrapper::{EmbassyDuration, EmbassyInstant, EmbassyTimeSource};
@@ -15,13 +15,13 @@ pub enum LedId {
 }
 
 /// Extended command type that includes color queries
-/// 
+///
 /// The library's SequencerCommand handles Load/Start/Pause/Resume/etc,
 /// but we need an additional GetColor command for querying LED state.
 pub enum ExtendedCommand {
     /// Standard sequencer command targeting a specific LED
     Sequencer(SequencerCommand<LedId, EmbassyDuration, SEQUENCE_STEP_CAPACITY>),
-    
+
     /// Query the current color of a specific LED
     /// Response will be sent via the provided signal
     GetColor {

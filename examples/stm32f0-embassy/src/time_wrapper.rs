@@ -17,7 +17,7 @@ impl TimeDuration for EmbassyDuration {
 
     fn saturating_sub(self, other: Self) -> Self {
         EmbassyDuration(embassy_time::Duration::from_ticks(
-            self.0.as_ticks().saturating_sub(other.0.as_ticks())
+            self.0.as_ticks().saturating_sub(other.0.as_ticks()),
         ))
     }
 }

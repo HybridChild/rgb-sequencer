@@ -3,7 +3,7 @@ use palette::Srgb;
 use rgb_sequencer::RgbLed;
 
 /// RGB LED implementation for PWM-controlled LEDs
-/// 
+///
 /// This wrapper implements the RgbLed trait required by the sequencer,
 /// handling PWM duty cycle conversion and common anode/cathode logic.
 pub struct PwmRgbLed<R, G, B>
@@ -26,7 +26,7 @@ where
     B: PwmPin<Duty = u16>,
 {
     /// Create a new RGB LED controller
-    /// 
+    ///
     /// # Arguments
     /// * `red` - PWM channel for red LED
     /// * `green` - PWM channel for green LED
@@ -39,7 +39,7 @@ where
         red.enable();
         green.enable();
         blue.enable();
-        
+
         Self {
             red,
             green,
@@ -54,7 +54,7 @@ where
     fn float_to_duty(&self, value: f32) -> u16 {
         let value_clamped = value.clamp(0.0, 1.0);
         let duty = (value_clamped * self.max_duty as f32) as u16;
-        
+
         if self.common_anode {
             self.max_duty - duty
         } else {

@@ -7,10 +7,10 @@ use rtt_target::{rprintln, rtt_init_print};
 
 use stm32f0_examples::time_source::HalTimeSource;
 
-mod button;
-mod sequences;
-mod hardware_setup;
 mod app_state;
+mod button;
+mod hardware_setup;
+mod sequences;
 
 use app_state::AppState;
 
@@ -35,14 +35,14 @@ fn main() -> ! {
 
     // Initialize application state and run
     let mut app = AppState::new(hw, &time_source);
-    
+
     rprintln!("=== System Ready ===");
     rprintln!("Press button to cycle through modes:");
     rprintln!("  1. Rainbow (color cycle)");
     rprintln!("  2. Police (red/blue alternating)");
     rprintln!("  3. Flame (flickering orange)");
     rprintln!("  4. Breathing (white fade)");
-    
+
     // Run the main application loop (never returns)
     app.run()
 }

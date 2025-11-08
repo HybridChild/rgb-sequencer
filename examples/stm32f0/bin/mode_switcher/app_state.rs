@@ -1,12 +1,15 @@
 use rtt_target::rprintln;
 use stm32f0xx_hal::prelude::*;
 
-use stm32f0_examples::time_source::{HalTimeSource, HalInstant, HalDuration};
 use rgb_sequencer::{RgbSequencer, SequencerState, ServiceTiming, TimeDuration, TimeSource};
+use stm32f0_examples::time_source::{HalDuration, HalInstant, HalTimeSource};
 
 use crate::button::ButtonDebouncer;
 use crate::hardware_setup::{HardwareContext, Led1};
-use crate::sequences::{create_breathing_sequence, create_rainbow_sequence, create_police_sequence, create_flame_sequence};
+use crate::sequences::{
+    create_breathing_sequence, create_flame_sequence, create_police_sequence,
+    create_rainbow_sequence,
+};
 
 /// Type aliases for the sequencers
 type Sequencer<'a> = RgbSequencer<'a, HalInstant, Led1, HalTimeSource, 16>;
@@ -55,7 +58,7 @@ impl<'a> AppState<'a> {
         // Start with Rainbow mode
         let initial_mode = Mode::Rainbow;
         let sequence = create_rainbow_sequence();
-        
+
         sequencer.load(sequence);
         sequencer.start().unwrap();
 
@@ -76,7 +79,7 @@ impl<'a> AppState<'a> {
         rprintln!("Switching to mode: {:?}", mode);
 
         let sequence = match mode {
-            Mode::Breathing => create_breathing_sequence(),  // Now uses function-based sine wave!
+            Mode::Breathing => create_breathing_sequence(), // Now uses function-based sine wave!
             Mode::Rainbow => create_rainbow_sequence(),
             Mode::Police => create_police_sequence(),
             Mode::Flame => create_flame_sequence(),
@@ -141,7 +144,8 @@ impl<'a> AppState<'a> {
         let button_is_low = self.button.is_low().unwrap();
         let current_time = self.time_source.now();
 
-        self.button_debouncer.check_press(button_is_low, current_time.as_millis())
+        self.button_debouncer
+            .check_press(button_is_low, current_time.as_millis())
     }
 
     /// Sleep until next service time is needed

@@ -1,12 +1,14 @@
 use defmt::info;
-use embassy_stm32::timer::simple_pwm::SimplePwm;
+use embassy_futures::select::{Either, select};
 use embassy_stm32::peripherals::TIM3;
+use embassy_stm32::timer::simple_pwm::SimplePwm;
 use embassy_time::{Duration, Timer};
-use embassy_futures::select::{select, Either};
 use palette::Srgb;
-use rgb_sequencer::{RgbSequencer, RgbLed, ServiceTiming};
+use rgb_sequencer::{RgbLed, RgbSequencer, ServiceTiming};
 
-use crate::types::{RGB_COMMAND_CHANNEL, EmbassyInstant, EmbassyTimeSource, SEQUENCE_STEP_CAPACITY};
+use crate::types::{
+    EmbassyInstant, EmbassyTimeSource, RGB_COMMAND_CHANNEL, SEQUENCE_STEP_CAPACITY,
+};
 
 // ============================================================================
 // PWM-based RGB LED implementation for Embassy
@@ -31,7 +33,7 @@ impl<'d, T: embassy_stm32::timer::GeneralInstance4Channel> EmbassyPwmRgbLed<'d, 
     fn float_to_duty(&self, value: f32) -> u16 {
         let value_clamped = value.clamp(0.0, 1.0);
         let duty = (value_clamped * self.max_duty as f32) as u16;
-        
+
         if self.common_anode {
             self.max_duty - duty
         } else {
@@ -45,7 +47,7 @@ impl<'d, T: embassy_stm32::timer::GeneralInstance4Channel> RgbLed for EmbassyPwm
         let red_duty = self.float_to_duty(color.red);
         let green_duty = self.float_to_duty(color.green);
         let blue_duty = self.float_to_duty(color.blue);
-        
+
         self.pwm.ch1().set_duty_cycle(red_duty);
         self.pwm.ch2().set_duty_cycle(green_duty);
         self.pwm.ch3().set_duty_cycle(blue_duty);
@@ -57,35 +59,35 @@ impl<'d, T: embassy_stm32::timer::GeneralInstance4Channel> RgbLed for EmbassyPwm
 // ============================================================================
 
 #[embassy_executor::task]
-pub async fn rgb_task(
-    pwm_tim3: SimplePwm<'static, TIM3>,
-    max_duty_tim3: u16,
-) {
+pub async fn rgb_task(pwm_tim3: SimplePwm<'static, TIM3>, max_duty_tim3: u16) {
     info!("RGB task started");
-    
+
     // Create LED wrapper (common anode = true)
     let led_1 = EmbassyPwmRgbLed::new(pwm_tim3, max_duty_tim3, true);
-    
+
     // Create time source
     let time_source = EmbassyTimeSource::new();
-    
+
     // Create sequencer
-    let mut sequencer = RgbSequencer::<EmbassyInstant, _, _, SEQUENCE_STEP_CAPACITY>::new(led_1, &time_source);
-    
+    let mut sequencer =
+        RgbSequencer::<EmbassyInstant, _, _, SEQUENCE_STEP_CAPACITY>::new(led_1, &time_source);
+
     info!("Sequencer created");
-    
+
     // Start with a short delay, will be updated after first service
     let mut next_service_delay = Duration::from_millis(16);
-    
+
     loop {
         // Wait for either a command or the next service time
         match select(
             RGB_COMMAND_CHANNEL.receive(),
-            Timer::after(next_service_delay)
-        ).await {
+            Timer::after(next_service_delay),
+        )
+        .await
+        {
             Either::First(command) => {
                 info!("Handling command");
-                
+
                 // Use the library's handle_action method!
                 // The Load action will load and start the sequence
                 match command.action {
@@ -101,7 +103,7 @@ pub async fn rgb_task(
                         }
                     }
                 }
-                
+
                 // Service to set color and get delay
                 next_service_delay = service_and_get_delay(&mut sequencer);
             }
@@ -115,12 +117,17 @@ pub async fn rgb_task(
 
 /// Service the sequencer and return the appropriate delay.
 fn service_and_get_delay(
-    sequencer: &mut RgbSequencer<EmbassyInstant, EmbassyPwmRgbLed<TIM3>, EmbassyTimeSource, SEQUENCE_STEP_CAPACITY>
+    sequencer: &mut RgbSequencer<
+        EmbassyInstant,
+        EmbassyPwmRgbLed<TIM3>,
+        EmbassyTimeSource,
+        SEQUENCE_STEP_CAPACITY,
+    >,
 ) -> Duration {
     if !sequencer.is_running() {
         return Duration::from_secs(3600);
     }
-    
+
     match sequencer.service() {
         Ok(ServiceTiming::Continuous) => {
             // Linear transition - service at ~60fps

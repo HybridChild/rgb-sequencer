@@ -1,6 +1,6 @@
+use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_sync::signal::Signal;
-use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use rgb_sequencer::SequencerCommand;
 
 // Re-export the time types from the library
@@ -39,7 +39,11 @@ pub static BUTTON_SIGNAL: Signal<ThreadModeRawMutex, ()> = Signal::new();
 
 /// Channel for sending commands from app_logic_task to rgb_task
 /// Uses the library's SequencerCommand type
-pub static RGB_COMMAND_CHANNEL: Channel<ThreadModeRawMutex, SequencerCommand<LedId, EmbassyDuration, SEQUENCE_STEP_CAPACITY>, 2> = Channel::new();
+pub static RGB_COMMAND_CHANNEL: Channel<
+    ThreadModeRawMutex,
+    SequencerCommand<LedId, EmbassyDuration, SEQUENCE_STEP_CAPACITY>,
+    2,
+> = Channel::new();
 
 /// Maximum number of steps that can be stored in a sequence
 pub const SEQUENCE_STEP_CAPACITY: usize = 8;
