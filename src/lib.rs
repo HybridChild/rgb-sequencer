@@ -66,7 +66,7 @@ pub mod command;
 pub use sequence::{RgbSequence, SequenceBuilder, StepPosition};
 pub use types::{LoopCount, SequenceError, SequenceStep, TransitionStyle};
 pub use time::{TimeDuration, TimeInstant, TimeSource};
-pub use sequencer::{RgbSequencer, RgbLed, SequencerState, SequencerError};
+pub use sequencer::{RgbSequencer, RgbLed, SequencerState, SequencerError, ServiceTiming};
 pub use command::{SequencerAction, SequencerCommand};
 
 pub const COLOR_OFF: Srgb = Srgb::new(0.0, 0.0, 0.0);

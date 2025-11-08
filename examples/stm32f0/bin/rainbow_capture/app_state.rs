@@ -2,7 +2,7 @@ use rtt_target::rprintln;
 use stm32f0xx_hal::prelude::*;
 
 use stm32f0_examples::time_source::{HalTimeSource, HalInstant, HalDuration};
-use rgb_sequencer::{RgbSequencer, RgbSequence, TransitionStyle, SequencerState, TimeDuration, TimeSource, COLOR_OFF};
+use rgb_sequencer::{RgbSequencer, RgbSequence, ServiceTiming, TransitionStyle, SequencerState, TimeDuration, TimeSource, COLOR_OFF};
 
 use crate::button::ButtonDebouncer;
 use crate::hardware_setup::{HardwareContext, Led1, Led2};
@@ -95,20 +95,24 @@ impl<'a> AppState<'a> {
         }
     }
 
-    /// Service both sequencers and return the minimum delay needed
-    fn service_sequencers(&mut self) -> Option<HalDuration> {
+    /// Service both sequencers and return timing information
+    fn service_sequencers(&mut self) -> (bool, Option<HalDuration>) {
         let state_1 = self.sequencer_1.get_state();
         let state_2 = self.sequencer_2.get_state();
-        
+
+        let mut has_continuous = false;
         let mut min_delay: Option<HalDuration> = None;
-        
+
         // Service LED 1
         if state_1 == SequencerState::Running {
             match self.sequencer_1.service() {
-                Ok(Some(delay)) => {
+                Ok(ServiceTiming::Continuous) => {
+                    has_continuous = true;
+                }
+                Ok(ServiceTiming::Delay(delay)) => {
                     min_delay = Some(Self::min_duration(min_delay, delay));
                 }
-                Ok(None) => {
+                Ok(ServiceTiming::Complete) => {
                     rprintln!("LED 1 sequence completed");
                 }
                 Err(e) => {
@@ -116,14 +120,17 @@ impl<'a> AppState<'a> {
                 }
             }
         }
-        
+
         // Service LED 2
         if state_2 == SequencerState::Running {
             match self.sequencer_2.service() {
-                Ok(Some(delay)) => {
+                Ok(ServiceTiming::Continuous) => {
+                    has_continuous = true;
+                }
+                Ok(ServiceTiming::Delay(delay)) => {
                     min_delay = Some(Self::min_duration(min_delay, delay));
                 }
-                Ok(None) => {
+                Ok(ServiceTiming::Complete) => {
                     rprintln!("LED 2 sequence completed");
                 }
                 Err(e) => {
@@ -131,8 +138,8 @@ impl<'a> AppState<'a> {
                 }
             }
         }
-        
-        min_delay
+
+        (has_continuous, min_delay)
     }
 
     /// Helper to find minimum duration
@@ -158,26 +165,23 @@ impl<'a> AppState<'a> {
     }
 
     /// Sleep until next service time is needed
-    fn sleep_until_next_service(&self, delay: Option<HalDuration>) {
-        if let Some(delay) = delay {
-            let delay_ms = delay.as_millis();
-            if delay_ms > 0 {
-                // For step transitions, use WFI
+    fn sleep_until_next_service(&self, has_continuous: bool, delay: Option<HalDuration>) {
+        if has_continuous {
+            // Continuous animation - target ~60fps (16ms)
+            let current_time = self.time_source.now();
+            let target_time = current_time.as_millis().wrapping_add(16);
+            loop {
                 cortex_m::asm::wfi();
-            } else {
-                // For linear transitions, target ~60fps (16ms)
-                let current_time = self.time_source.now();
-                let target_time = current_time.as_millis().wrapping_add(16);
-                loop {
-                    cortex_m::asm::wfi();
-                    let now = self.time_source.now();
-                    if now.as_millis().wrapping_sub(target_time) < 0x8000_0000 {
-                        break;
-                    }
+                let now = self.time_source.now();
+                if now.as_millis().wrapping_sub(target_time) < 0x8000_0000 {
+                    break;
                 }
             }
+        } else if let Some(_delay) = delay {
+            // Step transition - use WFI (interrupt will wake us for next step)
+            cortex_m::asm::wfi();
         } else {
-            // Both paused - just sleep and let interrupts wake us
+            // Both paused or complete - just sleep and let interrupts wake us
             cortex_m::asm::wfi();
         }
     }
@@ -193,10 +197,10 @@ impl<'a> AppState<'a> {
             }
 
             // Service sequencers
-            let delay = self.service_sequencers();
-            
+            let (has_continuous, delay) = self.service_sequencers();
+
             // Sleep until next service needed
-            self.sleep_until_next_service(delay);
+            self.sleep_until_next_service(has_continuous, delay);
         }
     }
 }

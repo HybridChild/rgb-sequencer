@@ -5,7 +5,7 @@ use embassy_time::{Duration, Timer};
 use embassy_futures::select::{select, Either};
 use heapless::Vec;
 use palette::Srgb;
-use rgb_sequencer::{RgbSequencer, RgbLed};
+use rgb_sequencer::{RgbSequencer, RgbLed, ServiceTiming};
 
 use crate::types::{ExtendedCommand, RGB_COMMAND_CHANNEL, EmbassyDuration, EmbassyInstant, EmbassyTimeSource, SEQUENCE_STEP_CAPACITY, LedId};
 
@@ -127,16 +127,20 @@ impl<'t, const CAPACITY: usize> SequencerCollection<'t, CAPACITY> {
     }
     
     /// Service all running sequencers and return minimum delay
-    fn service_all(&mut self) -> Option<EmbassyDuration> {
+    fn service_all(&mut self) -> (bool, Option<EmbassyDuration>) {
+        let mut has_continuous = false;
         let mut min_delay: Option<EmbassyDuration> = None;
-        
+
         for sequencer in self.sequencers.iter_mut() {
             if !sequencer.is_running() {
                 continue;
             }
-            
+
             match sequencer.service() {
-                Ok(Some(delay)) => {
+                Ok(ServiceTiming::Continuous) => {
+                    has_continuous = true;
+                }
+                Ok(ServiceTiming::Delay(delay)) => {
                     min_delay = Some(match min_delay {
                         None => delay,
                         Some(current_min) => {
@@ -148,7 +152,7 @@ impl<'t, const CAPACITY: usize> SequencerCollection<'t, CAPACITY> {
                         }
                     });
                 }
-                Ok(None) => {
+                Ok(ServiceTiming::Complete) => {
                     info!("Sequence completed");
                 }
                 Err(e) => {
@@ -156,8 +160,8 @@ impl<'t, const CAPACITY: usize> SequencerCollection<'t, CAPACITY> {
                 }
             }
         }
-        
-        min_delay
+
+        (has_continuous, min_delay)
     }
     
     /// Get number of LEDs in collection
@@ -250,18 +254,16 @@ fn handle_command(
 
 /// Service all sequencers and return the appropriate delay.
 fn service_and_get_delay(collection: &mut SequencerCollection<4>) -> Duration {
-    match collection.service_all() {
-        Some(delay) if delay.0.as_millis() == 0 => {
-            // Linear transition - service at ~60fps
-            Duration::from_millis(16)
-        }
-        Some(delay) => {
-            // Step transition - use the delay
-            delay.0
-        }
-        None => {
-            // All sequences complete - wait indefinitely
-            Duration::from_secs(3600)
-        }
+    let (has_continuous, delay) = collection.service_all();
+
+    if has_continuous {
+        // Continuous animation - service at ~60fps
+        Duration::from_millis(16)
+    } else if let Some(delay) = delay {
+        // Step transition - use the delay
+        delay.0
+    } else {
+        // All sequences complete - wait indefinitely
+        Duration::from_secs(3600)
     }
 }

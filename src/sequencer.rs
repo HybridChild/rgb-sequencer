@@ -6,7 +6,7 @@
 
 use crate::sequence::RgbSequence;
 use crate::command::SequencerAction;
-use crate::time::{TimeInstant, TimeSource};
+use crate::time::{TimeDuration, TimeInstant, TimeSource};
 use crate::{COLOR_OFF};
 use palette::Srgb;
 
@@ -37,6 +37,32 @@ pub enum SequencerState {
     /// Sequence paused. LED holds the color from when pause was called.
     Paused,
     /// Finite sequence finished. LED displays landing color or last step color.
+    Complete,
+}
+
+/// Timing information returned by service operations.
+///
+/// Indicates when the sequencer needs to be serviced again.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum ServiceTiming<D> {
+    /// Continuous animation in progress. Service again at your desired frame rate.
+    ///
+    /// Returned during linear color transitions or continuous function-based sequences.
+    /// Typically you should sleep for 16-33ms (30-60 FPS) between service calls.
+    Continuous,
+
+    /// Static color hold. Service again after the specified delay.
+    ///
+    /// Returned during step transitions where the color is constant.
+    /// Sleep for exactly this duration before calling service again.
+    Delay(D),
+
+    /// Sequence has completed.
+    ///
+    /// Returned when a finite sequence finishes all loops. The LED will display
+    /// the landing color (if configured) or the last step's color. No further
+    /// servicing is needed until a new sequence is loaded or the sequence is restarted.
     Complete,
 }
 
@@ -126,32 +152,32 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
     /// to be dispatched without matching on the action type manually.
     ///
     /// # Returns
-    /// * `Ok(Some(duration))` - Time until next service needed
-    /// * `Ok(None)` - Sequence complete or action doesn't require timing
+    /// * `Ok(ServiceTiming)` - Timing for actions that start/resume sequences
+    /// * `Ok(ServiceTiming::Complete)` - For actions that don't require servicing
     /// * `Err` - Operation failed (invalid state, etc.)
     pub fn handle_action(
         &mut self,
         action: SequencerAction<I::Duration, N>,
-    ) -> Result<Option<I::Duration>, SequencerError> {
+    ) -> Result<ServiceTiming<I::Duration>, SequencerError> {
         match action {
             SequencerAction::Load(sequence) => {
                 self.load(sequence);
-                Ok(None)
+                Ok(ServiceTiming::Complete)
             }
             SequencerAction::Start => self.start(),
             SequencerAction::Stop => {
                 self.stop()?;
-                Ok(None)
+                Ok(ServiceTiming::Complete)
             }
             SequencerAction::Pause => {
                 self.pause()?;
-                Ok(None)
+                Ok(ServiceTiming::Complete)
             }
             SequencerAction::Resume => self.resume(),
             SequencerAction::Restart => self.restart(),
             SequencerAction::Clear => {
                 self.clear();
-                Ok(None)
+                Ok(ServiceTiming::Complete)
             }
         }
     }
@@ -171,10 +197,9 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
     /// Must be called from `Loaded` state.
     ///
     /// # Returns
-    /// * `Ok(Some(duration))` - Time until next service
-    /// * `Ok(None)` - Sequence completed immediately
+    /// * `Ok(ServiceTiming)` - When to service next
     /// * `Err` - Invalid state or no sequence loaded
-    pub fn start(&mut self) -> Result<Option<I::Duration>, SequencerError> {
+    pub fn start(&mut self) -> Result<ServiceTiming<I::Duration>, SequencerError> {
         if self.state != SequencerState::Loaded {
             return Err(SequencerError::InvalidState {
                 expected: "Loaded",
@@ -194,7 +219,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
     /// Restarts the sequence from the beginning.
     ///
     /// Can be called from `Running`, `Paused`, or `Complete` states.
-    pub fn restart(&mut self) -> Result<Option<I::Duration>, SequencerError> {
+    pub fn restart(&mut self) -> Result<ServiceTiming<I::Duration>, SequencerError> {
         match self.state {
             SequencerState::Running | SequencerState::Paused | SequencerState::Complete => {
                 if self.sequence.is_none() {
@@ -218,11 +243,11 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
     /// Must be called from `Running` state.
     ///
     /// # Returns
-    /// - `Ok(Some(Duration::ZERO))` - Continuous animation, service at desired frame rate
-    /// - `Ok(Some(duration))` - Static hold, service after this delay
-    /// - `Ok(None)` - Sequence complete, transitions to `Complete` state
+    /// - `Ok(ServiceTiming::Continuous)` - Continuous animation, service at desired frame rate
+    /// - `Ok(ServiceTiming::Delay(duration))` - Static hold, service after this delay
+    /// - `Ok(ServiceTiming::Complete)` - Sequence complete, transitions to `Complete` state
     /// - `Err` - Invalid state
-    pub fn service(&mut self) -> Result<Option<I::Duration>, SequencerError> {
+    pub fn service(&mut self) -> Result<ServiceTiming<I::Duration>, SequencerError> {
         if self.state != SequencerState::Running {
             return Err(SequencerError::InvalidState {
                 expected: "Running",
@@ -244,13 +269,15 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
             self.current_color = new_color;
         }
 
-        // Handle completion
-        if next_service.is_none() {
-            self.state = SequencerState::Complete;
-            return Ok(None);
+        // Convert timing hint to ServiceTiming
+        match next_service {
+            None => {
+                self.state = SequencerState::Complete;
+                Ok(ServiceTiming::Complete)
+            }
+            Some(duration) if duration == I::Duration::ZERO => Ok(ServiceTiming::Continuous),
+            Some(duration) => Ok(ServiceTiming::Delay(duration)),
         }
-
-        Ok(next_service)
     }
 
     /// Stops the sequence and turns off the LED.
@@ -295,7 +322,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
     /// Resumes a paused sequence, adjusting timing for pause duration.
     ///
     /// Must be called from `Paused` state.
-    pub fn resume(&mut self) -> Result<Option<I::Duration>, SequencerError> {
+    pub fn resume(&mut self) -> Result<ServiceTiming<I::Duration>, SequencerError> {
         if self.state != SequencerState::Paused {
             return Err(SequencerError::InvalidState {
                 expected: "Paused",
@@ -739,10 +766,10 @@ mod tests {
             .unwrap();
 
         sequencer.load(sequence);
-        let delay = sequencer.start().unwrap();
+        let timing = sequencer.start().unwrap();
 
         // Should return the remaining time in the first step (1000ms)
-        assert_eq!(delay, Some(TestDuration(1000)));
+        assert_eq!(timing, ServiceTiming::Delay(TestDuration(1000)));
     }
 
     #[test]
@@ -763,10 +790,10 @@ mod tests {
 
         // Advance into the linear transition step
         timer.advance(TestDuration(150));
-        let delay = sequencer.service().unwrap();
+        let timing = sequencer.service().unwrap();
 
-        // Should return ZERO for linear transitions
-        assert_eq!(delay, Some(TestDuration::ZERO));
+        // Should return Continuous for linear transitions
+        assert_eq!(timing, ServiceTiming::Continuous);
     }
 
     #[test]
@@ -787,10 +814,10 @@ mod tests {
 
         // Advance past the sequence duration
         timer.advance(TestDuration(200));
-        let result = sequencer.service().unwrap();
+        let timing = sequencer.service().unwrap();
 
-        // Should return None to indicate completion
-        assert_eq!(result, None);
+        // Should return Complete to indicate completion
+        assert_eq!(timing, ServiceTiming::Complete);
         assert_eq!(sequencer.get_state(), SequencerState::Complete);
         assert!(colors_equal(sequencer.current_color(), BLUE));
     }

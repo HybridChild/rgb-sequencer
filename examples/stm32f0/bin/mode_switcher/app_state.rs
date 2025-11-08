@@ -2,7 +2,7 @@ use rtt_target::rprintln;
 use stm32f0xx_hal::prelude::*;
 
 use stm32f0_examples::time_source::{HalTimeSource, HalInstant, HalDuration};
-use rgb_sequencer::{RgbSequencer, SequencerState, TimeDuration, TimeSource};
+use rgb_sequencer::{RgbSequencer, SequencerState, ServiceTiming, TimeDuration, TimeSource};
 
 use crate::button::ButtonDebouncer;
 use crate::hardware_setup::{HardwareContext, Led1};
@@ -121,28 +121,19 @@ impl<'a> AppState<'a> {
         self.load_mode(next_mode);
     }
 
-    /// Service sequencer and return the minimum delay needed
-    fn service_sequencer(&mut self) -> Option<HalDuration> {
-        let state = self.sequencer.get_state();
-        
-        let mut min_delay: Option<HalDuration> = None;
-        
-        // Service RGB LED
-        if state == SequencerState::Running {
+    /// Service sequencer and return timing
+    fn service_sequencer(&mut self) -> ServiceTiming<HalDuration> {
+        if self.sequencer.is_running() {
             match self.sequencer.service() {
-                Ok(Some(delay)) => {
-                    min_delay = Some(delay);
-                }
-                Ok(None) => {
-                    rprintln!("RGB LED sequence completed");
-                }
+                Ok(timing) => timing,
                 Err(e) => {
                     rprintln!("RGB LED sequencer error: {:?}", e);
+                    ServiceTiming::Complete
                 }
             }
+        } else {
+            ServiceTiming::Complete
         }
-        
-        min_delay
     }
 
     /// Check for button press and handle it
@@ -154,14 +145,10 @@ impl<'a> AppState<'a> {
     }
 
     /// Sleep until next service time is needed
-    fn sleep_until_next_service(&self, delay: Option<HalDuration>) {
-        if let Some(delay) = delay {
-            let delay_ms = delay.as_millis();
-            if delay_ms > 0 {
-                // For step transitions, use WFI
-                cortex_m::asm::wfi();
-            } else {
-                // For linear transitions, target ~60fps (16ms)
+    fn sleep_until_next_service(&self, timing: ServiceTiming<HalDuration>) {
+        match timing {
+            ServiceTiming::Continuous => {
+                // Continuous animation - target ~60fps (16ms)
                 let current_time = self.time_source.now();
                 let target_time = current_time.as_millis().wrapping_add(16);
                 loop {
@@ -172,9 +159,14 @@ impl<'a> AppState<'a> {
                     }
                 }
             }
-        } else {
-            // RGB LED paused or completed - just sleep and let interrupts wake us
-            cortex_m::asm::wfi();
+            ServiceTiming::Delay(_delay) => {
+                // Step transition - use WFI (interrupt will wake us for next step)
+                cortex_m::asm::wfi();
+            }
+            ServiceTiming::Complete => {
+                // RGB LED paused or completed - just sleep and let interrupts wake us
+                cortex_m::asm::wfi();
+            }
         }
     }
 
@@ -186,11 +178,9 @@ impl<'a> AppState<'a> {
                 self.handle_button_press();
             }
 
-            // Service sequencers
-            let delay = self.service_sequencer();
-            
-            // Sleep until next service needed
-            self.sleep_until_next_service(delay);
+            // Service sequencer and sleep until next service needed
+            let timing = self.service_sequencer();
+            self.sleep_until_next_service(timing);
         }
     }
 }

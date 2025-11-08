@@ -4,7 +4,7 @@ use embassy_stm32::peripherals::TIM3;
 use embassy_time::{Duration, Timer};
 use embassy_futures::select::{select, Either};
 use palette::Srgb;
-use rgb_sequencer::{RgbSequencer, RgbLed};
+use rgb_sequencer::{RgbSequencer, RgbLed, ServiceTiming};
 
 use crate::types::{RGB_COMMAND_CHANNEL, EmbassyInstant, EmbassyTimeSource, SEQUENCE_STEP_CAPACITY};
 
@@ -122,15 +122,15 @@ fn service_and_get_delay(
     }
     
     match sequencer.service() {
-        Ok(Some(delay)) if delay.0.as_millis() == 0 => {
+        Ok(ServiceTiming::Continuous) => {
             // Linear transition - service at ~60fps
             Duration::from_millis(16)
         }
-        Ok(Some(delay)) => {
+        Ok(ServiceTiming::Delay(delay)) => {
             // Step transition - use the delay
             delay.0
         }
-        Ok(None) => {
+        Ok(ServiceTiming::Complete) => {
             info!("Sequence completed");
             // Sequence complete - wait indefinitely - One hour for simplicity
             Duration::from_secs(3600)

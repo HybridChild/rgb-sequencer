@@ -17,7 +17,7 @@ pub trait TimeSource<I: TimeInstant> {
 }
 
 /// Abstracts over duration types from different embedded time libraries.
-pub trait TimeDuration: Copy {
+pub trait TimeDuration: Copy + PartialEq {
     /// A duration of zero length, used for initialization.
     const ZERO: Self;
 

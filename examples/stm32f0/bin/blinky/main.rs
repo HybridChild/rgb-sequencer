@@ -18,14 +18,15 @@ use stm32f0xx_hal::{
 use stm32f0_examples::rgb_led::PwmRgbLed;
 
 use rgb_sequencer::{
-    COLOR_OFF,
-    LoopCount,
     RgbSequence,
     RgbSequencer,
-    TimeSource,
+    LoopCount,
+    TransitionStyle,
+    ServiceTiming,
     TimeDuration,
     TimeInstant,
-    TransitionStyle,
+    TimeSource,
+    COLOR_OFF,
 };
 
 /// Type alias for LED 1
@@ -189,19 +190,21 @@ fn main() -> ! {
     rprintln!("Sequence started");
 
     loop {
-        if let Some(delay_duration) = sequencer.service().unwrap() {
-            if delay_duration == TimeDuration::ZERO {
+        match sequencer.service().unwrap() {
+            ServiceTiming::Continuous => {
                 // Linear transition - maintain frame rate
                 delay.delay_ms(FRAME_RATE_MS as u32);
                 time_source.advance(BlinkyDuration(FRAME_RATE_MS));
-            } else {
+            }
+            ServiceTiming::Delay(delay_duration) => {
                 // Step transition - delay for the specified time
                 delay.delay_ms(delay_duration.as_millis() as u32);
                 time_source.advance(delay_duration);
             }
-        } else {
-            // Sequence complete
-            break;
+            ServiceTiming::Complete => {
+                // Sequence complete
+                break;
+            }
         }
     }
 

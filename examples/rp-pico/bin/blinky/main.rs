@@ -19,7 +19,14 @@ use palette::{FromColor, Hsv, Srgb};
 use rp_pico_examples::rgb_led::PwmRgbLed;
 
 use rgb_sequencer::{
-    LoopCount, RgbSequence, RgbSequencer, TimeDuration, TimeInstant, TimeSource, TransitionStyle,
+    RgbSequence,
+    RgbSequencer,
+    LoopCount,
+    TransitionStyle,
+    ServiceTiming,
+    TimeDuration,
+    TimeInstant,
+    TimeSource,
     COLOR_OFF,
 };
 
@@ -220,19 +227,21 @@ fn main() -> ! {
     let mut delay = Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     loop {
-        if let Some(delay_duration) = sequencer.service().unwrap() {
-            if delay_duration == TimeDuration::ZERO {
+        match sequencer.service().unwrap() {
+            ServiceTiming::Continuous => {
                 // Linear transition - maintain frame rate
                 delay.delay_ms(FRAME_RATE_MS as u32);
                 time_source.advance(BlinkyDuration(FRAME_RATE_MS));
-            } else {
+            }
+            ServiceTiming::Delay(delay_duration) => {
                 // Step transition - delay for the specified time
                 delay.delay_ms(delay_duration.as_millis() as u32);
                 time_source.advance(delay_duration);
             }
-        } else {
-            // Sequence complete
-            break;
+            ServiceTiming::Complete => {
+                // Sequence complete
+                break;
+            }
         }
     }
 

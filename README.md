@@ -76,17 +76,19 @@ sequencer.start().unwrap();
 
 // 5. Service in your main loop
 loop {
-    if let Some(delay) = sequencer.service().unwrap() {
-        if delay == TimeDuration::ZERO {
+    match sequencer.service().unwrap() {
+        ServiceTiming::Continuous => {
             // Linear transition - sleep for desired frame rate
-            sleep_ms(FRAME_RATE_MS);
-        } else {
-            // Step transition - delay for the specified time
-            sleep_ms(delay.as_millis());
+            sleep_ms(16);  // ~60 FPS
         }
-    } else {
-        // Sequence complete
-        break;
+        ServiceTiming::Delay(duration) => {
+            // Step transition - sleep for exact duration
+            sleep_ms(duration.as_millis());
+        }
+        ServiceTiming::Complete => {
+            // Sequence finished
+            break;
+        }
     }
 }
 ```
@@ -341,17 +343,17 @@ sequencer.start().unwrap();
 
 loop {
     match sequencer.service() {
-        Ok(Some(duration)) if duration == Duration::ZERO => {
+        Ok(ServiceTiming::Continuous) => {
             // Continuous color change in progress
             // Sleep for your desired frame rate (e.g., 16ms for ~60fps)
             sleep_ms(16);
         }
-        Ok(Some(duration)) => {
+        Ok(ServiceTiming::Delay(duration)) => {
             // Holding a static color
-            // Sleep for this duration
+            // Sleep for this exact duration
             sleep_ms(duration.as_millis());
         }
-        Ok(None) => {
+        Ok(ServiceTiming::Complete) => {
             // Finite sequence completed
             // No more servicing needed
             break;
@@ -368,31 +370,44 @@ loop {
 
 ### Multi-LED Servicing
 
-When managing multiple LEDs, find the minimum delay across all sequencers:
+When managing multiple LEDs, coordinate timing across all sequencers:
 
 ```rust
+use rgb_sequencer::ServiceTiming;
+
+let mut has_continuous = false;
 let mut min_delay = None;
+let mut all_complete = true;
 
 for sequencer in sequencers.iter_mut() {
-    if let Ok(Some(delay)) = sequencer.service() {
-        min_delay = match min_delay {
-            None => Some(delay),
-            Some(current) if delay < current => Some(delay),
-            Some(current) => Some(current),
-        };
+    match sequencer.service() {
+        Ok(ServiceTiming::Continuous) => {
+            has_continuous = true;
+            all_complete = false;
+        }
+        Ok(ServiceTiming::Delay(delay)) => {
+            all_complete = false;
+            min_delay = Some(match min_delay {
+                None => delay,
+                Some(current) if delay < current => delay,
+                Some(current) => current,
+            });
+        }
+        Ok(ServiceTiming::Complete) => {
+            // This sequencer is done
+        }
+        Err(_) => {
+            // Handle error
+        }
     }
 }
 
-if let Some(delay) = min_delay {
-    if delay == Duration::ZERO {
-        sleep_ms(16);  // Frame rate for linear transitions
-    } else {
-        sleep_ms(delay.as_millis());  // Exact delay for steps
-    }
-} else {
-    // All sequences returned None - they're all complete
-    // No more servicing needed until new sequences are loaded
-    break;  // or sleep_indefinitely() or wait_for_event()
+if has_continuous {
+    sleep_ms(16);  // Frame rate for any continuous animations
+} else if let Some(delay) = min_delay {
+    sleep_ms(delay.as_millis());  // Sleep until next step change
+} else if all_complete {
+    break;  // All sequences done
 }
 ```
 
@@ -491,21 +506,24 @@ sequencer_1.start()?;
 sequencer_2.start()?;
 
 loop {
-    let delay_1 = sequencer_1.service()?;
-    let delay_2 = sequencer_2.service()?;
-    
-    // Find minimum delay - handle completion
-    let min_delay = match (delay_1, delay_2) {
-        (Some(d1), Some(d2)) => Some(if d1 < d2 { d1 } else { d2 }),
-        (Some(d), None) | (None, Some(d)) => Some(d),
-        (None, None) => break,  // Both complete
-    };
-    
-    if let Some(delay) = min_delay {
-        if delay == Duration::ZERO {
-            sleep_ms(16);
-        } else {
-            sleep_ms(delay.as_millis());
+    let timing_1 = sequencer_1.service()?;
+    let timing_2 = sequencer_2.service()?;
+
+    // Combine timing from both sequencers
+    match (timing_1, timing_2) {
+        (ServiceTiming::Complete, ServiceTiming::Complete) => break,  // Both done
+
+        (ServiceTiming::Continuous, _) | (_, ServiceTiming::Continuous) => {
+            sleep_ms(16);  // Either has continuous animation
+        }
+
+        (ServiceTiming::Delay(d1), ServiceTiming::Delay(d2)) => {
+            sleep_ms(d1.min(d2).as_millis());  // Sleep until first change
+        }
+
+        (ServiceTiming::Delay(d), ServiceTiming::Complete) |
+        (ServiceTiming::Complete, ServiceTiming::Delay(d)) => {
+            sleep_ms(d.as_millis());  // One still running
         }
     }
 }
