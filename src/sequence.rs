@@ -136,6 +136,15 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
     }
 
     /// Handles the special case where all steps have zero duration.
+    ///
+    /// # Parameters
+    /// * `elapsed` - Time elapsed since sequence start. Used to determine if the
+    ///   sequence is still at time zero (showing first step) or has advanced
+    ///   (showing last step as complete).
+    ///
+    /// # Returns
+    /// A `StepPosition` indicating either the first step (at time zero) or
+    /// completion at the last step (after any non-zero time).
     #[inline]
     fn handle_zero_duration_sequence(&self, elapsed: D) -> StepPosition<D> {
         let is_complete = elapsed.as_millis() > 0;
@@ -173,20 +182,45 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
     }
 
     /// Locates the active step at a given time offset within a loop iteration.
+    ///
+    /// # Parameters
+    /// * `time_in_loop` - Time offset from the start of a single loop iteration (0 to loop_duration).
+    ///   This is typically calculated as `elapsed % loop_duration`.
+    /// * `current_loop` - Which loop iteration we're in (0-indexed). Used to track position
+    ///   for features like start_color (only affects first loop).
+    ///
+    /// # Returns
+    /// A `StepPosition` containing the active step index, timing information within that step,
+    /// and the current loop number.
     fn find_step_at_time(&self, time_in_loop: D, current_loop: u32) -> StepPosition<D> {
+        // Accumulated time pattern: We walk through steps sequentially, accumulating
+        // their durations to build time ranges for each step. This allows us to determine
+        // which step contains the given time_in_loop.
+        //
+        // Example with 3 steps of 100ms, 200ms, 150ms:
+        //   Step 0: 0-100ms      (accumulated_time: 0ms,   step_end_time: 100ms)
+        //   Step 1: 100-300ms    (accumulated_time: 100ms, step_end_time: 300ms)
+        //   Step 2: 300-450ms    (accumulated_time: 300ms, step_end_time: 450ms)
+        //
+        // If time_in_loop is 250ms, we iterate:
+        //   - Step 0: 250 < 100? No, accumulated_time becomes 100ms
+        //   - Step 1: 250 < 300? Yes! We're in step 1
+        //     - time_in_step = 250 - 100 = 150ms (how far into step 1)
+        //     - time_until_end = 300 - 250 = 50ms (remaining in step 1)
         let mut accumulated_time = D::ZERO;
-        
+
         for (step_idx, step) in self.steps.iter().enumerate() {
             let step_end_time = D::from_millis(
                 accumulated_time.as_millis() + step.duration.as_millis(),
             );
 
             if time_in_loop.as_millis() < step_end_time.as_millis() {
+                // Found the step containing time_in_loop
                 let time_in_step = D::from_millis(
                     time_in_loop.as_millis() - accumulated_time.as_millis(),
                 );
                 let time_until_end = step_end_time.saturating_sub(time_in_loop);
-                
+
                 return StepPosition {
                     step_index: step_idx,
                     time_in_step,
@@ -196,10 +230,13 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
                 };
             }
 
+            // Move to next step: accumulated_time now represents the end of this step
             accumulated_time = step_end_time;
         }
 
-        // Fallback to last step
+        // Fallback: If time_in_loop >= total loop duration (edge case from timing precision
+        // or rounding), clamp to the last step at its end. This ensures we always return a
+        // valid position even if time_in_loop is slightly beyond the theoretical loop end.
         let last_index = self.steps.len() - 1;
         StepPosition {
             step_index: last_index,
@@ -213,18 +250,32 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
     /// Performs linear color interpolation for a step.
     #[inline]
     fn interpolate_color(&self, position: &StepPosition<D>, step: &SequenceStep<D>) -> Srgb {
-        // If this is the first step with Linear transition and we're on the first loop,
-        // use start_color if available
-        let previous_color = if position.step_index == 0 
-            && step.transition == TransitionStyle::Linear 
-            && position.current_loop == 0 
-            && self.start_color.is_some() 
+        // Determine the color to interpolate FROM (previous_color).
+        // There are three cases based on position and configuration:
+        //
+        // Case 1: First step, Linear transition, first loop iteration, start_color configured
+        //   → Use start_color as the interpolation source
+        //   This allows sequences to smoothly transition from an initial color (e.g., LED's
+        //   current state) into the first step's color on the very first playthrough.
+        //
+        // Case 2: First step (index 0), but NOT Case 1
+        //   → Use the LAST step's color (wrap-around behavior)
+        //   This happens on subsequent loop iterations or when start_color isn't configured.
+        //   Creates seamless looping by transitioning from the sequence end back to the start.
+        //
+        // Case 3: Any step other than the first (index > 0)
+        //   → Use the previous step's color (step_index - 1)
+        //   Standard sequential interpolation from one step to the next.
+        let previous_color = if position.step_index == 0
+            && step.transition == TransitionStyle::Linear
+            && position.current_loop == 0
+            && self.start_color.is_some()
         {
-            self.start_color.unwrap()
+            self.start_color.unwrap()  // Case 1
         } else if position.step_index == 0 {
-            self.steps.last().unwrap().color
+            self.steps.last().unwrap().color  // Case 2
         } else {
-            self.steps[position.step_index - 1].color
+            self.steps[position.step_index - 1].color  // Case 3
         };
 
         let duration_millis = step.duration.as_millis();
@@ -257,7 +308,18 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
         if self.is_complete_step_based(elapsed) {
             return Some(self.create_complete_position());
         }
-        
+
+        // Core looping algorithm using modulo arithmetic:
+        // - Division gives us which loop iteration we're in (0, 1, 2, ...)
+        // - Modulo gives us the time position within the current loop iteration
+        //
+        // Example: If loop_duration is 1000ms and elapsed is 2500ms:
+        //   current_loop = 2500 / 1000 = 2 (we're in the 3rd iteration)
+        //   time_in_loop = 2500 % 1000 = 500ms (halfway through that iteration)
+        //
+        // This allows seamless looping without tracking iteration count separately,
+        // and works for both finite (LoopCount::Finite) and infinite (LoopCount::Infinite)
+        // sequences. The loop completion check above handles finite sequence termination.
         let elapsed_millis = elapsed.as_millis();
         let current_loop = (elapsed_millis / loop_millis) as u32;
         let time_in_loop = D::from_millis(elapsed_millis % loop_millis);
@@ -268,6 +330,16 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
     /// Calculates the color at a given step position.
     ///
     /// Used internally for step-based sequences.
+    ///
+    /// # Parameters
+    /// * `position` - The current position in the sequence, containing step index,
+    ///   timing within the step, loop iteration, and completion status.
+    ///
+    /// # Returns
+    /// The RGB color to display at this position. For completed sequences, returns
+    /// the landing color (or last step's color if no landing color set). For active
+    /// steps, returns either the step's color (Step transition) or an interpolated
+    /// color (Linear transition).
     #[inline]
     fn color_at_position(&self, position: &StepPosition<D>) -> Srgb {
         if position.is_complete {
@@ -288,6 +360,16 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
     /// Calculates optimal next service time from a step position.
     ///
     /// Used internally for step-based sequences.
+    ///
+    /// # Parameters
+    /// * `position` - The current position in the sequence.
+    ///
+    /// # Returns
+    /// - `None` if the sequence is complete (no further servicing needed)
+    /// - `Some(Duration::ZERO)` for Linear transitions (service immediately/continuously
+    ///   for smooth color interpolation)
+    /// - `Some(time_until_step_end)` for Step transitions (service only when stepping
+    ///   to the next color)
     #[inline]
     fn next_service_time_from_position(&self, position: &StepPosition<D>) -> Option<D> {
         if position.is_complete {
