@@ -95,25 +95,21 @@ impl<'a> AppState<'a> {
         }
     }
 
-    /// Service both sequencers and return timing information
-    fn service_sequencers(&mut self) -> (bool, Option<HalDuration>) {
+    /// Service both sequencers and return the most urgent timing
+    fn service_sequencers(&mut self) -> ServiceTiming<HalDuration> {
         let state_1 = self.sequencer_1.get_state();
         let state_2 = self.sequencer_2.get_state();
 
-        let mut has_continuous = false;
-        let mut min_delay: Option<HalDuration> = None;
+        let mut result = ServiceTiming::Complete;
 
         // Service LED 1
         if state_1 == SequencerState::Running {
             match self.sequencer_1.service() {
-                Ok(ServiceTiming::Continuous) => {
-                    has_continuous = true;
-                }
-                Ok(ServiceTiming::Delay(delay)) => {
-                    min_delay = Some(Self::min_duration(min_delay, delay));
-                }
-                Ok(ServiceTiming::Complete) => {
-                    rprintln!("LED 1 sequence completed");
+                Ok(timing) => {
+                    result = Self::most_urgent(result, timing);
+                    if matches!(timing, ServiceTiming::Complete) {
+                        rprintln!("LED 1 sequence completed");
+                    }
                 }
                 Err(e) => {
                     rprintln!("LED 1 sequencer error: {:?}", e);
@@ -124,14 +120,11 @@ impl<'a> AppState<'a> {
         // Service LED 2
         if state_2 == SequencerState::Running {
             match self.sequencer_2.service() {
-                Ok(ServiceTiming::Continuous) => {
-                    has_continuous = true;
-                }
-                Ok(ServiceTiming::Delay(delay)) => {
-                    min_delay = Some(Self::min_duration(min_delay, delay));
-                }
-                Ok(ServiceTiming::Complete) => {
-                    rprintln!("LED 2 sequence completed");
+                Ok(timing) => {
+                    result = Self::most_urgent(result, timing);
+                    if matches!(timing, ServiceTiming::Complete) {
+                        rprintln!("LED 2 sequence completed");
+                    }
                 }
                 Err(e) => {
                     rprintln!("LED 2 sequencer error: {:?}", e);
@@ -139,20 +132,26 @@ impl<'a> AppState<'a> {
             }
         }
 
-        (has_continuous, min_delay)
+        result
     }
 
-    /// Helper to find minimum duration
-    fn min_duration(current: Option<HalDuration>, new: HalDuration) -> HalDuration {
-        match current {
-            None => new,
-            Some(curr) => {
-                if new.as_millis() < curr.as_millis() {
-                    new
+    /// Helper to find the most urgent timing between two ServiceTimings
+    fn most_urgent(a: ServiceTiming<HalDuration>, b: ServiceTiming<HalDuration>) -> ServiceTiming<HalDuration> {
+        match (a, b) {
+            // Continuous is always most urgent
+            (ServiceTiming::Continuous, _) | (_, ServiceTiming::Continuous) => ServiceTiming::Continuous,
+            // Between two delays, choose the shorter one
+            (ServiceTiming::Delay(d1), ServiceTiming::Delay(d2)) => {
+                if d1.as_millis() < d2.as_millis() {
+                    ServiceTiming::Delay(d1)
                 } else {
-                    curr
+                    ServiceTiming::Delay(d2)
                 }
             }
+            // If one is Delay and other is Complete, use Delay
+            (ServiceTiming::Delay(d), _) | (_, ServiceTiming::Delay(d)) => ServiceTiming::Delay(d),
+            // Both Complete
+            _ => ServiceTiming::Complete,
         }
     }
 
@@ -165,24 +164,28 @@ impl<'a> AppState<'a> {
     }
 
     /// Sleep until next service time is needed
-    fn sleep_until_next_service(&self, has_continuous: bool, delay: Option<HalDuration>) {
-        if has_continuous {
-            // Continuous animation - target ~60fps (16ms)
-            let current_time = self.time_source.now();
-            let target_time = current_time.as_millis().wrapping_add(16);
-            loop {
-                cortex_m::asm::wfi();
-                let now = self.time_source.now();
-                if now.as_millis().wrapping_sub(target_time) < 0x8000_0000 {
-                    break;
+    fn sleep_until_next_service(&self, timing: ServiceTiming<HalDuration>) {
+        match timing {
+            ServiceTiming::Continuous => {
+                // Continuous animation - target ~60fps (16ms)
+                let current_time = self.time_source.now();
+                let target_time = current_time.as_millis().wrapping_add(16);
+                loop {
+                    cortex_m::asm::wfi();
+                    let now = self.time_source.now();
+                    if now.as_millis().wrapping_sub(target_time) < 0x8000_0000 {
+                        break;
+                    }
                 }
             }
-        } else if let Some(_delay) = delay {
-            // Step transition - use WFI (interrupt will wake us for next step)
-            cortex_m::asm::wfi();
-        } else {
-            // Both paused or complete - just sleep and let interrupts wake us
-            cortex_m::asm::wfi();
+            ServiceTiming::Delay(_) => {
+                // Step transition - use WFI (interrupt will wake us for next step)
+                cortex_m::asm::wfi();
+            }
+            ServiceTiming::Complete => {
+                // Both paused or complete - just sleep and let interrupts wake us
+                cortex_m::asm::wfi();
+            }
         }
     }
 
@@ -197,10 +200,10 @@ impl<'a> AppState<'a> {
             }
 
             // Service sequencers
-            let (has_continuous, delay) = self.service_sequencers();
+            let timing = self.service_sequencers();
 
             // Sleep until next service needed
-            self.sleep_until_next_service(has_continuous, delay);
+            self.sleep_until_next_service(timing);
         }
     }
 }

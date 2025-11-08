@@ -126,10 +126,9 @@ impl<'t, const CAPACITY: usize> SequencerCollection<'t, CAPACITY> {
         self.sequencers.get_mut(index)
     }
     
-    /// Service all running sequencers and return minimum delay
-    fn service_all(&mut self) -> (bool, Option<EmbassyDuration>) {
-        let mut has_continuous = false;
-        let mut min_delay: Option<EmbassyDuration> = None;
+    /// Service all running sequencers and return the most urgent timing
+    fn service_all(&mut self) -> ServiceTiming<EmbassyDuration> {
+        let mut result = ServiceTiming::Complete;
 
         for sequencer in self.sequencers.iter_mut() {
             if !sequencer.is_running() {
@@ -137,23 +136,11 @@ impl<'t, const CAPACITY: usize> SequencerCollection<'t, CAPACITY> {
             }
 
             match sequencer.service() {
-                Ok(ServiceTiming::Continuous) => {
-                    has_continuous = true;
-                }
-                Ok(ServiceTiming::Delay(delay)) => {
-                    min_delay = Some(match min_delay {
-                        None => delay,
-                        Some(current_min) => {
-                            if delay.0.as_millis() < current_min.0.as_millis() {
-                                delay
-                            } else {
-                                current_min
-                            }
-                        }
-                    });
-                }
-                Ok(ServiceTiming::Complete) => {
-                    info!("Sequence completed");
+                Ok(timing) => {
+                    result = Self::most_urgent(result, timing);
+                    if matches!(timing, ServiceTiming::Complete) {
+                        info!("Sequence completed");
+                    }
                 }
                 Err(e) => {
                     info!("Sequencer error: {:?}", e);
@@ -161,7 +148,27 @@ impl<'t, const CAPACITY: usize> SequencerCollection<'t, CAPACITY> {
             }
         }
 
-        (has_continuous, min_delay)
+        result
+    }
+
+    /// Helper to find the most urgent timing between two ServiceTimings
+    fn most_urgent(a: ServiceTiming<EmbassyDuration>, b: ServiceTiming<EmbassyDuration>) -> ServiceTiming<EmbassyDuration> {
+        match (a, b) {
+            // Continuous is always most urgent
+            (ServiceTiming::Continuous, _) | (_, ServiceTiming::Continuous) => ServiceTiming::Continuous,
+            // Between two delays, choose the shorter one
+            (ServiceTiming::Delay(d1), ServiceTiming::Delay(d2)) => {
+                if d1.0.as_millis() < d2.0.as_millis() {
+                    ServiceTiming::Delay(d1)
+                } else {
+                    ServiceTiming::Delay(d2)
+                }
+            }
+            // If one is Delay and other is Complete, use Delay
+            (ServiceTiming::Delay(d), _) | (_, ServiceTiming::Delay(d)) => ServiceTiming::Delay(d),
+            // Both Complete
+            _ => ServiceTiming::Complete,
+        }
     }
     
     /// Get number of LEDs in collection
@@ -254,16 +261,18 @@ fn handle_command(
 
 /// Service all sequencers and return the appropriate delay.
 fn service_and_get_delay(collection: &mut SequencerCollection<4>) -> Duration {
-    let (has_continuous, delay) = collection.service_all();
-
-    if has_continuous {
-        // Continuous animation - service at ~60fps
-        Duration::from_millis(16)
-    } else if let Some(delay) = delay {
-        // Step transition - use the delay
-        delay.0
-    } else {
-        // All sequences complete - wait indefinitely
-        Duration::from_secs(3600)
+    match collection.service_all() {
+        ServiceTiming::Continuous => {
+            // Continuous animation - service at ~60fps
+            Duration::from_millis(16)
+        }
+        ServiceTiming::Delay(delay) => {
+            // Step transition - use the delay
+            delay.0
+        }
+        ServiceTiming::Complete => {
+            // All sequences complete - wait indefinitely
+            Duration::from_secs(3600)
+        }
     }
 }
