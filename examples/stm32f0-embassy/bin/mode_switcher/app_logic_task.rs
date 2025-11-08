@@ -69,7 +69,7 @@ fn create_breathing_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAP
 
 /// Create a rainbow cycle sequence
 fn create_rainbow_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACITY> {
-    RgbSequence::new()
+    RgbSequence::builder()
         .step(
             Srgb::from_color(Hsv::new(0.0, 1.0, 1.0)),
             EmbassyDuration(Duration::from_millis(4000)),
@@ -96,7 +96,7 @@ fn create_police_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACI
     let blue = Srgb::new(0.0, 0.0, 1.0);
     let off = Srgb::new(0.0, 0.0, 0.0);
 
-    RgbSequence::new()
+    RgbSequence::builder()
         .step(red, EmbassyDuration(Duration::from_millis(100)), TransitionStyle::Step)
         .step(off, EmbassyDuration(Duration::from_millis(100)), TransitionStyle::Step)
         .step(red, EmbassyDuration(Duration::from_millis(100)), TransitionStyle::Step)

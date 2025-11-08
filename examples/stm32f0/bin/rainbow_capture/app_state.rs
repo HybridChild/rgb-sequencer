@@ -30,7 +30,7 @@ impl<'a> AppState<'a> {
 
         // Create and load sequences
         let sequence_1 = create_rainbow_sequence();
-        let sequence_2 = RgbSequence::new()
+        let sequence_2 = RgbSequence::builder()
             .step(COLOR_OFF, HalDuration(0), TransitionStyle::Step)
             .build()
             .unwrap();
@@ -73,7 +73,7 @@ impl<'a> AppState<'a> {
                 rprintln!("Captured: R={:.2} G={:.2} B={:.2}", 
                          captured_color.red, captured_color.green, captured_color.blue);
                 
-                let transition_sequence = RgbSequence::new()
+                let transition_sequence = RgbSequence::builder()
                     .start_color(old_color)
                     .step(captured_color, HalDuration(2000), TransitionStyle::Linear)
                     .build()

@@ -10,7 +10,7 @@ pub const SEQUENCE_STEP_CAPACITY: usize = 8;
 /// The sequence smoothly transitions through red -> green -> blue over 12 seconds,
 /// then loops infinitely.
 pub fn create_rainbow_sequence() -> RgbSequence<HalDuration, SEQUENCE_STEP_CAPACITY> {    
-    RgbSequence::new()
+    RgbSequence::builder()
         .step(
             Srgb::from_color(Hsv::new(0.0, 1.0, 1.0)),
             HalDuration(4000),

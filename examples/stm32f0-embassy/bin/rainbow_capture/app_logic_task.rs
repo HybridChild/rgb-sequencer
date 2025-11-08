@@ -10,7 +10,7 @@ use crate::types::{
 
 /// Create a rainbow cycle sequence (red -> green -> blue)
 fn create_rainbow_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACITY> {
-    RgbSequence::new()
+    RgbSequence::builder()
         .step(
             Srgb::from_color(Hsv::new(0.0, 1.0, 1.0)),      // Red
             EmbassyDuration(embassy_time::Duration::from_millis(4000)),
@@ -33,7 +33,7 @@ fn create_rainbow_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPAC
 
 /// Create a static color sequence that holds a single color
 fn create_static_sequence(color: Srgb) -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACITY> {
-    RgbSequence::new()
+    RgbSequence::builder()
         .step(
             color,
             EmbassyDuration(embassy_time::Duration::from_millis(0)),
@@ -49,7 +49,7 @@ fn create_transition_sequence(
     to: Srgb,
     duration_ms: u64,
 ) -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACITY> {
-    RgbSequence::new()
+    RgbSequence::builder()
         .start_color(from)
         .step(
             to,

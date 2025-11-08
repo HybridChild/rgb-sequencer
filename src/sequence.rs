@@ -59,7 +59,7 @@ pub struct RgbSequence<D: TimeDuration, const N: usize> {
 
 impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
     /// Creates a new sequence builder for step-based sequences.
-    pub fn new() -> SequenceBuilder<D, N> {
+    pub fn builder() -> SequenceBuilder<D, N> {
         SequenceBuilder::new()
     }
 
@@ -595,13 +595,13 @@ mod tests {
 
     #[test]
     fn builder_rejects_empty_sequence() {
-        let result = RgbSequence::<TestDuration, 8>::new().build();
+        let result = RgbSequence::<TestDuration, 8>::builder().build();
         assert!(matches!(result, Err(SequenceError::EmptySequence)));
     }
 
     #[test]
     fn builder_rejects_zero_duration_with_linear() {
-        let result = RgbSequence::<TestDuration, 8>::new()
+        let result = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(0), TransitionStyle::Linear)
             .build();
         assert!(matches!(result, Err(SequenceError::ZeroDurationWithLinear)));
@@ -609,7 +609,7 @@ mod tests {
 
     #[test]
     fn builder_accepts_valid_sequence() {
-        let result = RgbSequence::<TestDuration, 8>::new()
+        let result = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .step(GREEN, TestDuration(200), TransitionStyle::Linear)
             .build();
@@ -700,7 +700,7 @@ mod tests {
 
     #[test]
     fn evaluate_returns_both_color_and_timing() {
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .step(GREEN, TestDuration(200), TransitionStyle::Linear)
             .build()
@@ -719,7 +719,7 @@ mod tests {
 
     #[test]
     fn loop_duration_is_cached_correctly() {
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .step(GREEN, TestDuration(200), TransitionStyle::Step)
             .step(BLUE, TestDuration(50), TransitionStyle::Step)
@@ -731,7 +731,7 @@ mod tests {
 
     #[test]
     fn step_transition_holds_color() {
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
             .build()
             .unwrap();
@@ -748,7 +748,7 @@ mod tests {
 
     #[test]
     fn linear_transition_interpolates_correctly() {
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .step(BLUE, TestDuration(1000), TransitionStyle::Linear)
             .build()
@@ -767,7 +767,7 @@ mod tests {
 
     #[test]
     fn first_step_with_linear_transition_interpolates_from_last_step() {
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Linear)
             .step(GREEN, TestDuration(1000), TransitionStyle::Step)
             .step(BLUE, TestDuration(1000), TransitionStyle::Step)
@@ -799,7 +799,7 @@ mod tests {
     #[test]
     fn start_color_used_for_first_linear_step_first_loop_only() {
         // Create sequence with start_color = BLACK and first step = RED with Linear transition
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .start_color(BLACK)
             .step(RED, TestDuration(1000), TransitionStyle::Linear)
             .step(GREEN, TestDuration(1000), TransitionStyle::Step)
@@ -835,7 +835,7 @@ mod tests {
     #[test]
     fn start_color_not_used_when_first_step_is_step_transition() {
         // Create sequence with start_color but first step uses Step transition
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .start_color(BLACK)
             .step(RED, TestDuration(1000), TransitionStyle::Step)
             .step(GREEN, TestDuration(1000), TransitionStyle::Linear)
@@ -854,7 +854,7 @@ mod tests {
     #[test]
     fn start_color_only_affects_first_loop_with_finite_loops() {
         // Test that start_color only affects the first loop even with finite loops
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .start_color(YELLOW)
             .step(RED, TestDuration(1000), TransitionStyle::Linear)
             .step(GREEN, TestDuration(1000), TransitionStyle::Step)
@@ -886,7 +886,7 @@ mod tests {
 
     #[test]
     fn multi_step_sequence_progresses_through_steps_over_time() {
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .step(GREEN, TestDuration(100), TransitionStyle::Step)
             .step(BLUE, TestDuration(100), TransitionStyle::Step)
@@ -905,7 +905,7 @@ mod tests {
 
     #[test]
     fn finite_loop_completes_and_shows_landing_color() {
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .step(GREEN, TestDuration(100), TransitionStyle::Step)
             .loop_count(LoopCount::Finite(2))
@@ -929,7 +929,7 @@ mod tests {
 
     #[test]
     fn finite_loop_uses_last_step_color_when_no_landing_color() {
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .step(GREEN, TestDuration(100), TransitionStyle::Step)
             .step(BLUE, TestDuration(100), TransitionStyle::Step)
@@ -952,7 +952,7 @@ mod tests {
     
     #[test]
     fn infinite_loop_never_completes() {
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .step(GREEN, TestDuration(100), TransitionStyle::Step)
             .loop_count(LoopCount::Infinite)
@@ -972,7 +972,7 @@ mod tests {
 
     #[test]
     fn sequence_with_all_zero_duration_steps_completes_immediately() {
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(0), TransitionStyle::Step)
             .step(GREEN, TestDuration(0), TransitionStyle::Step)
             .loop_count(LoopCount::Finite(1))
@@ -992,7 +992,7 @@ mod tests {
 
     #[test]
     fn query_methods_return_correct_sequence_properties() {
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .step(GREEN, TestDuration(200), TransitionStyle::Linear)
             .step(BLUE, TestDuration(50), TransitionStyle::Step)
@@ -1023,7 +1023,7 @@ mod tests {
 
     #[test]
     fn has_completed_for_step_based_finite_sequence() {
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .step(GREEN, TestDuration(200), TransitionStyle::Step)
             .loop_count(LoopCount::Finite(2))
@@ -1041,7 +1041,7 @@ mod tests {
 
     #[test]
     fn infinite_sequence_never_reports_completion() {
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .loop_count(LoopCount::Infinite)
             .build()
@@ -1078,7 +1078,7 @@ mod tests {
     #[test]
     fn sequence_at_max_capacity_works_correctly() {
         // Build a sequence with exactly 4 steps (capacity)
-        let sequence = RgbSequence::<TestDuration, 4>::new()
+        let sequence = RgbSequence::<TestDuration, 4>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .step(GREEN, TestDuration(100), TransitionStyle::Step)
             .step(BLUE, TestDuration(100), TransitionStyle::Step)
@@ -1102,7 +1102,7 @@ mod tests {
     #[should_panic(expected = "sequence capacity (4) exceeded")]
     fn sequence_exceeds_capacity() {
         // Try to build a sequence with 5 steps when capacity is 4
-        RgbSequence::<TestDuration, 4>::new()
+        RgbSequence::<TestDuration, 4>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .step(GREEN, TestDuration(100), TransitionStyle::Step)
             .step(BLUE, TestDuration(100), TransitionStyle::Step)
@@ -1114,7 +1114,7 @@ mod tests {
 
     #[test]
     fn loop_boundaries_are_precise_to_millisecond() {
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .step(GREEN, TestDuration(100), TransitionStyle::Step)
             .loop_count(LoopCount::Finite(2))
@@ -1150,7 +1150,7 @@ mod tests {
 
     #[test]
     fn sequence_with_mixed_transition_styles_works_correctly() {
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .step(GREEN, TestDuration(100), TransitionStyle::Linear)
             .step(BLUE, TestDuration(100), TransitionStyle::Step)
@@ -1180,7 +1180,7 @@ mod tests {
     #[test]
     fn linear_interpolation_works_correctly_at_step_boundaries() {
         // Test that interpolation works correctly at boundaries
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .step(GREEN, TestDuration(100), TransitionStyle::Linear)
             .loop_count(LoopCount::Infinite)
@@ -1206,7 +1206,7 @@ mod tests {
 
     #[test]
     fn single_step_infinite_sequence_works_correctly() {
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
             .loop_count(LoopCount::Infinite)
             .build()
@@ -1226,7 +1226,7 @@ mod tests {
     #[test]
     fn sequence_with_many_loops_handles_large_durations_without_overflow() {
         // Test with many loops to check for potential overflow issues
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .loop_count(LoopCount::Finite(1000))
             .build()

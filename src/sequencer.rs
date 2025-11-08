@@ -521,7 +521,7 @@ mod tests {
         let timer = MockTimeSource::new();
         let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
             .build()
             .unwrap();
@@ -539,7 +539,7 @@ mod tests {
         let timer = MockTimeSource::new();
         let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
             .build()
             .unwrap();
@@ -557,7 +557,7 @@ mod tests {
         let timer = MockTimeSource::new();
         let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
             .build()
             .unwrap();
@@ -575,7 +575,7 @@ mod tests {
         let timer = MockTimeSource::new();
         let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
             .build()
             .unwrap();
@@ -596,7 +596,7 @@ mod tests {
         let timer = MockTimeSource::new();
         let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .step(GREEN, TestDuration(100), TransitionStyle::Step)
             .step(BLUE, TestDuration(100), TransitionStyle::Step)
@@ -669,7 +669,7 @@ mod tests {
         let timer = MockTimeSource::new();
         let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
             .step(GREEN, TestDuration(1000), TransitionStyle::Step)
             .loop_count(LoopCount::Finite(1))
@@ -708,7 +708,7 @@ mod tests {
         let timer = MockTimeSource::new();
         let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
             .build()
             .unwrap();
@@ -728,7 +728,7 @@ mod tests {
         let timer = MockTimeSource::new();
         let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
             .build()
             .unwrap();
@@ -748,7 +748,7 @@ mod tests {
         let timer = MockTimeSource::new();
         let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
             .step(GREEN, TestDuration(500), TransitionStyle::Step)
             .loop_count(LoopCount::Finite(1))
@@ -768,7 +768,7 @@ mod tests {
         let timer = MockTimeSource::new();
         let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .step(GREEN, TestDuration(1000), TransitionStyle::Linear)
             .loop_count(LoopCount::Finite(1))
@@ -792,7 +792,7 @@ mod tests {
         let timer = MockTimeSource::new();
         let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .loop_count(LoopCount::Finite(1))
             .landing_color(BLUE)
@@ -818,7 +818,7 @@ mod tests {
         let timer = MockTimeSource::new();
         let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
             .step(GREEN, TestDuration(1000), TransitionStyle::Step)
             .loop_count(LoopCount::Finite(1))
@@ -846,7 +846,7 @@ mod tests {
         let timer = MockTimeSource::new();
         let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
             .step(GREEN, TestDuration(1000), TransitionStyle::Step)
             .build()
@@ -870,7 +870,7 @@ mod tests {
         let timer = MockTimeSource::new();
         let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .loop_count(LoopCount::Finite(1))
             .landing_color(BLUE)
@@ -900,7 +900,7 @@ mod tests {
         assert!(matches!(result, Err(SequencerError::InvalidState { .. })));
 
         // Try restart from Loaded
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .build()
             .unwrap();
@@ -916,7 +916,7 @@ mod tests {
         let timer = MockTimeSource::new();
         let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .build()
             .unwrap();
@@ -972,7 +972,7 @@ mod tests {
         assert!(sequencer.elapsed_time().is_none());
         assert!(colors_equal(sequencer.current_color(), BLACK));
 
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .step(GREEN, TestDuration(100), TransitionStyle::Step)
             .build()
@@ -1002,7 +1002,7 @@ mod tests {
         let timer = MockTimeSource::new();
         let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
             .build()
             .unwrap();
@@ -1024,7 +1024,7 @@ mod tests {
         let timer = MockTimeSource::new();
         let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .loop_count(LoopCount::Finite(1))
             .build()
@@ -1048,7 +1048,7 @@ mod tests {
         let timer = MockTimeSource::new();
         let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
             .build()
             .unwrap();
@@ -1077,7 +1077,7 @@ mod tests {
         let timer = MockTimeSource::new();
         let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
             .step(GREEN, TestDuration(1000), TransitionStyle::Step)
             .build()
@@ -1121,7 +1121,7 @@ mod tests {
         let timer = MockTimeSource::new();
         let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .build()
             .unwrap();
@@ -1187,12 +1187,12 @@ mod tests {
         let timer = MockTimeSource::new();
         let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-        let sequence1 = RgbSequence::<TestDuration, 8>::new()
+        let sequence1 = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .build()
             .unwrap();
 
-        let sequence2 = RgbSequence::<TestDuration, 8>::new()
+        let sequence2 = RgbSequence::<TestDuration, 8>::builder()
             .step(GREEN, TestDuration(200), TransitionStyle::Step)
             .build()
             .unwrap();
@@ -1217,7 +1217,7 @@ mod tests {
         let timer = MockTimeSource::new();
         let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
             .build()
             .unwrap();
@@ -1239,7 +1239,7 @@ mod tests {
         let timer = MockTimeSource::new();
         let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-        let sequence = RgbSequence::<TestDuration, 8>::new()
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(0), TransitionStyle::Step)
             .step(GREEN, TestDuration(100), TransitionStyle::Step)
             .step(BLUE, TestDuration(0), TransitionStyle::Step)
