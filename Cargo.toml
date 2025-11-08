@@ -2,11 +2,13 @@
 name = "rgb-sequencer"
 version = "0.1.0"
 edition = "2024"
+authors = ["Esben Dueholm Nørgaard"]
 license = "MIT"
 description = "A no_std-compatible Rust library for controlling RGB LEDs through timed color sequences on embedded systems"
 repository = "https://github.com/HybridChild/rgb-sequencer"
 keywords = ["embedded", "rgb", "led", "no-std"]
 categories = ["embedded", "no-std"]
+exclude = ["examples/", "tools/"]
 
 [dependencies]
 heapless = "0.9.1"

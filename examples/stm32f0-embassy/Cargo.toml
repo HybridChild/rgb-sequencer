@@ -31,7 +31,7 @@ default-features = false
 features = ["defmt"]
 
 [lib]
-name = "stm32f0-embassy"
+name = "stm32f0_embassy"
 path = "src/lib.rs"
 
 [[bin]]
