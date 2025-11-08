@@ -307,10 +307,13 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize>
         let current_time = self.time_source.now();
         let pause_duration = current_time.duration_since(pause_start);
 
-        // Add the pause duration to start time
-        // This keeps the sequence at the same position it was at when paused
+        // Add the pause duration to start time to compensate for the time spent paused.
+        // This keeps the sequence at the same position it was at when paused.
+        // If checked_add returns None (overflow, e.g., due to very long pause on 32-bit timers),
+        // we fall back to the old start time. This causes the sequence to jump forward but
+        // prevents a crash. This is a graceful degradation on timer overflow.
         let old_start = self.start_time.unwrap();
-        self.start_time = old_start.checked_add(pause_duration);
+        self.start_time = Some(old_start.checked_add(pause_duration).unwrap_or(old_start));
 
         self.pause_start_time = None;
         self.state = SequencerState::Running;
