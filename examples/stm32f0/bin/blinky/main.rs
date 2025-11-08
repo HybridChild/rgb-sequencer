@@ -179,8 +179,7 @@ fn main() -> ! {
         .step(COLOR_OFF, BlinkyDuration(1000), TransitionStyle::Linear,)                              // Fade out
         .step(Srgb::from_color(Hsv::new(300.0, 1.0, 1.0)), BlinkyDuration(0), TransitionStyle::Step,) // Purple
         .step(COLOR_OFF, BlinkyDuration(1000), TransitionStyle::Linear,)                              // Fade out
-        .loop_count(LoopCount::Finite(3))
-        .landing_color(Srgb::new(1.0, 1.0, 1.0))
+        .loop_count(LoopCount::Infinite)
         .build()
         .unwrap();
 

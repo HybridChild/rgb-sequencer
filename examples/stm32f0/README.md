@@ -74,9 +74,9 @@ A simple, clean example demonstrating basic LED sequencing with blocking delays.
 
 **Features:**
 - **Single RGB LED**: Controls one RGB LED through a colorful sequence
+- **Infinite loop**: Sequence repeats continuously forever
 - **Blocking approach**: Uses HAL's `Delay` for simple, easy-to-understand timing
 - **Simple time source**: Advances time manually after each delay
-- **Finite sequence**: Runs 3 loops then displays a landing color
 - **Zero-duration steps**: Demonstrates instant color changes before fade-outs
 - No interrupt handlers or manual WFI calls needed
 
@@ -85,7 +85,7 @@ A simple, clean example demonstrating basic LED sequencing with blocking delays.
 - How to create sequences with steps and transitions
 - The difference between Step (instant) and Linear (fade) transitions
 - Zero-duration steps as color waypoints
-- Finite loop counts with landing colors
+- Infinite loop sequencing
 - Simple blocking delay pattern
 
 **Technical Highlights:**
@@ -113,12 +113,12 @@ loop {
 ```
 
 The time source is dead simple - just a counter that advances after each delay. This works perfectly for applications where the sequencer is the only thing happening.
+
 **Behavior:**
 1. LED fades from Yellow to off over 1 second
 2. LED fades from Cyan to off over 1 second
 3. LED fades from Purple to off over 1 second
-4. Sequence repeats 3 times total
-5. After completion, LED shows white (landing color)
+4. Sequence repeats infinitely
 
 **Run:**
 ```bash
