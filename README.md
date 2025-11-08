@@ -638,6 +638,24 @@ RgbSequencer<MyInstant, MyLed, MyTimer, 32>  // Up to 32 steps
 
 **Calculate Exact Sizes**: Use the [memory calculator tool](tools/README.md#memory_calculator) to see detailed breakdowns for different capacities and duration types.
 
+# Performance Considerations
+
+## Floating Point Math Requirements
+
+**IMPORTANT**: This library uses `f32` extensively for color math and interpolation. Performance varies by target:
+
+### Hardware FPU (Fast) ✅
+Cortex-M4F, M7, M33 (e.g., STM32F4, STM32H7, nRF52) - Hardware-accelerated f32 operations, excellent performance.
+
+### No Hardware FPU (Slow) ⚠️
+Cortex-M0/M0+, M3 (e.g., STM32F0, STM32F1, RP2040) - Software-emulated f32 is **10-100x slower**.
+
+**Recommendations for non-FPU targets:**
+- Prefer Step transitions over Linear (avoids interpolation)
+- Avoid math-heavy function-based sequences
+
+The library works on all targets but is optimized for microcontrollers with FPU.
+
 # License
 
 This project is licensed under the MIT License - see the [LICENSE](https://github.com/HybridChild/rgb-sequencer/blob/main/LICENSE) file for details.

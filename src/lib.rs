@@ -42,6 +42,17 @@
 //! The library uses `palette::Srgb<f32>` (0.0-1.0 range) for all color operations and interpolation.
 //! When implementing `RgbLed` for your hardware, convert these values to your device's
 //! native format (e.g., 8-bit integers, PWM duty cycles).
+//!
+//! # Performance Considerations
+//!
+//! **IMPORTANT**: This library uses `f32` extensively for color math and interpolation. Performance
+//! varies significantly by target:
+//!
+//! - **Hardware FPU (Fast)**: Cortex-M4F, M7, M33 (e.g., STM32F4, nRF52) - Excellent performance with hardware-accelerated f32.
+//! - **No Hardware FPU (Slow)**: Cortex-M0/M0+, M3 (e.g., STM32F0, RP2040) - Software-emulated f32 is 10-100x slower.
+//!
+//! For non-FPU targets, prefer Step transitions over Linear and avoid math-heavy function-based sequences.
+//! The library works on all targets but is optimized for microcontrollers with FPU.
 
 // Re-export Srgb from palette for user convenience
 pub use palette::Srgb;
