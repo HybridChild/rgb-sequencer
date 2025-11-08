@@ -473,6 +473,8 @@ impl<D: TimeDuration, const N: usize> Default for SequenceBuilder<D, N> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    extern crate std;
+    use std::format;
 
     // Mock Duration type for testing
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -533,7 +535,7 @@ mod tests {
     }
 
     #[test]
-    fn function_based_sequence_with_base_color() {
+    fn function_based_sequence_applies_function_to_base_color() {
         // Brightness modulation function - works with any base color
         fn brightness_pulse(base: Srgb, elapsed: TestDuration) -> Srgb {
             let brightness = if elapsed.as_millis() < 500 {
@@ -591,7 +593,7 @@ mod tests {
     }
 
     #[test]
-    fn function_based_sequence_timing_works() {
+    fn function_based_sequence_respects_timing_function() {
         fn test_color(base: Srgb, _elapsed: TestDuration) -> Srgb {
             base
         }
@@ -682,7 +684,7 @@ mod tests {
     }
 
     #[test]
-    fn first_step_linear_interpolates_from_last() {
+    fn first_step_with_linear_transition_interpolates_from_last_step() {
         let sequence = RgbSequence::<TestDuration, 8>::new()
             .step(RED, TestDuration(1000), TransitionStyle::Linear)
             .step(GREEN, TestDuration(1000), TransitionStyle::Step)
@@ -768,7 +770,7 @@ mod tests {
     }
 
     #[test]
-    fn start_color_with_finite_loops() {
+    fn start_color_only_affects_first_loop_with_finite_loops() {
         // Test that start_color only affects the first loop even with finite loops
         let sequence = RgbSequence::<TestDuration, 8>::new()
             .start_color(YELLOW)
@@ -801,7 +803,7 @@ mod tests {
     }
 
     #[test]
-    fn multi_step_sequence_progresses() {
+    fn multi_step_sequence_progresses_through_steps_over_time() {
         let sequence = RgbSequence::<TestDuration, 8>::new()
             .step(RED, TestDuration(100), TransitionStyle::Step)
             .step(GREEN, TestDuration(100), TransitionStyle::Step)
@@ -887,7 +889,7 @@ mod tests {
     }
 
     #[test]
-    fn all_zero_duration_steps() {
+    fn sequence_with_all_zero_duration_steps_completes_immediately() {
         let sequence = RgbSequence::<TestDuration, 8>::new()
             .step(RED, TestDuration(0), TransitionStyle::Step)
             .step(GREEN, TestDuration(0), TransitionStyle::Step)
@@ -898,11 +900,271 @@ mod tests {
 
         let (color, _) = sequence.evaluate(TestDuration(0));
         assert!(colors_equal(color, RED));
-        
+
         let (color, _) = sequence.evaluate(TestDuration(1));
         assert!(colors_equal(color, BLUE));
-        
+
         let (color, _) = sequence.evaluate(TestDuration(100));
         assert!(colors_equal(color, BLUE));
+    }
+
+    #[test]
+    fn query_methods_return_correct_sequence_properties() {
+        let sequence = RgbSequence::<TestDuration, 8>::new()
+            .step(RED, TestDuration(100), TransitionStyle::Step)
+            .step(GREEN, TestDuration(200), TransitionStyle::Linear)
+            .step(BLUE, TestDuration(50), TransitionStyle::Step)
+            .loop_count(LoopCount::Finite(3))
+            .landing_color(YELLOW)
+            .start_color(BLACK)
+            .build()
+            .unwrap();
+
+        assert_eq!(sequence.step_count(), 3);
+        assert_eq!(sequence.loop_count(), LoopCount::Finite(3));
+        assert_eq!(sequence.loop_duration(), TestDuration(350));
+        assert_eq!(sequence.landing_color(), Some(YELLOW));
+        assert_eq!(sequence.start_color(), Some(BLACK));
+        assert!(!sequence.is_function_based());
+
+        // Test get_step
+        assert!(sequence.get_step(0).is_some());
+        assert!(sequence.get_step(1).is_some());
+        assert!(sequence.get_step(2).is_some());
+        assert!(sequence.get_step(3).is_none());
+
+        let step0 = sequence.get_step(0).unwrap();
+        assert!(colors_equal(step0.color, RED));
+        assert_eq!(step0.duration, TestDuration(100));
+        assert_eq!(step0.transition, TransitionStyle::Step);
+    }
+
+    #[test]
+    fn has_completed_for_step_based_finite_sequence() {
+        let sequence = RgbSequence::<TestDuration, 8>::new()
+            .step(RED, TestDuration(100), TransitionStyle::Step)
+            .step(GREEN, TestDuration(200), TransitionStyle::Step)
+            .loop_count(LoopCount::Finite(2))
+            .build()
+            .unwrap();
+
+        // Total duration: 2 loops * 300ms = 600ms
+        assert!(!sequence.has_completed(TestDuration(0)));
+        assert!(!sequence.has_completed(TestDuration(299)));
+        assert!(!sequence.has_completed(TestDuration(300))); // First loop done
+        assert!(!sequence.has_completed(TestDuration(599)));
+        assert!(sequence.has_completed(TestDuration(600))); // Both loops done
+        assert!(sequence.has_completed(TestDuration(1000)));
+    }
+
+    #[test]
+    fn infinite_sequence_never_reports_completion() {
+        let sequence = RgbSequence::<TestDuration, 8>::new()
+            .step(RED, TestDuration(100), TransitionStyle::Step)
+            .loop_count(LoopCount::Infinite)
+            .build()
+            .unwrap();
+
+        assert!(!sequence.has_completed(TestDuration(0)));
+        assert!(!sequence.has_completed(TestDuration(1000)));
+        assert!(!sequence.has_completed(TestDuration(1000000)));
+    }
+
+    #[test]
+    fn function_based_sequence_query_methods_return_expected_values() {
+        fn test_color(base: Srgb, _elapsed: TestDuration) -> Srgb {
+            base
+        }
+
+        fn test_timing(_elapsed: TestDuration) -> Option<TestDuration> {
+            Some(TestDuration::ZERO)
+        }
+
+        let sequence = RgbSequence::<TestDuration, 8>::from_function(
+            RED,
+            test_color,
+            test_timing,
+        );
+
+        assert!(sequence.is_function_based());
+        assert_eq!(sequence.step_count(), 0);
+        assert_eq!(sequence.loop_duration(), TestDuration::ZERO);
+        assert_eq!(sequence.start_color(), Some(RED));
+        assert!(sequence.get_step(0).is_none());
+    }
+
+    #[test]
+    fn sequence_at_max_capacity_works_correctly() {
+        // Build a sequence with exactly 4 steps (capacity)
+        let sequence = RgbSequence::<TestDuration, 4>::new()
+            .step(RED, TestDuration(100), TransitionStyle::Step)
+            .step(GREEN, TestDuration(100), TransitionStyle::Step)
+            .step(BLUE, TestDuration(100), TransitionStyle::Step)
+            .step(YELLOW, TestDuration(100), TransitionStyle::Step)
+            .build()
+            .unwrap();
+
+        assert_eq!(sequence.step_count(), 4);
+
+        let (color, _) = sequence.evaluate(TestDuration(0));
+        assert!(colors_equal(color, RED));
+
+        let (color, _) = sequence.evaluate(TestDuration(150));
+        assert!(colors_equal(color, GREEN));
+
+        let (color, _) = sequence.evaluate(TestDuration(350));
+        assert!(colors_equal(color, YELLOW));
+    }
+
+    #[test]
+    #[should_panic(expected = "sequence capacity (4) exceeded")]
+    fn sequence_exceeds_capacity() {
+        // Try to build a sequence with 5 steps when capacity is 4
+        RgbSequence::<TestDuration, 4>::new()
+            .step(RED, TestDuration(100), TransitionStyle::Step)
+            .step(GREEN, TestDuration(100), TransitionStyle::Step)
+            .step(BLUE, TestDuration(100), TransitionStyle::Step)
+            .step(YELLOW, TestDuration(100), TransitionStyle::Step)
+            .step(BLACK, TestDuration(100), TransitionStyle::Step) // This should panic
+            .build()
+            .unwrap();
+    }
+
+    #[test]
+    fn loop_boundaries_are_precise_to_millisecond() {
+        let sequence = RgbSequence::<TestDuration, 8>::new()
+            .step(RED, TestDuration(100), TransitionStyle::Step)
+            .step(GREEN, TestDuration(100), TransitionStyle::Step)
+            .loop_count(LoopCount::Finite(2))
+            .landing_color(BLUE)
+            .build()
+            .unwrap();
+
+        // Test exact loop boundaries
+        let (color, _) = sequence.evaluate(TestDuration(0));
+        assert!(colors_equal(color, RED)); // Loop 0, step 0
+
+        let (color, _) = sequence.evaluate(TestDuration(99));
+        assert!(colors_equal(color, RED)); // Loop 0, still step 0
+
+        let (color, _) = sequence.evaluate(TestDuration(100));
+        assert!(colors_equal(color, GREEN)); // Loop 0, step 1
+
+        let (color, _) = sequence.evaluate(TestDuration(199));
+        assert!(colors_equal(color, GREEN)); // Loop 0, still step 1
+
+        let (color, _) = sequence.evaluate(TestDuration(200));
+        assert!(colors_equal(color, RED)); // Loop 1, step 0
+
+        let (color, _) = sequence.evaluate(TestDuration(300));
+        assert!(colors_equal(color, GREEN)); // Loop 1, step 1
+
+        let (color, _) = sequence.evaluate(TestDuration(399));
+        assert!(colors_equal(color, GREEN)); // Loop 1, still step 1
+
+        let (color, _) = sequence.evaluate(TestDuration(400));
+        assert!(colors_equal(color, BLUE)); // Complete - landing color
+    }
+
+    #[test]
+    fn sequence_with_mixed_transition_styles_works_correctly() {
+        let sequence = RgbSequence::<TestDuration, 8>::new()
+            .step(RED, TestDuration(100), TransitionStyle::Step)
+            .step(GREEN, TestDuration(100), TransitionStyle::Linear)
+            .step(BLUE, TestDuration(100), TransitionStyle::Step)
+            .step(YELLOW, TestDuration(100), TransitionStyle::Linear)
+            .build()
+            .unwrap();
+
+        // Step transition - holds color
+        let (color, timing) = sequence.evaluate(TestDuration(50));
+        assert!(colors_equal(color, RED));
+        assert_eq!(timing, Some(TestDuration(50))); // Time until step end
+
+        // Linear transition - interpolates
+        let (color, timing) = sequence.evaluate(TestDuration(150));
+        assert!(colors_equal(color, RED.mix(GREEN, 0.5)));
+        assert_eq!(timing, Some(TestDuration::ZERO)); // Continuous
+
+        // Another step transition
+        let (color, _) = sequence.evaluate(TestDuration(250));
+        assert!(colors_equal(color, BLUE));
+
+        // Another linear transition
+        let (color, _) = sequence.evaluate(TestDuration(350));
+        assert!(colors_equal(color, BLUE.mix(YELLOW, 0.5)));
+    }
+
+    #[test]
+    fn linear_interpolation_works_correctly_at_step_boundaries() {
+        // Test that interpolation works correctly at boundaries
+        let sequence = RgbSequence::<TestDuration, 8>::new()
+            .step(RED, TestDuration(100), TransitionStyle::Step)
+            .step(GREEN, TestDuration(100), TransitionStyle::Linear)
+            .loop_count(LoopCount::Infinite)
+            .build()
+            .unwrap();
+
+        // At start of linear transition (beginning of step 1)
+        let (color, _) = sequence.evaluate(TestDuration(100));
+        assert!(colors_equal(color, RED));
+
+        // Midway through linear transition
+        let (color, _) = sequence.evaluate(TestDuration(150));
+        assert!(colors_equal(color, RED.mix(GREEN, 0.5)));
+
+        // Near end of linear transition (99% progress)
+        let (color, _) = sequence.evaluate(TestDuration(199));
+        assert!(colors_equal(color, RED.mix(GREEN, 0.99)));
+
+        // Past end (should wrap to next loop, back to step 0 which is RED with Step transition)
+        let (color, _) = sequence.evaluate(TestDuration(200));
+        assert!(colors_equal(color, RED));
+    }
+
+    #[test]
+    fn single_step_infinite_sequence_works_correctly() {
+        let sequence = RgbSequence::<TestDuration, 8>::new()
+            .step(RED, TestDuration(1000), TransitionStyle::Step)
+            .loop_count(LoopCount::Infinite)
+            .build()
+            .unwrap();
+
+        let (color, timing) = sequence.evaluate(TestDuration(0));
+        assert!(colors_equal(color, RED));
+        assert_eq!(timing, Some(TestDuration(1000)));
+
+        let (color, _) = sequence.evaluate(TestDuration(500));
+        assert!(colors_equal(color, RED));
+
+        let (color, _) = sequence.evaluate(TestDuration(1500));
+        assert!(colors_equal(color, RED));
+    }
+
+    #[test]
+    fn sequence_with_many_loops_handles_large_durations_without_overflow() {
+        // Test with many loops to check for potential overflow issues
+        let sequence = RgbSequence::<TestDuration, 8>::new()
+            .step(RED, TestDuration(100), TransitionStyle::Step)
+            .loop_count(LoopCount::Finite(1000))
+            .build()
+            .unwrap();
+
+        assert!(!sequence.has_completed(TestDuration(99_900)));
+        assert!(sequence.has_completed(TestDuration(100_000)));
+
+        let (color, _) = sequence.evaluate(TestDuration(50_000));
+        assert!(colors_equal(color, RED));
+    }
+
+    #[test]
+    fn error_display_for_sequence_errors() {
+        let error1 = SequenceError::EmptySequence;
+        let error_str = format!("{:?}", error1);
+        assert!(error_str.contains("EmptySequence"));
+
+        let error2 = SequenceError::ZeroDurationWithLinear;
+        let error_str = format!("{:?}", error2);
+        assert!(error_str.contains("ZeroDurationWithLinear"));
     }
 }
