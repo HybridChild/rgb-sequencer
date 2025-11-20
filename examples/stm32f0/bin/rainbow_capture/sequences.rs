@@ -1,6 +1,6 @@
 use palette::{FromColor, Hsv, Srgb};
 use rgb_sequencer::{LoopCount, RgbSequence, TransitionStyle};
-use stm32f0_examples::time_source::HalDuration;
+use stm32f0::time_source::HalDuration;
 
 /// Maximum number of steps that can be stored in a sequence
 pub const SEQUENCE_STEP_CAPACITY: usize = 8;

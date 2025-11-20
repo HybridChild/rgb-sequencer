@@ -5,7 +5,7 @@ use rgb_sequencer::{
     COLOR_OFF, RgbSequence, RgbSequencer, SequencerState, ServiceTiming, TimeDuration, TimeSource,
     TransitionStyle,
 };
-use stm32f0_examples::time_source::{HalDuration, HalInstant, HalTimeSource};
+use stm32f0::time_source::{HalDuration, HalInstant, HalTimeSource};
 
 use crate::button::ButtonDebouncer;
 use crate::hardware_setup::{HardwareContext, Led1, Led2};

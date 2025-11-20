@@ -1,8 +1,8 @@
 use rtt_target::rprintln;
 use stm32f0xx_hal::prelude::*;
 
-use rgb_sequencer::{RgbSequencer, SequencerState, ServiceTiming, TimeDuration, TimeSource};
-use stm32f0_examples::time_source::{HalDuration, HalInstant, HalTimeSource};
+use rgb_sequencer::{RgbSequencer, ServiceTiming, TimeSource};
+use stm32f0::time_source::{HalDuration, HalInstant, HalTimeSource};
 
 use crate::button::ButtonDebouncer;
 use crate::hardware_setup::{HardwareContext, Led1};

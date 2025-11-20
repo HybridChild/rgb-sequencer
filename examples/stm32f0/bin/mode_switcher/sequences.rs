@@ -1,6 +1,6 @@
 use palette::{FromColor, Hsv, Srgb};
 use rgb_sequencer::{LoopCount, RgbSequence, TimeDuration, TransitionStyle};
-use stm32f0_examples::time_source::HalDuration;
+use stm32f0::time_source::HalDuration;
 
 /// Sine-based breathing effect function
 ///

@@ -15,7 +15,7 @@ use stm32f0xx_hal::{
     time::Hertz,
 };
 
-use stm32f0_examples::rgb_led::PwmRgbLed;
+use stm32f0::rgb_led::PwmRgbLed;
 
 use rgb_sequencer::{
     COLOR_OFF, LoopCount, RgbSequence, RgbSequencer, ServiceTiming, TimeDuration, TimeInstant,
@@ -163,7 +163,7 @@ fn main() -> ! {
         RgbSequencer::new(led_1, &time_source);
 
     // Create a sequence
-    let sequence = RgbSequence::<BlinkyDuration, SEQUENCE_STEP_CAPACITY>::new()
+    let sequence = RgbSequence::<BlinkyDuration, SEQUENCE_STEP_CAPACITY>::builder()
         .step(
             Srgb::from_color(Hsv::new(60.0, 1.0, 1.0)),
             BlinkyDuration(0),

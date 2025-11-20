@@ -183,7 +183,7 @@ fn main() -> ! {
         RgbSequencer::new(led_1, &time_source);
 
     // Create a sequence
-    let sequence = RgbSequence::<BlinkyDuration, SEQUENCE_STEP_CAPACITY>::new()
+    let sequence = RgbSequence::<BlinkyDuration, SEQUENCE_STEP_CAPACITY>::builder()
         .step(
             Srgb::from_color(Hsv::new(60.0, 1.0, 1.0)),
             BlinkyDuration(0),

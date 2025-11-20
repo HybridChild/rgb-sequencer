@@ -8,7 +8,7 @@ use stm32f0xx_hal::{
     time::Hertz,
 };
 
-use stm32f0_examples::rgb_led::PwmRgbLed;
+use stm32f0::rgb_led::PwmRgbLed;
 
 /// Type alias for LED 1
 pub type Led1 = PwmRgbLed<
