@@ -1,8 +1,10 @@
-Cargo.lock
-/target/
-.cargo/
+.claude/
 .vscode/
 .DS_Store
+
+Cargo.lock
+/target/
+/.cargo/
 
 /examples/*/target/
 /examples/*/Cargo.lock
