@@ -2,7 +2,12 @@
 
 A `no_std`-compatible Rust library for controlling RGB LEDs through timed color sequences on embedded systems.
 
-# Overview
+[![Platform](https://img.shields.io/badge/platform-no__std-blue)](https://github.com/HybridChild/rgb-sequencer)
+[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-green)](https://github.com/HybridChild/rgb-sequencer)
+
+---
+
+## Overview
 
 **rgb-sequencer** provides a lightweight framework for creating and executing RGB LED animations on resource-constrained embedded devices. Define high-level sequences and let the library handle timing, interpolation, and LED updates.
 
@@ -34,16 +39,16 @@ The library is built for embedded systems with:
 
 Whether you're building a status LED that breathes gently, a multi-LED notification system with synchronized animations, or an interactive light show that responds to user input, rgb-sequencer provides the building blocks and lets you focus on your application logic.
 
-# Quick Start
+## Quick Start
 
-## Add Dependency
+### Add Dependency
 ```toml
 [dependencies]
 rgb-sequencer = "0.1"
 palette = { version = "0.7.6", default-features = false, features = ["libm"] }
 ```
 
-## Minimal Example
+### Minimal Example
 ```rust
 use rgb_sequencer::{RgbSequencer, RgbSequence, RgbLed, TimeSource, TransitionStyle, LoopCount};
 use palette::Srgb;
@@ -102,20 +107,20 @@ loop {
 }
 ```
 
-### Memory Impact
+## Memory Impact
 
 **Calculate Exact Sizes**: Use the [memory calculator tool](tools/README.md#memory_calculator) to see detailed breakdowns for different capacities and duration types.
 
-# Performance Considerations
+## Performance Considerations
 
-## Floating Point Math Requirements
+### Floating Point Math Requirements
 
 **IMPORTANT**: This library uses `f32` extensively for color math and interpolation. Performance varies by target:
 
-### Hardware FPU (Fast) ✅
+#### Hardware FPU (Fast) ✅
 Cortex-M4F, M7, M33 (e.g., STM32F4, STM32H7, nRF52) - Hardware-accelerated f32 operations, excellent performance.
 
-### No Hardware FPU (Slow) ⚠️
+#### No Hardware FPU (Slow) ⚠️
 Cortex-M0/M0+, M3 (e.g., STM32F0, STM32F1, RP2040) - Software-emulated f32 is **10-100x slower**.
 
 **Recommendations for non-FPU targets:**
@@ -124,6 +129,15 @@ Cortex-M0/M0+, M3 (e.g., STM32F0, STM32F1, RP2040) - Software-emulated f32 is **
 
 The library works on all targets but is optimized for microcontrollers with FPU.
 
-# License
+## License
 
-This project is licensed under the MIT License - see the [LICENSE](https://github.com/HybridChild/rgb-sequencer/blob/main/LICENSE) file for details.
+Licensed under either of:
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
+at your option.
+
+## Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
