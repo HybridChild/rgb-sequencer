@@ -109,7 +109,7 @@ loop {
 
 ## Memory Impact
 
-**Calculate Exact Sizes**: Use the [memory calculator tool](tools/README.md#memory_calculator) to see detailed breakdowns for different capacities and duration types.
+**Analyze Memory Footprint**: Use the [size-analysis tool](size-analysis/README.md) to measure exact Flash and RAM usage on embedded targets. The tool builds for real hardware (Cortex-M0) and provides detailed breakdowns for different feature combinations and sequence capacities.
 
 ## Performance Considerations
 
