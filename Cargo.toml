@@ -8,7 +8,7 @@ description = "A no_std-compatible Rust library for controlling RGB LEDs through
 repository = "https://github.com/HybridChild/rgb-sequencer"
 keywords = ["embedded", "rgb", "led", "no-std"]
 categories = ["embedded", "no-std"]
-exclude = ["examples/", "tools/"]
+exclude = ["examples/", "size-analysis/"]
 
 [dependencies]
 heapless = "0.9.2"

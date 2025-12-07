@@ -1,0 +1,6 @@
+# Generated report
+report.md
+
+# Build artifacts
+minimal/target/
+minimal/Cargo.lock

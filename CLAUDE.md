@@ -437,8 +437,8 @@ examples/
 ├── stm32f0-embassy/    # STM32F0 Embassy async examples
 └── rp-pico/            # Raspberry Pi Pico examples
 
-tools/
-└── memory-calculator/  # Binary size analysis tool
+size-analysis/
+└── minimal/            # Minimal reference binary for size analysis
 ```
 
 ---
