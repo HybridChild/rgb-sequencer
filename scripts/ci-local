@@ -1,0 +1,160 @@
+#!/usr/bin/env bash
+
+# Local CI verification script
+# Run this before pushing to catch errors early
+
+set -e
+
+# Color codes
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Helper functions
+print_step() {
+    echo -e "${BLUE}▶${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}✓${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}✗${NC} $1"
+}
+
+# Main script
+echo ""
+echo "========================================="
+echo "  RGB Sequencer - Local CI Verification"
+echo "========================================="
+echo ""
+
+# 1. Format check
+print_step "Checking code formatting..."
+cargo fmt --all -- --check
+print_success "Code formatting OK"
+echo ""
+
+# 2. Clippy (no features)
+print_step "Running Clippy (no default features)..."
+cargo clippy --lib --no-default-features -- -D warnings
+print_success "Clippy passed (no features)"
+echo ""
+
+# 3. Clippy (all features)
+print_step "Running Clippy (all features)..."
+cargo clippy --lib --features "std,defmt" -- -D warnings
+print_success "Clippy passed (all features)"
+echo ""
+
+# 4. Test (no features)
+print_step "Running tests (no default features)..."
+cargo test --lib --no-default-features
+print_success "Tests passed (no features)"
+echo ""
+
+# 5. Test (std)
+print_step "Running tests (std feature)..."
+cargo test --lib --features "std"
+print_success "Tests passed (std)"
+echo ""
+
+# 6. Test (defmt)
+print_step "Running tests (defmt feature)..."
+cargo test --lib --features "defmt"
+print_success "Tests passed (defmt)"
+echo ""
+
+# 7. Test (all features)
+print_step "Running tests (all features)..."
+cargo test --lib --features "std,defmt"
+print_success "Tests passed (all features)"
+echo ""
+
+# 8. Documentation check
+print_step "Building documentation (all features)..."
+RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
+print_success "Documentation built successfully"
+echo ""
+
+print_step "Building documentation (no default features)..."
+RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --no-default-features
+print_success "Documentation built successfully"
+echo ""
+
+# 9. no_std compatibility check
+print_step "Checking no_std compatibility (thumbv6m-none-eabi)..."
+if rustup target list --installed | grep -q "thumbv6m-none-eabi"; then
+    cargo build --target thumbv6m-none-eabi --lib --release --no-default-features
+    print_success "no_std build OK (no features)"
+
+    cargo build --target thumbv6m-none-eabi --lib --release --features "defmt"
+    print_success "no_std build OK (defmt)"
+else
+    print_warning "thumbv6m-none-eabi target not installed, skipping"
+    echo "  Install with: rustup target add thumbv6m-none-eabi"
+fi
+echo ""
+
+# 10. Build examples
+print_step "Building example: rp-pico..."
+if [ -d "examples/rp-pico" ]; then
+    (cd examples/rp-pico && cargo build --release)
+    print_success "rp-pico example built"
+else
+    print_warning "rp-pico example not found, skipping"
+fi
+echo ""
+
+print_step "Building example: stm32f0..."
+if [ -d "examples/stm32f0" ]; then
+    (cd examples/stm32f0 && cargo build --release)
+    print_success "stm32f0 example built"
+else
+    print_warning "stm32f0 example not found, skipping"
+fi
+echo ""
+
+print_step "Building example: stm32f0-embassy..."
+if [ -d "examples/stm32f0-embassy" ]; then
+    (cd examples/stm32f0-embassy && cargo build --release)
+    print_success "stm32f0-embassy example built"
+else
+    print_warning "stm32f0-embassy example not found, skipping"
+fi
+echo ""
+
+# 11. Size analysis
+print_step "Running size analysis..."
+if [ -f "size-analysis/analyze.sh" ]; then
+    (cd size-analysis && ./analyze.sh)
+    print_success "Size analysis completed"
+else
+    print_warning "Size analysis script not found, skipping"
+fi
+echo ""
+
+# 12. Git status check
+print_step "Checking git status..."
+if [ -n "$(git status --porcelain)" ]; then
+    print_warning "There are uncommitted changes:"
+    git status --short
+else
+    print_success "No uncommitted changes"
+fi
+echo ""
+
+# Summary
+echo "========================================="
+echo -e "${GREEN}✓ All CI checks passed!${NC}"
+echo "========================================="
+echo ""
+echo "You can now push your changes with confidence."
+echo ""
