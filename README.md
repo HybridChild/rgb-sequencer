@@ -4,7 +4,16 @@ A `no_std`-compatible Rust library for controlling RGB LEDs through timed color 
 
 # Overview
 
-**rgb-sequencer** provides a lightweight, flexible framework for creating and executing RGB LED animations on resource-constrained embedded devices. Instead of manually managing timers, color interpolation, and LED updates in your application code, you define high-level sequences and let the library handle the timing complexity.
+**rgb-sequencer** provides a lightweight framework for creating and executing RGB LED animations on resource-constrained embedded devices. Define high-level sequences and let the library handle timing, interpolation, and LED updates.
+
+**Key features:**
+- **Zero heap allocation** - Fixed-capacity collections, compile-time sizing
+- **Platform independent** - Trait abstractions for LEDs and timing
+- **Two animation approaches** - Step-based (waypoints) and function-based (algorithmic)
+- **Efficient timing** - Service hints enable power-efficient operation
+- **State machine** - Explicit states prevent errors (Idle, Loaded, Running, Paused, Complete)
+- **Pause/resume** - With timing compensation for perfect continuity
+- **Multi-LED support** - Independent sequencers, command-based control
 
 The library supports two animation approaches:
 
