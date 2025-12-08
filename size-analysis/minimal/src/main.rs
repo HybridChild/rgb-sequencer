@@ -86,223 +86,78 @@ impl TimeSource<Instant32> for MinimalTimeSource {
 }
 
 // ============================================================================
-// Test Sequences
+// Test Sequence
 // ============================================================================
 
 // This function uses the library to prevent optimizer from removing code
 #[inline(never)]
-fn test_sequences() {
+fn test_sequence() {
     let time_source = MinimalTimeSource;
     let led = MinimalLed;
 
-    // Test different sequence capacities
-
-    // 4-step sequence
-    let seq4 = RgbSequence::<Duration32, 4>::builder()
+    // Single 4-step sequence with all features:
+    // - Linear transitions
+    // - start_color (smooth entry from black)
+    // - landing_color (smooth exit to black on completion)
+    // - Finite loop count
+    let sequence = RgbSequence::<Duration32, 4>::builder()
         .step(
-            Srgb::new(1.0, 0.0, 0.0),
+            Srgb::new(1.0, 0.0, 0.0),  // Red
             Duration32::new(1000),
             TransitionStyle::Linear,
         )
         .step(
-            Srgb::new(0.0, 1.0, 0.0),
+            Srgb::new(0.0, 1.0, 0.0),  // Green
             Duration32::new(1000),
             TransitionStyle::Linear,
         )
         .step(
-            Srgb::new(0.0, 0.0, 1.0),
-            Duration32::new(1000),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::new(1.0, 1.0, 1.0),
+            Srgb::new(0.0, 0.0, 1.0),  // Blue
             Duration32::new(1000),
             TransitionStyle::Step,
         )
-        .loop_count(LoopCount::Infinite)
+        .step(
+            Srgb::new(1.0, 1.0, 1.0),  // White
+            Duration32::new(1000),
+            TransitionStyle::Step,
+        )
+        .start_color(Srgb::new(0.0, 0.0, 0.0))      // Start from black
+        .landing_color(Srgb::new(0.0, 0.0, 0.0))    // End on black
+        .loop_count(LoopCount::Finite(3))
         .build();
 
-    if let Ok(sequence) = seq4 {
+    // Exercise all API methods on a single sequencer
+    if let Ok(seq) = sequence {
         let mut sequencer = RgbSequencer::new(led, &time_source);
-        sequencer.load(sequence);
+
+        // Load and start
+        sequencer.load(seq);
         let _ = sequencer.start();
+
+        // Service (updates LED)
         let _ = sequencer.service();
-        core::hint::black_box(sequencer);
-    }
 
-    // 8-step sequence
-    let seq8 = RgbSequence::<Duration32, 8>::builder()
-        .step(
-            Srgb::new(1.0, 0.0, 0.0),
-            Duration32::new(500),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::new(0.0, 1.0, 0.0),
-            Duration32::new(500),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::new(0.0, 0.0, 1.0),
-            Duration32::new(500),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::new(1.0, 1.0, 0.0),
-            Duration32::new(500),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::new(1.0, 0.0, 1.0),
-            Duration32::new(500),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::new(0.0, 1.0, 1.0),
-            Duration32::new(500),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::new(1.0, 1.0, 1.0),
-            Duration32::new(500),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::new(0.0, 0.0, 0.0),
-            Duration32::new(500),
-            TransitionStyle::Step,
-        )
-        .loop_count(LoopCount::Finite(10))
-        .build();
-
-    if let Ok(sequence) = seq8 {
-        let led2 = MinimalLed;
-        let mut sequencer = RgbSequencer::new(led2, &time_source);
-        sequencer.load(sequence);
-        let _ = sequencer.start();
+        // Pause and resume
         let _ = sequencer.pause();
         let _ = sequencer.resume();
-        core::hint::black_box(sequencer);
-    }
 
-    // 16-step sequence
-    let seq16 = RgbSequence::<Duration32, 16>::builder()
-        .step(
-            Srgb::new(1.0, 0.0, 0.0),
-            Duration32::new(250),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::new(0.9, 0.1, 0.0),
-            Duration32::new(250),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::new(0.8, 0.2, 0.0),
-            Duration32::new(250),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::new(0.7, 0.3, 0.0),
-            Duration32::new(250),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::new(0.6, 0.4, 0.0),
-            Duration32::new(250),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::new(0.5, 0.5, 0.0),
-            Duration32::new(250),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::new(0.4, 0.6, 0.0),
-            Duration32::new(250),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::new(0.3, 0.7, 0.0),
-            Duration32::new(250),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::new(0.2, 0.8, 0.0),
-            Duration32::new(250),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::new(0.1, 0.9, 0.0),
-            Duration32::new(250),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::new(0.0, 1.0, 0.0),
-            Duration32::new(250),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::new(0.0, 0.9, 0.1),
-            Duration32::new(250),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::new(0.0, 0.8, 0.2),
-            Duration32::new(250),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::new(0.0, 0.7, 0.3),
-            Duration32::new(250),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::new(0.0, 0.6, 0.4),
-            Duration32::new(250),
-            TransitionStyle::Linear,
-        )
-        .step(
-            Srgb::new(0.0, 0.5, 0.5),
-            Duration32::new(250),
-            TransitionStyle::Linear,
-        )
-        .loop_count(LoopCount::Infinite)
-        .start_color(Srgb::new(0.0, 0.0, 0.0))
-        .landing_color(Srgb::new(0.0, 0.0, 0.0))
-        .build();
-
-    if let Ok(sequence) = seq16 {
-        let led3 = MinimalLed;
-        let mut sequencer = RgbSequencer::new(led3, &time_source);
-        sequencer.load(sequence);
+        // Restart
         let _ = sequencer.restart();
+
+        // Query state
+        let _ = sequencer.get_state();
+
+        // Clear
+        sequencer.clear();
+
         core::hint::black_box(sequencer);
     }
-
-    // Function-based sequence (0 capacity)
-    fn color_fn(_base: Srgb, _t: Duration32) -> Srgb {
-        Srgb::new(0.5, 0.5, 0.5)
-    }
-
-    fn timing_fn(_t: Duration32) -> Option<Duration32> {
-        Some(Duration32::new(16))
-    }
-
-    let seq_func =
-        RgbSequence::<Duration32, 0>::from_function(Srgb::new(1.0, 1.0, 1.0), color_fn, timing_fn);
-
-    let led4 = MinimalLed;
-    let mut sequencer = RgbSequencer::new(led4, &time_source);
-    sequencer.load(seq_func);
-    let _ = sequencer.start();
-    core::hint::black_box(sequencer);
 }
 
 #[entry]
 fn main() -> ! {
     // Call test function to ensure all code is included
-    test_sequences();
+    test_sequence();
 
     // Halt - this is a size analysis binary, not meant to run
     loop {
