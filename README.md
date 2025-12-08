@@ -109,7 +109,7 @@ loop {
 
 ## Memory Impact
 
-The library has minimal overhead: ~3.8KB Flash on Cortex-M0 (with software f32 emulation), ~2.1KB on Cortex-M4F (with hardware FPU). See [size-analysis report](size-analysis/report.md) for detailed breakdowns including symbol-level analysis showing what contributes to the binary size.
+The library has minimal Flash overhead. Use the [size-analysis tool](size-analysis/README.md) to generate detailed reports showing baseline library cost across different ARM Cortex-M targets, with symbol-level analysis of what contributes to binary size.
 
 ## Performance Considerations
 
