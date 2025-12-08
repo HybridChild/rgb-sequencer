@@ -51,7 +51,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cargo/bin
-          key: ${{ runner.os }}-cargo-bin-${{ hashFiles('.github/workflows/size-analysis.yml') }}
+          key: ${{ runner.os }}-cargo-bin-bloat-binutils-v1
 
       - name: Install cargo-bloat
         run: |
