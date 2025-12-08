@@ -108,6 +108,3 @@ impl core::fmt::Display for SequenceError {
         }
     }
 }
-
-#[cfg(feature = "std")]
-impl std::error::Error for SequenceError {}

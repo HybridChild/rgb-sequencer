@@ -17,7 +17,6 @@ defmt = { version = "1.0.1", optional = true }
 
 [features]
 default = []
-std = ["palette/std"]
 defmt = ["dep:defmt"]
 
 [profile.release]

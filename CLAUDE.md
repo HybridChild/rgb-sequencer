@@ -366,7 +366,6 @@ assert_eq!(sequencer.pause(), Err(SequencerError::InvalidState));
 
 ```bash
 cargo test --lib                  # Run all tests
-cargo test --lib --features std   # Test with std feature
 cargo test sequence::tests        # Test specific module
 ```
 
@@ -380,9 +379,6 @@ cargo check
 
 # Run tests
 cargo test --lib
-
-# Test with features
-cargo test --lib --features std
 
 # Lint
 cargo clippy --all-features -- -D warnings
@@ -405,15 +401,11 @@ cd tools && cargo run --release
 
 | Feature | Description | Dependencies |
 |---------|-------------|--------------|
-| `std` | Enable standard library support | Enables `palette/std` |
 | `defmt` | Enable defmt logging support | Adds `defmt` dependency |
 
 ```toml
 # Minimal (default)
 rgb-sequencer = "0.1"
-
-# With std
-rgb-sequencer = { version = "0.1", features = ["std"] }
 
 # With defmt
 rgb-sequencer = { version = "0.1", features = ["defmt"] }

@@ -1,6 +1,6 @@
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 
-//! A `no_std`-compatible Rust library for controlling RGB LEDs through timed color sequences on embedded systems.
+//! A `no_std` Rust library for controlling RGB LEDs through timed color sequences on embedded systems.
 //!
 //! **rgb-sequencer** provides a lightweight, flexible framework for creating and executing RGB LED animations
 //! on resource-constrained embedded devices. Instead of manually managing timers, color interpolation, and LED
