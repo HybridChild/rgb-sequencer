@@ -15,13 +15,6 @@ jobs:
   test:
     name: Test Suite
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        features:
-          - ""
-          - "std"
-          - "defmt"
-          - "std,defmt"
     steps:
       - uses: actions/checkout@v4
 
@@ -47,21 +40,11 @@ jobs:
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run tests
-        run: |
-          if [ -z "${{ matrix.features }}" ]; then
-            cargo test --lib --no-default-features
-          else
-            cargo test --lib --features "${{ matrix.features }}"
-          fi
+        run: cargo test --lib --no-default-features
 
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        features:
-          - ""
-          - "std,defmt"
     steps:
       - uses: actions/checkout@v4
 
@@ -88,13 +71,11 @@ jobs:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Run clippy
-        run: |
-          if [ -z "${{ matrix.features }}" ]; then
-            cargo clippy --lib --no-default-features -- -D warnings
-          else
-            cargo clippy --lib --features "${{ matrix.features }}" -- -D warnings
-          fi
+      - name: Run clippy (no features)
+        run: cargo clippy --lib --no-default-features -- -D warnings
+
+      - name: Run clippy (all features)
+        run: cargo clippy --lib --all-features -- -D warnings
 
   fmt:
     name: Format
