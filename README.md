@@ -109,7 +109,7 @@ loop {
 
 ## Memory Impact
 
-**Analyze Memory Footprint**: Use the [size-analysis tool](size-analysis/README.md) to measure exact Flash and RAM usage on embedded targets. The tool builds for real hardware (Cortex-M0) and provides detailed breakdowns for different feature combinations and sequence capacities.
+The library has minimal overhead: ~3.8KB Flash on Cortex-M0 (with software f32 emulation), ~2.1KB on Cortex-M4F (with hardware FPU). See [size-analysis report](size-analysis/report.md) for detailed breakdowns including symbol-level analysis showing what contributes to the binary size.
 
 ## Performance Considerations
 
