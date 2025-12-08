@@ -13,7 +13,6 @@ panic-halt = "1.0.0"
 
 [features]
 default = []
-std = ["rgb-sequencer/std", "palette/std"]
 defmt = ["rgb-sequencer/defmt"]
 
 [profile.release]
