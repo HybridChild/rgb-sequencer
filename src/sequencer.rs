@@ -1,8 +1,4 @@
-//! RGB LED sequencer with state management and timing control.
-//!
-//! Provides [`RgbSequencer`] which manages a single RGB LED through timed sequences,
-//! handling state transitions, timing coordination, and LED updates. Also defines
-//! the [`RgbLed`] trait for hardware abstraction.
+//! RGB LED sequencer with state management.
 
 use crate::COLOR_OFF;
 use crate::command::SequencerAction;
@@ -11,16 +7,8 @@ use crate::time::{TimeDuration, TimeInstant, TimeSource};
 use palette::Srgb;
 
 /// Trait for abstracting RGB LED hardware.
-///
-/// Implement this for your LED hardware (GPIO, PWM, SPI, etc.) to allow
-/// the sequencer to control it.
 pub trait RgbLed {
-    /// Sets the LED to the specified RGB color.
-    ///
-    /// Color components are in the range 0.0-1.0. Implementations should
-    /// convert these to their hardware's native format (e.g., PWM duty cycles,
-    /// 8-bit RGB values). Handle any hardware errors internally - this method
-    /// cannot fail.
+    /// Sets LED to specified color.
     fn set_color(&mut self, color: Srgb);
 }
 
@@ -28,41 +16,27 @@ pub trait RgbLed {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SequencerState {
-    /// No sequence loaded. LED is off.
+    /// No sequence loaded.
     Idle,
-    /// Sequence loaded and ready to start. LED is off.
+    /// Sequence loaded.
     Loaded,
-    /// Sequence actively executing. LED displays animated colors.
+    /// Sequence running.
     Running,
-    /// Sequence paused. LED holds the color from when pause was called.
+    /// Sequence paused.
     Paused,
-    /// Finite sequence finished. LED displays landing color or last step color.
+    /// Sequence complete.
     Complete,
 }
 
 /// Timing information returned by service operations.
-///
-/// Indicates when the sequencer needs to be serviced again.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum ServiceTiming<D> {
-    /// Continuous animation in progress. Service again at your desired frame rate.
-    ///
-    /// Returned during linear color transitions or continuous function-based sequences.
-    /// Typically you should sleep for 16-33ms (30-60 FPS) between service calls.
+    /// Continuous animation.
     Continuous,
-
-    /// Static color hold. Service again after the specified delay.
-    ///
-    /// Returned during step transitions where the color is constant.
-    /// Sleep for exactly this duration before calling service again.
+    /// Static hold.
     Delay(D),
-
-    /// Sequence has completed.
-    ///
-    /// Returned when a finite sequence finishes all loops. The LED will display
-    /// the landing color (if configured) or the last step's color. No further
-    /// servicing is needed until a new sequence is loaded or the sequence is restarted.
+    /// Sequence complete.
     Complete,
 }
 
@@ -70,16 +44,12 @@ pub enum ServiceTiming<D> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SequencerError {
-    /// Operation called from an invalid state.
-    ///
-    /// The `expected` field describes which state(s) are valid for this operation.
+    /// Invalid state.
     InvalidState {
-        /// Human-readable description of expected state(s), e.g. "Running" or "Running, Paused, or Complete"
         expected: &'static str,
-        /// The actual current state
         actual: SequencerState,
     },
-    /// No sequence is loaded.
+    /// No sequence loaded.
     NoSequenceLoaded,
 }
 
@@ -100,21 +70,7 @@ impl core::fmt::Display for SequencerError {
     }
 }
 
-/// Controls a single RGB LED through timed color sequences.
-///
-/// Each sequencer owns an LED and executes sequences independently. The sequencer
-/// tracks timing, calculates colors, and updates the LED hardware.
-///
-/// Supports both step-based sequences (pre-defined color transitions) and
-/// function-based sequences (algorithmic animations). Both types work seamlessly
-/// with the same sequencer interface.
-///
-/// # Type Parameters
-/// * `'t` - Lifetime of the time source reference
-/// * `I` - Time instant type
-/// * `L` - LED implementation type
-/// * `T` - Time source implementation type
-/// * `N` - Maximum number of steps in sequences
+/// Controls a single RGB LED through sequences.
 pub struct RgbSequencer<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> {
     led: L,
     time_source: &'t T,
@@ -126,7 +82,7 @@ pub struct RgbSequencer<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N
 }
 
 impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequencer<'t, I, L, T, N> {
-    /// Creates a new idle sequencer with LED turned off.
+    /// Creates sequencer with LED off.
     pub fn new(mut led: L, time_source: &'t T) -> Self {
         led.set_color(COLOR_OFF);
 
@@ -141,15 +97,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
         }
     }
 
-    /// Handles a sequencer action by dispatching to the appropriate method.
-    ///
-    /// This is a convenience method for command-based control, allowing actions
-    /// to be dispatched without matching on the action type manually.
-    ///
-    /// # Returns
-    /// * `Ok(ServiceTiming)` - Timing for actions that start/resume sequences
-    /// * `Ok(ServiceTiming::Complete)` - For actions that don't require servicing
-    /// * `Err` - Operation failed (invalid state, etc.)
+    /// Dispatches action to appropriate method.
     pub fn handle_action(
         &mut self,
         action: SequencerAction<I::Duration, N>,
@@ -177,9 +125,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
         }
     }
 
-    /// Loads a sequence. Can be called from any state.
-    ///
-    /// Stops any running sequence and transitions to `Loaded` state.
+    /// Loads a sequence.
     pub fn load(&mut self, sequence: RgbSequence<I::Duration, N>) {
         self.sequence = Some(sequence);
         self.start_time = None;
@@ -187,13 +133,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
         self.state = SequencerState::Loaded;
     }
 
-    /// Starts the loaded sequence from the beginning.
-    ///
-    /// Must be called from `Loaded` state.
-    ///
-    /// # Returns
-    /// * `Ok(ServiceTiming)` - When to service next
-    /// * `Err` - Invalid state or no sequence loaded
+    /// Starts sequence.
     pub fn start(&mut self) -> Result<ServiceTiming<I::Duration>, SequencerError> {
         if self.state != SequencerState::Loaded {
             return Err(SequencerError::InvalidState {
@@ -211,9 +151,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
         self.service()
     }
 
-    /// Restarts the sequence from the beginning.
-    ///
-    /// Can be called from `Running`, `Paused`, or `Complete` states.
+    /// Restarts sequence.
     pub fn restart(&mut self) -> Result<ServiceTiming<I::Duration>, SequencerError> {
         match self.state {
             SequencerState::Running | SequencerState::Paused | SequencerState::Complete => {
@@ -233,15 +171,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
         }
     }
 
-    /// Services the sequencer, updating the LED if necessary.
-    ///
-    /// Must be called from `Running` state.
-    ///
-    /// # Returns
-    /// - `Ok(ServiceTiming::Continuous)` - Continuous animation, service at desired frame rate
-    /// - `Ok(ServiceTiming::Delay(duration))` - Static hold, service after this delay
-    /// - `Ok(ServiceTiming::Complete)` - Sequence complete, transitions to `Complete` state
-    /// - `Err` - Invalid state
+    /// Services sequencer, updating LED.
     pub fn service(&mut self) -> Result<ServiceTiming<I::Duration>, SequencerError> {
         if self.state != SequencerState::Running {
             return Err(SequencerError::InvalidState {
@@ -275,10 +205,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
         }
     }
 
-    /// Stops the sequence and turns off the LED.
-    ///
-    /// Sequence remains loaded and transitions to `Loaded` state.
-    /// Can be called from `Running`, `Paused`, or `Complete`.
+    /// Stops sequence and turns LED off.
     pub fn stop(&mut self) -> Result<(), SequencerError> {
         match self.state {
             SequencerState::Running | SequencerState::Paused | SequencerState::Complete => {
@@ -298,9 +225,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
         }
     }
 
-    /// Pauses the sequence at the current color.
-    ///
-    /// Must be called from `Running` state.
+    /// Pauses sequence.
     pub fn pause(&mut self) -> Result<(), SequencerError> {
         if self.state != SequencerState::Running {
             return Err(SequencerError::InvalidState {
@@ -314,9 +239,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
         Ok(())
     }
 
-    /// Resumes a paused sequence, adjusting timing for pause duration.
-    ///
-    /// Must be called from `Paused` state.
+    /// Resumes paused sequence.
     pub fn resume(&mut self) -> Result<ServiceTiming<I::Duration>, SequencerError> {
         if self.state != SequencerState::Paused {
             return Err(SequencerError::InvalidState {
@@ -342,9 +265,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
         self.service()
     }
 
-    /// Clears the sequence and turns off the LED.
-    ///
-    /// Removes loaded sequence and transitions to `Idle`. Can be called from any state.
+    /// Clears sequence and turns LED off.
     pub fn clear(&mut self) {
         self.sequence = None;
         self.start_time = None;
@@ -355,32 +276,26 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
         self.current_color = COLOR_OFF;
     }
 
-    /// Returns the current state of the sequencer.
     pub fn get_state(&self) -> SequencerState {
         self.state
     }
 
-    /// Returns the current color being displayed on the LED.
     pub fn current_color(&self) -> Srgb {
         self.current_color
     }
 
-    /// Returns true if the sequencer is currently paused.
     pub fn is_paused(&self) -> bool {
         self.state == SequencerState::Paused
     }
 
-    /// Returns true if the sequencer is currently running.
     pub fn is_running(&self) -> bool {
         self.state == SequencerState::Running
     }
 
-    /// Returns a reference to the currently loaded sequence, if any
     pub fn current_sequence(&self) -> Option<&RgbSequence<I::Duration, N>> {
         self.sequence.as_ref()
     }
 
-    /// Returns the elapsed time since the sequence started, if running
     pub fn elapsed_time(&self) -> Option<I::Duration> {
         self.start_time.map(|start| {
             let now = self.time_source.now();

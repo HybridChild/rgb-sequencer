@@ -39,6 +39,11 @@ The library is built for embedded systems with:
 
 Whether you're building a status LED that breathes gently, a multi-LED notification system with synchronized animations, or an interactive light show that responds to user input, rgb-sequencer provides the building blocks and lets you focus on your application logic.
 
+## Documentation
+
+- **[FEATURES.md](docs/FEATURES.md)** - Complete feature guide with examples
+- **[IMPLEMENTATION.md](docs/IMPLEMENTATION.md)** - Technical implementation details for contributors
+
 ## Quick Start
 
 ### Add Dependency
