@@ -26,7 +26,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: thumbv6m-none-eabi
+          targets: thumbv6m-none-eabi,thumbv7em-none-eabihf
           components: llvm-tools
 
       - name: Cache cargo registry
@@ -84,8 +84,8 @@ jobs:
             const reportPath = 'size-analysis/report.md';
             const report = fs.readFileSync(reportPath, 'utf8');
 
-            // Extract the summary table (everything before "## Detailed Analysis")
-            const summaryMatch = report.match(/# Memory Footprint Analysis[\s\S]*?(?=## Detailed Analysis|$)/);
+            // Extract the summary (header + Target Comparison table, before individual target sections)
+            const summaryMatch = report.match(/# rgb-sequencer Memory Footprint Analysis[\s\S]*?(?=\n---\n)/);
             const summary = summaryMatch ? summaryMatch[0] : report;
 
             const body = `## Memory Footprint Analysis\n\n${summary}\n\n<details>\n<summary>View full report</summary>\n\n${report}\n\n</details>`;
