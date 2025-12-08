@@ -96,6 +96,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        target:
+          - thumbv6m-none-eabi
+          - thumbv7em-none-eabihf
         features:
           - ""
           - "defmt"
@@ -105,7 +108,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: thumbv6m-none-eabi
+          targets: ${{ matrix.target }}
 
       - name: Cache cargo registry
         uses: actions/cache@v4
@@ -125,12 +128,12 @@ jobs:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Build for thumbv6m-none-eabi
+      - name: Build for ${{ matrix.target }}
         run: |
           if [ -z "${{ matrix.features }}" ]; then
-            cargo build --target thumbv6m-none-eabi --lib --release --no-default-features
+            cargo build --target ${{ matrix.target }} --lib --release --no-default-features
           else
-            cargo build --target thumbv6m-none-eabi --lib --release --features "${{ matrix.features }}"
+            cargo build --target ${{ matrix.target }} --lib --release --features "${{ matrix.features }}"
           fi
 
   examples:
