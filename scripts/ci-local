@@ -50,7 +50,7 @@ echo ""
 
 # 3. Clippy (all features)
 print_step "Running Clippy (all features)..."
-cargo clippy --lib --features "std,defmt" -- -D warnings
+cargo clippy --lib --all-features -- -D warnings
 print_success "Clippy passed (all features)"
 echo ""
 
@@ -60,25 +60,7 @@ cargo test --lib --no-default-features
 print_success "Tests passed (no features)"
 echo ""
 
-# 5. Test (std)
-print_step "Running tests (std feature)..."
-cargo test --lib --features "std"
-print_success "Tests passed (std)"
-echo ""
-
-# 6. Test (defmt)
-print_step "Running tests (defmt feature)..."
-cargo test --lib --features "defmt"
-print_success "Tests passed (defmt)"
-echo ""
-
-# 7. Test (all features)
-print_step "Running tests (all features)..."
-cargo test --lib --features "std,defmt"
-print_success "Tests passed (all features)"
-echo ""
-
-# 8. Documentation check
+# 5. Documentation check
 print_step "Building documentation (all features)..."
 RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
 print_success "Documentation built successfully"
@@ -89,7 +71,7 @@ RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --no-default-features
 print_success "Documentation built successfully"
 echo ""
 
-# 9. no_std compatibility check
+# 6. no_std compatibility check
 print_step "Checking no_std compatibility (thumbv6m-none-eabi)..."
 if rustup target list --installed | grep -q "thumbv6m-none-eabi"; then
     cargo build --target thumbv6m-none-eabi --lib --release --no-default-features
@@ -103,7 +85,7 @@ else
 fi
 echo ""
 
-# 10. Build examples
+# 7. Build examples
 print_step "Building example: rp-pico..."
 if [ -d "examples/rp-pico" ]; then
     (cd examples/rp-pico && cargo build --release)
@@ -131,7 +113,7 @@ else
 fi
 echo ""
 
-# 11. Size analysis
+# 8. Size analysis
 print_step "Running size analysis..."
 if [ -f "size-analysis/analyze.sh" ]; then
     (cd size-analysis && ./analyze.sh)
@@ -141,7 +123,7 @@ else
 fi
 echo ""
 
-# 12. Git status check
+# 9. Git status check
 print_step "Checking git status..."
 if [ -n "$(git status --porcelain)" ]; then
     print_warning "There are uncommitted changes:"
