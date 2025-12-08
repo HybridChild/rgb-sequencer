@@ -1,44 +1,25 @@
-//! Core type definitions for sequence construction and configuration.
-//!
-//! Defines [`TransitionStyle`], [`LoopCount`], [`SequenceStep`], and [`SequenceError`]
-//! used by [`RgbSequence`](crate::sequence::RgbSequence) to construct animations.
+//! Core types for sequence construction.
 
 use crate::time::TimeDuration;
 use palette::Srgb;
 
-/// Defines how a sequence step transitions to its target color.
-///
-/// The transition style determines how the sequencer interpolates from the previous
-/// color state to this step's target color over the step's duration.
+/// How to transition to a step's target color.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransitionStyle {
-    /// Instantly jump to the target color with no interpolation.
-    ///
-    /// The step's duration determines how long to hold the color before moving
-    /// to the next step. A zero-duration step displays its color instantly and
-    /// immediately proceeds to the next step, making it useful as a waypoint color
-    /// in looping sequences (e.g., defining the loop boundary for smooth transitions).
+    /// Instantly jump to target color, hold for duration.
     Step,
 
-    /// Smoothly interpolate from the previous color to the target color.
-    ///
-    /// Uses linear interpolation in RGB color space over the step's duration.
-    /// Cannot be used with zero-duration steps as interpolation requires time.
+    /// Smoothly interpolate over duration.
     Linear,
 }
 
-/// Defines how many times a sequence should repeat.
+/// How many times a sequence should repeat.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LoopCount {
-    /// Repeat the sequence a specific number of times.
-    ///
-    /// After completing all loops, the sequence either transitions to the landing
-    /// color (if specified) or holds the last step's color.
+    /// Repeat a specific number of times.
     Finite(u32),
 
-    /// Repeat the sequence indefinitely.
-    ///
-    /// The sequence will never complete and the landing color is never used.
+    /// Repeat indefinitely.
     Infinite,
 }
 
@@ -49,32 +30,20 @@ impl Default for LoopCount {
 }
 
 /// A single step in an RGB sequence.
-///
-/// Each step defines a target color, how long the step lasts, and how to transition
-/// to that color from the previous step.
 #[derive(Debug, Clone, Copy)]
 pub struct SequenceStep<D: TimeDuration> {
-    /// The target RGB color for this step.
+    /// Target color.
     pub color: Srgb,
 
-    /// How long this step lasts.
-    ///
-    /// For `Step` transitions, this is how long to hold the color.
-    /// For `Linear` transitions, this is how long to spend interpolating to the color.
-    /// Zero duration is only valid with `Step` transitions.
+    /// Step duration.
     pub duration: D,
 
-    /// How to transition to this step's color from the previous state.
+    /// Transition style.
     pub transition: TransitionStyle,
 }
 
 impl<D: TimeDuration> SequenceStep<D> {
     /// Creates a new sequence step.
-    ///
-    /// # Arguments
-    /// * `color` - The target RGB color for this step
-    /// * `duration` - How long this step lasts
-    /// * `transition` - How to transition to this color
     pub fn new(color: Srgb, duration: D, transition: TransitionStyle) -> Self {
         Self {
             color,
@@ -84,15 +53,13 @@ impl<D: TimeDuration> SequenceStep<D> {
     }
 }
 
-/// Errors that can occur when building or validating a sequence.
+/// Sequence validation errors.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SequenceError {
-    /// The sequence has no steps. At least one step is required.
+    /// No steps provided.
     EmptySequence,
 
-    /// A step with zero duration was combined with a Linear transition.
-    ///
-    /// Linear transitions require non-zero duration to perform interpolation.
+    /// Zero duration with Linear transition.
     ZeroDurationWithLinear,
 }
 

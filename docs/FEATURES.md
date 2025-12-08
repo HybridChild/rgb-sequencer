@@ -31,9 +31,7 @@ let sequence = RgbSequence::builder()
     .build()?;
 ```
 
-This creates a sequence that on each loop iteration, will jump to yellow and then smoothly transition to black (off).
-
-**Important**: Zero-duration steps with `TransitionStyle::Linear` are invalid and will be rejected during sequence building.
+This creates a sequence that on each loop iteration, will jump to yellow and then smoothly transition to black (off). Zero-duration steps with `TransitionStyle::Linear` are invalid and will be rejected during sequence building.
 
 ### Start Color for Smooth Entry
 
@@ -52,9 +50,7 @@ let sequence = RgbSequence::builder()
 - **First loop**: Uses `start_color` for interpolation to first step (black → red)
 - **Subsequent loops**: Uses last step's color for interpolation to first step (blue → red)
 
-This is particularly useful for creating smooth entry animations into looping sequences without affecting the loop-to-loop transitions.
-
-**Note**: `start_color` only affects the first step if it uses `TransitionStyle::Linear`. For `TransitionStyle::Step`, the start color is ignored.
+This is particularly useful for creating smooth entry animations into looping sequences without affecting loop-to-loop transitions. The `start_color` only affects the first step if it uses `TransitionStyle::Linear`.
 
 ### Landing Color for Completion
 
@@ -73,9 +69,7 @@ let sequence = RgbSequence::builder()
 - The sequence blinks red/green 3 times
 - After completion, the LED turns blue and stays blue
 
-**Note**: If no `landing_color` is specified, the LED holds the last step's color
-
-**Note**: `landing_color` is ignored for infinite sequences.
+If no `landing_color` is specified, the LED holds the last step's color. The `landing_color` is ignored for infinite sequences.
 
 ### Loop Count
 
@@ -92,7 +86,7 @@ Control how many times a sequence repeats:
 .loop_count(LoopCount::Infinite)
 ```
 
-**Note**: If no Loop Count is specified, the sequence will default to `LoopCount::Finite(1)`
+If no Loop Count is specified, the sequence will default to `LoopCount::Finite(1)`
 
 ## Function-Based Sequences
 
@@ -207,7 +201,7 @@ fn fire_flicker(base: Srgb, elapsed: Duration) -> Srgb {
     Srgb::new(
         base.red * brightness,
         base.green * brightness,
-        base.blue * brightnes
+        base.blue * brightness
     )
 }
 
@@ -221,7 +215,7 @@ let dim_red = RgbSequence::from_function(
 ### Step-based vs. Function-based Sequences
 
 Use step-based sequences when:
-- Simple stuff like just setting a static color or blinking
+- Simple sequences like setting static colors or blinking
 - You only need instant color changes or linear transitions
 - You have a fixed set of color waypoints
 - Your animation fits naturally into discrete stages
@@ -271,7 +265,7 @@ loop {
 }
 ```
 
-**Note**: For function-based sequences, the `service()` method will call the [timing function](#2-timing-function-fnduration---optionduration) internally and forward its return value.
+For function-based sequences, `service()` calls the [timing function](#2-timing-function-fnduration---optionduration) internally and forwards its return value.
 
 ### Multi-LED Servicing
 

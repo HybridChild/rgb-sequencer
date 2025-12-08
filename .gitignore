@@ -10,3 +10,5 @@ Cargo.lock
 /examples/*/Cargo.lock
 /tools/target/
 /tools/Cargo.lock
+
+scratch.md
