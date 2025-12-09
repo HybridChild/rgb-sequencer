@@ -9,10 +9,15 @@ use palette::{Mix, Srgb};
 /// Position within a sequence.
 #[derive(Debug, Clone, Copy)]
 pub struct StepPosition<D: TimeDuration> {
+    /// Current step index.
     pub step_index: usize,
+    /// Elapsed time in current step.
     pub time_in_step: D,
+    /// Time remaining until step ends.
     pub time_until_step_end: D,
+    /// Whether sequence is complete.
     pub is_complete: bool,
+    /// Current loop iteration.
     pub current_loop: u32,
 }
 
@@ -286,6 +291,7 @@ pub struct SequenceBuilder<D: TimeDuration, const N: usize> {
 }
 
 impl<D: TimeDuration, const N: usize> SequenceBuilder<D, N> {
+    /// Creates a new sequence builder.
     pub fn new() -> Self {
         Self {
             steps: Vec::new(),

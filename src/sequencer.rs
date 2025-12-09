@@ -46,7 +46,9 @@ pub enum ServiceTiming<D> {
 pub enum SequencerError {
     /// Invalid state.
     InvalidState {
+        /// Expected state description.
         expected: &'static str,
+        /// Actual current state.
         actual: SequencerState,
     },
     /// No sequence loaded.
@@ -276,26 +278,32 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
         self.current_color = COLOR_OFF;
     }
 
+    /// Returns current state.
     pub fn get_state(&self) -> SequencerState {
         self.state
     }
 
+    /// Returns current color.
     pub fn current_color(&self) -> Srgb {
         self.current_color
     }
 
+    /// Returns true if paused.
     pub fn is_paused(&self) -> bool {
         self.state == SequencerState::Paused
     }
 
+    /// Returns true if running.
     pub fn is_running(&self) -> bool {
         self.state == SequencerState::Running
     }
 
+    /// Returns current sequence reference.
     pub fn current_sequence(&self) -> Option<&RgbSequence<I::Duration, N>> {
         self.sequence.as_ref()
     }
 
+    /// Returns elapsed time since start.
     pub fn elapsed_time(&self) -> Option<I::Duration> {
         self.start_time.map(|start| {
             let now = self.time_source.now();
