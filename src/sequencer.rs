@@ -153,6 +153,15 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
         self.service()
     }
 
+    /// Loads and immediately starts a sequence.
+    pub fn load_and_start(
+        &mut self,
+        sequence: RgbSequence<I::Duration, N>,
+    ) -> Result<ServiceTiming<I::Duration>, SequencerError> {
+        self.load(sequence);
+        self.start()
+    }
+
     /// Restarts sequence.
     pub fn restart(&mut self) -> Result<ServiceTiming<I::Duration>, SequencerError> {
         match self.state {
@@ -1167,6 +1176,31 @@ mod tests {
             assert!(result.is_ok());
             assert!(colors_equal(sequencer.current_color(), RED));
         }
+    }
+
+    #[test]
+    fn load_and_start_convenience_method_works() {
+        let led = MockLed::new();
+        let timer = MockTimeSource::new();
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
+            .step(RED, TestDuration(1000), TransitionStyle::Step)
+            .step(GREEN, TestDuration(1000), TransitionStyle::Step)
+            .build()
+            .unwrap();
+
+        // Should go from Idle -> Loaded -> Running in one call
+        let timing = sequencer.load_and_start(sequence).unwrap();
+        assert_eq!(sequencer.get_state(), SequencerState::Running);
+        assert!(colors_equal(sequencer.current_color(), RED));
+        assert_eq!(timing, ServiceTiming::Delay(TestDuration(1000)));
+
+        // Advance and verify it progresses through sequence
+        timer.advance(TestDuration(1100));
+        sequencer.service().unwrap();
+        assert!(colors_equal(sequencer.current_color(), GREEN));
     }
 
     #[test]

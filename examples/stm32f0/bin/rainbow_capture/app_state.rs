@@ -38,11 +38,8 @@ impl<'a> AppState<'a> {
             .build()
             .unwrap();
 
-        sequencer_1.load(sequence_1);
-        sequencer_1.start().unwrap();
-
-        sequencer_2.load(sequence_2);
-        sequencer_2.start().unwrap();
+        sequencer_1.load_and_start(sequence_1).unwrap();
+        sequencer_2.load_and_start(sequence_2).unwrap();
 
         rprintln!("Both sequences started!");
         rprintln!("LED 1: Rainbow animation (red -> green -> blue)");
@@ -86,8 +83,7 @@ impl<'a> AppState<'a> {
                     .build()
                     .unwrap();
 
-                self.sequencer_2.load(transition_sequence);
-                self.sequencer_2.start().unwrap();
+                self.sequencer_2.load_and_start(transition_sequence).unwrap();
             }
             SequencerState::Paused => {
                 rprintln!("Resuming LED 1 animation");
