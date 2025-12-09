@@ -18,8 +18,8 @@ use stm32f0xx_hal::{
 use stm32f0::rgb_led::PwmRgbLed;
 
 use rgb_sequencer::{
-    LoopCount, RgbSequence8, RgbSequencer8, ServiceTiming, TimeDuration, TimeInstant, TimeSource,
-    TransitionStyle, COLOR_OFF,
+    COLOR_OFF, LoopCount, RgbSequence8, RgbSequencer8, ServiceTiming, TimeDuration, TimeInstant,
+    TimeSource, TransitionStyle,
 };
 
 /// Type alias for LED 1
