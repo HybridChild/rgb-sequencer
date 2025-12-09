@@ -12,12 +12,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README updates for clarity and structure
 - Removed Memory calculator tool in favor of size-analysis script
 - `.gitignore` updated to track `.cargo/config.toml` for examples
+- Examples updated to use new convenience method and type aliases
+- CI workflow and ci-local script extended to check formatting for examples and size-analysis/minimal
 
 ### Added
 - Introduce CHANGELOG.md (this file)
 - `CLAUDE.md` file for AI assistant guidance
 - Comprehensive CI workflow for automated testing
 - Size analysis script for tracking binary size impact
+- Compiler directives: `#![forbid(unsafe_code)]` and `#![warn(missing_docs)]`
+- Comprehensive documentation for all public API items
+- Common color constants: `COLOR_RED`, `COLOR_GREEN`, `COLOR_BLUE`, `COLOR_WHITE`, `COLOR_YELLOW`, `COLOR_CYAN`, `COLOR_MAGENTA`, `COLOR_ORANGE`, `COLOR_PURPLE`
+- `load_and_start()` convenience method for `RgbSequencer`
+- Type aliases for common capacities: `RgbSequencer4/8/16` and `RgbSequence4/8/16`
 
 ### Fixed
 - Removed unintended `std` dependency to maintain full `no_std` compatibility
