@@ -102,27 +102,27 @@ fn test_sequence() {
     // - Finite loop count
     let sequence = RgbSequence::<Duration32, 4>::builder()
         .step(
-            Srgb::new(1.0, 0.0, 0.0),  // Red
+            Srgb::new(1.0, 0.0, 0.0), // Red
             Duration32::new(1000),
             TransitionStyle::Linear,
         )
         .step(
-            Srgb::new(0.0, 1.0, 0.0),  // Green
+            Srgb::new(0.0, 1.0, 0.0), // Green
             Duration32::new(1000),
             TransitionStyle::Linear,
         )
         .step(
-            Srgb::new(0.0, 0.0, 1.0),  // Blue
+            Srgb::new(0.0, 0.0, 1.0), // Blue
             Duration32::new(1000),
             TransitionStyle::Step,
         )
         .step(
-            Srgb::new(1.0, 1.0, 1.0),  // White
+            Srgb::new(1.0, 1.0, 1.0), // White
             Duration32::new(1000),
             TransitionStyle::Step,
         )
-        .start_color(Srgb::new(0.0, 0.0, 0.0))      // Start from black
-        .landing_color(Srgb::new(0.0, 0.0, 0.0))    // End on black
+        .start_color(Srgb::new(0.0, 0.0, 0.0)) // Start from black
+        .landing_color(Srgb::new(0.0, 0.0, 0.0)) // End on black
         .loop_count(LoopCount::Finite(3))
         .build();
 

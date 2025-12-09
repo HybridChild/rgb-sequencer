@@ -18,8 +18,8 @@ use palette::{FromColor, Hsv, Srgb};
 use rp_pico_examples::rgb_led::PwmRgbLed;
 
 use rgb_sequencer::{
-    LoopCount, RgbSequence8, RgbSequencer8, ServiceTiming, TimeDuration, TimeInstant, TimeSource,
-    TransitionStyle, COLOR_OFF,
+    COLOR_OFF, LoopCount, RgbSequence8, RgbSequencer8, ServiceTiming, TimeDuration, TimeInstant,
+    TimeSource, TransitionStyle,
 };
 
 pub const FRAME_RATE_MS: u64 = 16;

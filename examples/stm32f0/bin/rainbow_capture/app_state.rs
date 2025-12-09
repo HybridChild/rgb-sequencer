@@ -2,8 +2,8 @@ use rtt_target::rprintln;
 use stm32f0xx_hal::prelude::*;
 
 use rgb_sequencer::{
-    RgbSequence8, RgbSequencer8, SequencerState, ServiceTiming, TimeDuration, TimeSource,
-    TransitionStyle, COLOR_OFF,
+    COLOR_OFF, RgbSequence8, RgbSequencer8, SequencerState, ServiceTiming, TimeDuration,
+    TimeSource, TransitionStyle,
 };
 use stm32f0::time_source::{HalDuration, HalInstant, HalTimeSource};
 
@@ -83,7 +83,9 @@ impl<'a> AppState<'a> {
                     .build()
                     .unwrap();
 
-                self.sequencer_2.load_and_start(transition_sequence).unwrap();
+                self.sequencer_2
+                    .load_and_start(transition_sequence)
+                    .unwrap();
             }
             SequencerState::Paused => {
                 rprintln!("Resuming LED 1 animation");

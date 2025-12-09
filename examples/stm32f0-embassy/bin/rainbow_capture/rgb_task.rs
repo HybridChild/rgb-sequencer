@@ -8,8 +8,7 @@ use palette::Srgb;
 use rgb_sequencer::{RgbLed, RgbSequencer, RgbSequencer8, ServiceTiming};
 
 use crate::types::{
-    EmbassyDuration, EmbassyInstant, EmbassyTimeSource, ExtendedCommand, LedId,
-    RGB_COMMAND_CHANNEL,
+    EmbassyDuration, EmbassyInstant, EmbassyTimeSource, ExtendedCommand, LedId, RGB_COMMAND_CHANNEL,
 };
 
 // ============================================================================
@@ -121,9 +120,7 @@ impl<'t, const CAPACITY: usize> SequencerCollection<'t, CAPACITY> {
     fn get_mut(
         &mut self,
         led_id: LedId,
-    ) -> Option<
-        &mut RgbSequencer8<'t, EmbassyInstant, AnyLed<'t>, EmbassyTimeSource>,
-    > {
+    ) -> Option<&mut RgbSequencer8<'t, EmbassyInstant, AnyLed<'t>, EmbassyTimeSource>> {
         let index = match led_id {
             LedId::Led1 => 0,
             LedId::Led2 => 1,

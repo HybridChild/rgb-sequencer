@@ -1,9 +1,7 @@
 use defmt::info;
 use embassy_stm32::gpio::Output;
 use palette::{FromColor, Hsv, Srgb};
-use rgb_sequencer::{
-    LoopCount, RgbSequence8, SequencerAction, SequencerCommand, TransitionStyle,
-};
+use rgb_sequencer::{LoopCount, RgbSequence8, SequencerAction, SequencerCommand, TransitionStyle};
 
 use crate::types::{
     BUTTON_SIGNAL, COLOR_RESPONSE_SIGNAL, EmbassyDuration, ExtendedCommand, LedId,
