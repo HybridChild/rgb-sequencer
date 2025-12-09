@@ -1,4 +1,6 @@
 #![no_std]
+#![forbid(unsafe_code)]
+#![warn(missing_docs)]
 
 //! `no_std` RGB LED animation library for embedded systems.
 //!
