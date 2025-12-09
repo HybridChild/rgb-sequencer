@@ -2,18 +2,18 @@ use rtt_target::rprintln;
 use stm32f0xx_hal::prelude::*;
 
 use rgb_sequencer::{
-    COLOR_OFF, RgbSequence, RgbSequencer, SequencerState, ServiceTiming, TimeDuration, TimeSource,
-    TransitionStyle,
+    RgbSequence8, RgbSequencer8, SequencerState, ServiceTiming, TimeDuration, TimeSource,
+    TransitionStyle, COLOR_OFF,
 };
 use stm32f0::time_source::{HalDuration, HalInstant, HalTimeSource};
 
 use crate::button::ButtonDebouncer;
 use crate::hardware_setup::{HardwareContext, Led1, Led2};
-use crate::sequences::{SEQUENCE_STEP_CAPACITY, create_rainbow_sequence};
+use crate::sequences::create_rainbow_sequence;
 
 /// Type aliases for the sequencers
-type Sequencer1<'a> = RgbSequencer<'a, HalInstant, Led1, HalTimeSource, SEQUENCE_STEP_CAPACITY>;
-type Sequencer2<'a> = RgbSequencer<'a, HalInstant, Led2, HalTimeSource, SEQUENCE_STEP_CAPACITY>;
+type Sequencer1<'a> = RgbSequencer8<'a, HalInstant, Led1, HalTimeSource>;
+type Sequencer2<'a> = RgbSequencer8<'a, HalInstant, Led2, HalTimeSource>;
 
 /// Application state containing all runtime data
 pub struct AppState<'a> {
@@ -28,12 +28,12 @@ impl<'a> AppState<'a> {
     /// Initialize the application with hardware and sequences
     pub fn new(hw: HardwareContext, time_source: &'a HalTimeSource) -> Self {
         // Create sequencers
-        let mut sequencer_1 = RgbSequencer::new(hw.led_1, time_source);
-        let mut sequencer_2 = RgbSequencer::new(hw.led_2, time_source);
+        let mut sequencer_1 = RgbSequencer8::new(hw.led_1, time_source);
+        let mut sequencer_2 = RgbSequencer8::new(hw.led_2, time_source);
 
         // Create and load sequences
         let sequence_1 = create_rainbow_sequence();
-        let sequence_2 = RgbSequence::builder()
+        let sequence_2 = RgbSequence8::builder()
             .step(COLOR_OFF, HalDuration(0), TransitionStyle::Step)
             .build()
             .unwrap();
@@ -77,7 +77,7 @@ impl<'a> AppState<'a> {
                     captured_color.blue
                 );
 
-                let transition_sequence = RgbSequence::builder()
+                let transition_sequence = RgbSequence8::builder()
                     .start_color(old_color)
                     .step(captured_color, HalDuration(2000), TransitionStyle::Linear)
                     .build()

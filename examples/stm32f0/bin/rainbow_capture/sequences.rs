@@ -1,16 +1,13 @@
 use palette::{FromColor, Hsv, Srgb};
-use rgb_sequencer::{LoopCount, RgbSequence, TransitionStyle};
+use rgb_sequencer::{LoopCount, RgbSequence8, TransitionStyle};
 use stm32f0::time_source::HalDuration;
-
-/// Maximum number of steps that can be stored in a sequence
-pub const SEQUENCE_STEP_CAPACITY: usize = 8;
 
 /// Create a rainbow sequence that cycles through the full color spectrum
 ///
 /// The sequence smoothly transitions through red -> green -> blue over 12 seconds,
 /// then loops infinitely.
-pub fn create_rainbow_sequence() -> RgbSequence<HalDuration, SEQUENCE_STEP_CAPACITY> {
-    RgbSequence::builder()
+pub fn create_rainbow_sequence() -> RgbSequence8<HalDuration> {
+    RgbSequence8::builder()
         .step(
             Srgb::from_color(Hsv::new(0.0, 1.0, 1.0)),
             HalDuration(4000),

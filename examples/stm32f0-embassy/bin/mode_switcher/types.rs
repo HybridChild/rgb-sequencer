@@ -38,12 +38,9 @@ pub type LedId = ();
 pub static BUTTON_SIGNAL: Signal<ThreadModeRawMutex, ()> = Signal::new();
 
 /// Channel for sending commands from app_logic_task to rgb_task
-/// Uses the library's SequencerCommand type
+/// Uses the library's SequencerCommand type with 8-step capacity
 pub static RGB_COMMAND_CHANNEL: Channel<
     ThreadModeRawMutex,
-    SequencerCommand<LedId, EmbassyDuration, SEQUENCE_STEP_CAPACITY>,
+    SequencerCommand<LedId, EmbassyDuration, 8>,
     2,
 > = Channel::new();
-
-/// Maximum number of steps that can be stored in a sequence
-pub const SEQUENCE_STEP_CAPACITY: usize = 8;

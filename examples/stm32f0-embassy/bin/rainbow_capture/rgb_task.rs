@@ -5,11 +5,11 @@ use embassy_stm32::timer::simple_pwm::SimplePwm;
 use embassy_time::{Duration, Timer};
 use heapless::Vec;
 use palette::Srgb;
-use rgb_sequencer::{RgbLed, RgbSequencer, ServiceTiming};
+use rgb_sequencer::{RgbLed, RgbSequencer, RgbSequencer8, ServiceTiming};
 
 use crate::types::{
     EmbassyDuration, EmbassyInstant, EmbassyTimeSource, ExtendedCommand, LedId,
-    RGB_COMMAND_CHANNEL, SEQUENCE_STEP_CAPACITY,
+    RGB_COMMAND_CHANNEL,
 };
 
 // ============================================================================
@@ -88,10 +88,7 @@ impl<'d> RgbLed for AnyLed<'d> {
 /// This allows them to be stored in a Vec and accessed individually by index,
 /// while maintaining zero-cost abstraction.
 struct SequencerCollection<'t, const CAPACITY: usize> {
-    sequencers: Vec<
-        RgbSequencer<'t, EmbassyInstant, AnyLed<'t>, EmbassyTimeSource, SEQUENCE_STEP_CAPACITY>,
-        CAPACITY,
-    >,
+    sequencers: Vec<RgbSequencer8<'t, EmbassyInstant, AnyLed<'t>, EmbassyTimeSource>, CAPACITY>,
     time_source: &'t EmbassyTimeSource,
 }
 
@@ -125,13 +122,7 @@ impl<'t, const CAPACITY: usize> SequencerCollection<'t, CAPACITY> {
         &mut self,
         led_id: LedId,
     ) -> Option<
-        &mut RgbSequencer<
-            't,
-            EmbassyInstant,
-            AnyLed<'t>,
-            EmbassyTimeSource,
-            SEQUENCE_STEP_CAPACITY,
-        >,
+        &mut RgbSequencer8<'t, EmbassyInstant, AnyLed<'t>, EmbassyTimeSource>,
     > {
         let index = match led_id {
             LedId::Led1 => 0,

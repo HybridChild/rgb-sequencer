@@ -3,12 +3,10 @@ use embassy_stm32::gpio::Output;
 use embassy_time::Duration;
 use palette::{FromColor, Hsv, Srgb};
 use rgb_sequencer::{
-    LoopCount, RgbSequence, SequencerAction, SequencerCommand, TimeDuration, TransitionStyle,
+    LoopCount, RgbSequence8, SequencerAction, SequencerCommand, TimeDuration, TransitionStyle,
 };
 
-use crate::types::{
-    BUTTON_SIGNAL, EmbassyDuration, Mode, RGB_COMMAND_CHANNEL, SEQUENCE_STEP_CAPACITY,
-};
+use crate::types::{BUTTON_SIGNAL, EmbassyDuration, Mode, RGB_COMMAND_CHANNEL};
 
 /// Sine-based breathing effect function
 ///
@@ -61,15 +59,15 @@ fn continuous_timing(_elapsed: EmbassyDuration) -> Option<EmbassyDuration> {
 /// Uses a sine wave to create a smooth breathing effect, demonstrating
 /// the function-based sequence feature. The brightness oscillates between
 /// 10% and 100% over a 4-second cycle.
-fn create_breathing_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACITY> {
+fn create_breathing_sequence() -> RgbSequence8<EmbassyDuration> {
     let white = Srgb::new(1.0, 1.0, 1.0);
 
-    RgbSequence::from_function(white, breathing_sine_wave, continuous_timing)
+    RgbSequence8::from_function(white, breathing_sine_wave, continuous_timing)
 }
 
 /// Create a rainbow cycle sequence
-fn create_rainbow_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACITY> {
-    RgbSequence::builder()
+fn create_rainbow_sequence() -> RgbSequence8<EmbassyDuration> {
+    RgbSequence8::builder()
         .step(
             Srgb::from_color(Hsv::new(0.0, 1.0, 1.0)),
             EmbassyDuration(Duration::from_millis(4000)),
@@ -91,12 +89,12 @@ fn create_rainbow_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPAC
 }
 
 /// Create a police lights sequence
-fn create_police_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACITY> {
+fn create_police_sequence() -> RgbSequence8<EmbassyDuration> {
     let red = Srgb::new(1.0, 0.0, 0.0);
     let blue = Srgb::new(0.0, 0.0, 1.0);
     let off = Srgb::new(0.0, 0.0, 0.0);
 
-    RgbSequence::builder()
+    RgbSequence8::builder()
         .step(
             red,
             EmbassyDuration(Duration::from_millis(100)),
@@ -202,15 +200,15 @@ fn flame_flicker(base_color: Srgb, elapsed: EmbassyDuration) -> Srgb {
 /// The effect combines multiple sine waves at different frequencies to create
 /// complex, pseudo-random brightness and color temperature variations.
 /// The flame stays within orange/yellow tones and never goes completely dark.
-fn create_flame_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACITY> {
+fn create_flame_sequence() -> RgbSequence8<EmbassyDuration> {
     // Base flame color: warm orange
     let flame_orange = Srgb::new(1.0, 0.4, 0.0);
 
-    RgbSequence::from_function(flame_orange, flame_flicker, continuous_timing)
+    RgbSequence8::from_function(flame_orange, flame_flicker, continuous_timing)
 }
 
 /// Get the sequence for a given mode
-fn get_sequence_for_mode(mode: Mode) -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACITY> {
+fn get_sequence_for_mode(mode: Mode) -> RgbSequence8<EmbassyDuration> {
     match mode {
         Mode::Rainbow => create_rainbow_sequence(),
         Mode::Police => create_police_sequence(),
