@@ -450,6 +450,7 @@ mod tests {
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -469,6 +470,7 @@ mod tests {
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -488,6 +490,7 @@ mod tests {
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -507,6 +510,7 @@ mod tests {
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -529,8 +533,11 @@ mod tests {
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
+            .unwrap()
             .step(GREEN, TestDuration(100), TransitionStyle::Step)
+            .unwrap()
             .step(BLUE, TestDuration(100), TransitionStyle::Step)
+            .unwrap()
             .loop_count(LoopCount::Finite(1))
             .build()
             .unwrap();
@@ -604,7 +611,9 @@ mod tests {
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
             .step(GREEN, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
             .loop_count(LoopCount::Finite(1))
             .build()
             .unwrap();
@@ -644,6 +653,7 @@ mod tests {
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -665,6 +675,7 @@ mod tests {
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -686,7 +697,9 @@ mod tests {
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
             .step(GREEN, TestDuration(500), TransitionStyle::Step)
+            .unwrap()
             .loop_count(LoopCount::Finite(1))
             .build()
             .unwrap();
@@ -707,7 +720,9 @@ mod tests {
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
+            .unwrap()
             .step(GREEN, TestDuration(1000), TransitionStyle::Linear)
+            .unwrap()
             .loop_count(LoopCount::Finite(1))
             .build()
             .unwrap();
@@ -732,6 +747,7 @@ mod tests {
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
+            .unwrap()
             .loop_count(LoopCount::Finite(1))
             .landing_color(BLUE)
             .build()
@@ -759,7 +775,9 @@ mod tests {
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
             .step(GREEN, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
             .loop_count(LoopCount::Finite(1))
             .build()
             .unwrap();
@@ -788,7 +806,9 @@ mod tests {
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
             .step(GREEN, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -813,6 +833,7 @@ mod tests {
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
+            .unwrap()
             .loop_count(LoopCount::Finite(1))
             .landing_color(BLUE)
             .build()
@@ -844,6 +865,7 @@ mod tests {
         // Try restart from Loaded
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
+            .unwrap()
             .build()
             .unwrap();
         sequencer.load(sequence);
@@ -861,6 +883,7 @@ mod tests {
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -918,7 +941,9 @@ mod tests {
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
+            .unwrap()
             .step(GREEN, TestDuration(100), TransitionStyle::Step)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -949,6 +974,7 @@ mod tests {
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -972,6 +998,7 @@ mod tests {
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
+            .unwrap()
             .loop_count(LoopCount::Finite(1))
             .build()
             .unwrap();
@@ -997,6 +1024,7 @@ mod tests {
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -1027,7 +1055,9 @@ mod tests {
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
             .step(GREEN, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -1066,6 +1096,7 @@ mod tests {
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -1133,11 +1164,13 @@ mod tests {
 
         let sequence1 = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(100), TransitionStyle::Step)
+            .unwrap()
             .build()
             .unwrap();
 
         let sequence2 = RgbSequence::<TestDuration, 8>::builder()
             .step(GREEN, TestDuration(200), TransitionStyle::Step)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -1164,6 +1197,7 @@ mod tests {
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -1187,7 +1221,9 @@ mod tests {
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
             .step(GREEN, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -1212,8 +1248,11 @@ mod tests {
 
         let sequence = RgbSequence::<TestDuration, 8>::builder()
             .step(RED, TestDuration(0), TransitionStyle::Step)
+            .unwrap()
             .step(GREEN, TestDuration(100), TransitionStyle::Step)
+            .unwrap()
             .step(BLUE, TestDuration(0), TransitionStyle::Step)
+            .unwrap()
             .loop_count(LoopCount::Finite(1))
             .build()
             .unwrap();

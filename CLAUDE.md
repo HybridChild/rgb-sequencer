@@ -42,9 +42,9 @@ This repository maintains **professional, lean documentation**:
 
 ```rust
 let sequence = RgbSequence::<_, 3>::builder()
-    .step(Srgb::new(1.0, 0.0, 0.0), ms(1000), TransitionStyle::Linear)
-    .step(Srgb::new(0.0, 1.0, 0.0), ms(1000), TransitionStyle::Linear)
-    .step(Srgb::new(0.0, 0.0, 1.0), ms(1000), TransitionStyle::Linear)
+    .step(Srgb::new(1.0, 0.0, 0.0), ms(1000), TransitionStyle::Linear)?
+    .step(Srgb::new(0.0, 1.0, 0.0), ms(1000), TransitionStyle::Linear)?
+    .step(Srgb::new(0.0, 0.0, 1.0), ms(1000), TransitionStyle::Linear)?
     .loop_count(LoopCount::Infinite)
     .build()?;
 ```
@@ -185,9 +185,9 @@ Use **method chaining** for fluent sequence construction:
 
 ```rust
 RgbSequence::builder()
-    .step(color1, duration1, transition1)  // Required: at least 1 step
-    .step(color2, duration2, transition2)  // Add more steps
-    .loop_count(LoopCount::Finite(3))      // Optional: default is Finite(1)
+    .step(color1, duration1, transition1)?  // Required: at least 1 step
+    .step(color2, duration2, transition2)?  // Add more steps
+    .loop_count(LoopCount::Finite(3))       // Optional: default is Finite(1)
     .start_color(start)                     // Optional: smooth entry
     .landing_color(landing)                 // Optional: smooth exit
     .build()?                               // Validates and returns Result
@@ -256,17 +256,20 @@ fn create_sequence() -> heapless::Vec<SequenceStep<Milliseconds>, 8> { }
 
 ### ❌ Mismatched Capacity
 ```rust
-// WRONG - Runtime error: capacity mismatch
+// WRONG - Returns SequenceError::CapacityExceeded
 let sequence = RgbSequence::<_, 3>::builder()
-    .step(color1, dur1, TransitionStyle::Step)
-    .step(color2, dur2, TransitionStyle::Step)
-    .step(color3, dur3, TransitionStyle::Step)
-    .step(color4, dur4, TransitionStyle::Step)  // 4 steps, capacity 3!
-    .build()?;  // Will fail
+    .step(color1, dur1, TransitionStyle::Step)?
+    .step(color2, dur2, TransitionStyle::Step)?
+    .step(color3, dur3, TransitionStyle::Step)?
+    .step(color4, dur4, TransitionStyle::Step)?  // 4 steps, capacity 3!
+    .build()?;  // Previous step() call will error
 
 // RIGHT
 let sequence = RgbSequence::<_, 4>::builder()  // Capacity matches steps
-    // ... 4 steps
+    .step(color1, dur1, TransitionStyle::Step)?
+    .step(color2, dur2, TransitionStyle::Step)?
+    .step(color3, dur3, TransitionStyle::Step)?
+    .step(color4, dur4, TransitionStyle::Step)?
     .build()?;
 ```
 

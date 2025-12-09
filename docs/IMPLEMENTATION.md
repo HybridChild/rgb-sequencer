@@ -47,7 +47,7 @@ Allows sequences to gracefully transition from LED's current state (or OFF) into
 ```rust
 // LED is currently off (0,0,0)
 .start_color(Srgb::new(0.0, 0.0, 0.0))  // Start from black
-.step(Srgb::new(1.0, 0.0, 0.0), ms(1000), Linear)  // Fade to red
+.step(Srgb::new(1.0, 0.0, 0.0), ms(1000), Linear)?  // Fade to red
 ```
 
 **Case 2: Wrap-Around (First Step, Subsequent Loops)**

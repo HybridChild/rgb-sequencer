@@ -73,16 +73,19 @@ fn create_rainbow_sequence() -> RgbSequence8<EmbassyDuration> {
             EmbassyDuration(Duration::from_millis(4000)),
             TransitionStyle::Linear,
         )
+        .unwrap()
         .step(
             Srgb::from_color(Hsv::new(120.0, 1.0, 1.0)),
             EmbassyDuration(Duration::from_millis(4000)),
             TransitionStyle::Linear,
         )
+        .unwrap()
         .step(
             Srgb::from_color(Hsv::new(240.0, 1.0, 1.0)),
             EmbassyDuration(Duration::from_millis(4000)),
             TransitionStyle::Linear,
         )
+        .unwrap()
         .loop_count(LoopCount::Infinite)
         .build()
         .unwrap()
@@ -100,41 +103,49 @@ fn create_police_sequence() -> RgbSequence8<EmbassyDuration> {
             EmbassyDuration(Duration::from_millis(100)),
             TransitionStyle::Step,
         )
+        .unwrap()
         .step(
             off,
             EmbassyDuration(Duration::from_millis(100)),
             TransitionStyle::Step,
         )
+        .unwrap()
         .step(
             red,
             EmbassyDuration(Duration::from_millis(100)),
             TransitionStyle::Step,
         )
+        .unwrap()
         .step(
             off,
             EmbassyDuration(Duration::from_millis(100)),
             TransitionStyle::Step,
         )
+        .unwrap()
         .step(
             blue,
             EmbassyDuration(Duration::from_millis(100)),
             TransitionStyle::Step,
         )
+        .unwrap()
         .step(
             off,
             EmbassyDuration(Duration::from_millis(100)),
             TransitionStyle::Step,
         )
+        .unwrap()
         .step(
             blue,
             EmbassyDuration(Duration::from_millis(100)),
             TransitionStyle::Step,
         )
+        .unwrap()
         .step(
             off,
             EmbassyDuration(Duration::from_millis(100)),
             TransitionStyle::Step,
         )
+        .unwrap()
         .loop_count(LoopCount::Infinite)
         .build()
         .unwrap()

@@ -35,6 +35,7 @@ impl<'a> AppState<'a> {
         let sequence_1 = create_rainbow_sequence();
         let sequence_2 = RgbSequence8::builder()
             .step(COLOR_OFF, HalDuration(0), TransitionStyle::Step)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -80,6 +81,7 @@ impl<'a> AppState<'a> {
                 let transition_sequence = RgbSequence8::builder()
                     .start_color(old_color)
                     .step(captured_color, HalDuration(2000), TransitionStyle::Linear)
+                    .unwrap()
                     .build()
                     .unwrap();
 

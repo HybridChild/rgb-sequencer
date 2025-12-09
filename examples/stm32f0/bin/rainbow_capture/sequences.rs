@@ -13,16 +13,19 @@ pub fn create_rainbow_sequence() -> RgbSequence8<HalDuration> {
             HalDuration(4000),
             TransitionStyle::Linear,
         )
+        .unwrap()
         .step(
             Srgb::from_color(Hsv::new(120.0, 1.0, 1.0)),
             HalDuration(4000),
             TransitionStyle::Linear,
         )
+        .unwrap()
         .step(
             Srgb::from_color(Hsv::new(240.0, 1.0, 1.0)),
             HalDuration(4000),
             TransitionStyle::Linear,
         )
+        .unwrap()
         .loop_count(LoopCount::Infinite)
         .build()
         .unwrap()

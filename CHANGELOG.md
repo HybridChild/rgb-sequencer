@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **BREAKING**: `SequenceBuilder::step()` now returns `Result<Self, SequenceError>` instead of panicking when capacity is exceeded
 - License changed from MIT to dual MIT/Apache-2.0
 - README updates for clarity and structure
 - Removed Memory calculator tool in favor of size-analysis script
@@ -25,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Common color constants: `COLOR_RED`, `COLOR_GREEN`, `COLOR_BLUE`, `COLOR_WHITE`, `COLOR_YELLOW`, `COLOR_CYAN`, `COLOR_MAGENTA`, `COLOR_ORANGE`, `COLOR_PURPLE`
 - `load_and_start()` convenience method for `RgbSequencer`
 - Type aliases for common capacities: `RgbSequencer4/8/16` and `RgbSequence4/8/16`
+- `SequenceError::CapacityExceeded` variant for robust error handling
 
 ### Fixed
 - Removed unintended `std` dependency to maintain full `no_std` compatibility

@@ -75,7 +75,9 @@ pub fn create_breathing_sequence_step_based() -> RgbSequence<HalDuration, 16> {
 
     RgbSequence::builder()
         .step(dim_white, HalDuration(2000), TransitionStyle::Linear)
+        .unwrap()
         .step(white, HalDuration(2000), TransitionStyle::Linear)
+        .unwrap()
         .loop_count(LoopCount::Infinite)
         .build()
         .unwrap()
@@ -92,16 +94,19 @@ pub fn create_rainbow_sequence() -> RgbSequence<HalDuration, 16> {
             HalDuration(4000),
             TransitionStyle::Linear,
         )
+        .unwrap()
         .step(
             Srgb::from_color(Hsv::new(120.0, 1.0, 1.0)), // Green
             HalDuration(4000),
             TransitionStyle::Linear,
         )
+        .unwrap()
         .step(
             Srgb::from_color(Hsv::new(240.0, 1.0, 1.0)), // Blue
             HalDuration(4000),
             TransitionStyle::Linear,
         )
+        .unwrap()
         .loop_count(LoopCount::Infinite)
         .build()
         .unwrap()
@@ -118,13 +123,21 @@ pub fn create_police_sequence() -> RgbSequence<HalDuration, 16> {
 
     RgbSequence::builder()
         .step(red, HalDuration(100), TransitionStyle::Step)
+        .unwrap()
         .step(off, HalDuration(100), TransitionStyle::Step)
+        .unwrap()
         .step(red, HalDuration(100), TransitionStyle::Step)
+        .unwrap()
         .step(off, HalDuration(100), TransitionStyle::Step)
+        .unwrap()
         .step(blue, HalDuration(100), TransitionStyle::Step)
+        .unwrap()
         .step(off, HalDuration(100), TransitionStyle::Step)
+        .unwrap()
         .step(blue, HalDuration(100), TransitionStyle::Step)
+        .unwrap()
         .step(off, HalDuration(100), TransitionStyle::Step)
+        .unwrap()
         .loop_count(LoopCount::Infinite)
         .build()
         .unwrap()
