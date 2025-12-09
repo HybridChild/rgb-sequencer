@@ -59,8 +59,7 @@ impl<'a> AppState<'a> {
         let initial_mode = Mode::Rainbow;
         let sequence = create_rainbow_sequence();
 
-        sequencer.load(sequence);
-        sequencer.start().unwrap();
+        sequencer.load_and_start(sequence).unwrap();
 
         rprintln!("Initial mode: {:?}", initial_mode);
 
@@ -86,8 +85,7 @@ impl<'a> AppState<'a> {
         };
 
         // Load and start the sequencer
-        self.sequencer.load(sequence);
-        self.sequencer.start().unwrap();
+        self.sequencer.load_and_start(sequence).unwrap();
 
         // Update onboard LED indicator
         self.update_mode_indicator(mode);

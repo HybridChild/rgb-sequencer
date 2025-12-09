@@ -186,8 +186,7 @@ fn main() -> ! {
         .build()
         .unwrap();
 
-    sequencer.load(sequence);
-    sequencer.start().unwrap();
+    sequencer.load_and_start(sequence).unwrap();
 
     rprintln!("Sequence started");
 
