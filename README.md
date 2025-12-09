@@ -80,9 +80,9 @@ impl TimeSource<MyInstant> for MyTimer {
 
 // 3. Create a blinking sequence
 let sequence = RgbSequence::builder()
-    .step(Srgb::new(1.0, 1.0, 1.0), Duration::from_millis(500), TransitionStyle::Step)  // White
-    .step(Srgb::new(0.0, 0.0, 0.0), Duration::from_millis(500), TransitionStyle::Step)  // Off
-    .loop_count(LoopCount::Infinite)                                                    // Loop indefinitely
+    .step(Srgb::new(1.0, 1.0, 1.0), Duration::from_millis(500), TransitionStyle::Step)?  // White
+    .step(Srgb::new(0.0, 0.0, 0.0), Duration::from_millis(500), TransitionStyle::Step)?  // Off
+    .loop_count(LoopCount::Infinite)                                                     // Loop indefinitely
     .build()?;
 
 // 4. Create sequencer and start

@@ -166,20 +166,26 @@ fn main() -> ! {
             Srgb::from_color(Hsv::new(60.0, 1.0, 1.0)),
             BlinkyDuration(0),
             TransitionStyle::Step,
-        ) // Yellow
-        .step(COLOR_OFF, BlinkyDuration(1000), TransitionStyle::Linear) // Fade out
+        )
+        .unwrap() // Yellow
+        .step(COLOR_OFF, BlinkyDuration(1000), TransitionStyle::Linear)
+        .unwrap() // Fade out
         .step(
             Srgb::from_color(Hsv::new(180.0, 1.0, 1.0)),
             BlinkyDuration(0),
             TransitionStyle::Step,
-        ) // Cyan
-        .step(COLOR_OFF, BlinkyDuration(1000), TransitionStyle::Linear) // Fade out
+        )
+        .unwrap() // Cyan
+        .step(COLOR_OFF, BlinkyDuration(1000), TransitionStyle::Linear)
+        .unwrap() // Fade out
         .step(
             Srgb::from_color(Hsv::new(300.0, 1.0, 1.0)),
             BlinkyDuration(0),
             TransitionStyle::Step,
-        ) // Purple
-        .step(COLOR_OFF, BlinkyDuration(1000), TransitionStyle::Linear) // Fade out
+        )
+        .unwrap() // Purple
+        .step(COLOR_OFF, BlinkyDuration(1000), TransitionStyle::Linear)
+        .unwrap() // Fade out
         .loop_count(LoopCount::Infinite)
         .build()
         .unwrap();

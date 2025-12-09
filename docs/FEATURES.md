@@ -8,8 +8,8 @@ Step-based sequences define animations as a series of color waypoints with expli
 
 ```rust
 let sequence = RgbSequence::builder()
-    .step(Srgb::new(1.0, 0.0, 0.0), Duration::from_millis(1000), TransitionStyle::Step)
-    .step(Srgb::new(0.0, 1.0, 0.0), Duration::from_millis(500), TransitionStyle::Linear)
+    .step(Srgb::new(1.0, 0.0, 0.0), Duration::from_millis(1000), TransitionStyle::Step)?
+    .step(Srgb::new(0.0, 1.0, 0.0), Duration::from_millis(500), TransitionStyle::Linear)?
     .build()?;
 ```
 
@@ -25,8 +25,8 @@ For steps with `TransitionStyle::Step`, setting zero-duration is allowed and ser
 
 ```rust
 let sequence = RgbSequence::builder()
-    .step(Srgb::new(1.0, 1.0, 0.0), Duration::from_millis(0), TransitionStyle::Step)       // Yellow waypoint
-    .step(Srgb::new(0.0, 0.0, 0.0), Duration::from_millis(1000), TransitionStyle::Linear)  // Fade to black
+    .step(Srgb::new(1.0, 1.0, 0.0), Duration::from_millis(0), TransitionStyle::Step)?       // Yellow waypoint
+    .step(Srgb::new(0.0, 0.0, 0.0), Duration::from_millis(1000), TransitionStyle::Linear)?  // Fade to black
     .loop_count(LoopCount::Infinite)
     .build()?;
 ```
@@ -40,8 +40,8 @@ The `start_color()` method allows you to define a color to interpolate from at t
 ```rust
 let sequence = RgbSequence::builder()
     .start_color(Srgb::new(0.0, 0.0, 0.0))  // Start from black
-    .step(Srgb::new(1.0, 0.0, 0.0), Duration::from_millis(2000), TransitionStyle::Linear)  // Fade to red
-    .step(Srgb::new(0.0, 0.0, 1.0), Duration::from_millis(2000), TransitionStyle::Linear)  // Fade to blue
+    .step(Srgb::new(1.0, 0.0, 0.0), Duration::from_millis(2000), TransitionStyle::Linear)?  // Fade to red
+    .step(Srgb::new(0.0, 0.0, 1.0), Duration::from_millis(2000), TransitionStyle::Linear)?  // Fade to blue
     .loop_count(LoopCount::Infinite)
     .build()?;
 ```
@@ -58,8 +58,8 @@ For finite sequences, you can specify a `landing_color` to display after all loo
 
 ```rust
 let sequence = RgbSequence::builder()
-    .step(Srgb::new(1.0, 0.0, 0.0), Duration::from_millis(500), TransitionStyle::Step)  // Red
-    .step(Srgb::new(0.0, 1.0, 0.0), Duration::from_millis(500), TransitionStyle::Step)  // Green
+    .step(Srgb::new(1.0, 0.0, 0.0), Duration::from_millis(500), TransitionStyle::Step)?  // Red
+    .step(Srgb::new(0.0, 1.0, 0.0), Duration::from_millis(500), TransitionStyle::Step)?  // Green
     .loop_count(LoopCount::Finite(3))
     .landing_color(Srgb::new(0.0, 0.0, 1.0))  // Turn blue when done
     .build()?;

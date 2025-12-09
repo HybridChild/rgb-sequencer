@@ -16,16 +16,19 @@ fn create_rainbow_sequence() -> RgbSequence8<EmbassyDuration> {
             EmbassyDuration(embassy_time::Duration::from_millis(4000)),
             TransitionStyle::Linear,
         )
+        .unwrap()
         .step(
             Srgb::from_color(Hsv::new(120.0, 1.0, 1.0)), // Green
             EmbassyDuration(embassy_time::Duration::from_millis(4000)),
             TransitionStyle::Linear,
         )
+        .unwrap()
         .step(
             Srgb::from_color(Hsv::new(240.0, 1.0, 1.0)), // Blue
             EmbassyDuration(embassy_time::Duration::from_millis(4000)),
             TransitionStyle::Linear,
         )
+        .unwrap()
         .loop_count(LoopCount::Infinite)
         .build()
         .unwrap()
@@ -39,6 +42,7 @@ fn create_static_sequence(color: Srgb) -> RgbSequence8<EmbassyDuration> {
             EmbassyDuration(embassy_time::Duration::from_millis(0)),
             TransitionStyle::Step,
         )
+        .unwrap()
         .build()
         .unwrap()
 }
@@ -56,6 +60,7 @@ fn create_transition_sequence(
             EmbassyDuration(embassy_time::Duration::from_millis(duration_ms)),
             TransitionStyle::Linear,
         )
+        .unwrap()
         .build()
         .unwrap()
 }

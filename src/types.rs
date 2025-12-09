@@ -61,6 +61,9 @@ pub enum SequenceError {
 
     /// Zero duration with Linear transition.
     ZeroDurationWithLinear,
+
+    /// Sequence capacity exceeded.
+    CapacityExceeded,
 }
 
 impl core::fmt::Display for SequenceError {
@@ -71,6 +74,9 @@ impl core::fmt::Display for SequenceError {
             }
             SequenceError::ZeroDurationWithLinear => {
                 write!(f, "zero-duration steps must use Step transition")
+            }
+            SequenceError::CapacityExceeded => {
+                write!(f, "sequence capacity exceeded")
             }
         }
     }
