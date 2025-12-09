@@ -26,3 +26,30 @@ pub use types::{LoopCount, SequenceError, SequenceStep, TransitionStyle};
 
 /// Black color (all channels off).
 pub const COLOR_OFF: Srgb = Srgb::new(0.0, 0.0, 0.0);
+
+/// Red color (full red channel).
+pub const COLOR_RED: Srgb = Srgb::new(1.0, 0.0, 0.0);
+
+/// Green color (full green channel).
+pub const COLOR_GREEN: Srgb = Srgb::new(0.0, 1.0, 0.0);
+
+/// Blue color (full blue channel).
+pub const COLOR_BLUE: Srgb = Srgb::new(0.0, 0.0, 1.0);
+
+/// White color (all channels full).
+pub const COLOR_WHITE: Srgb = Srgb::new(1.0, 1.0, 1.0);
+
+/// Yellow color (red + green).
+pub const COLOR_YELLOW: Srgb = Srgb::new(1.0, 1.0, 0.0);
+
+/// Cyan color (green + blue).
+pub const COLOR_CYAN: Srgb = Srgb::new(0.0, 1.0, 1.0);
+
+/// Magenta color (red + blue).
+pub const COLOR_MAGENTA: Srgb = Srgb::new(1.0, 0.0, 1.0);
+
+/// Orange color.
+pub const COLOR_ORANGE: Srgb = Srgb::new(1.0, 0.647, 0.0);
+
+/// Purple color.
+pub const COLOR_PURPLE: Srgb = Srgb::new(0.502, 0.0, 0.502);
