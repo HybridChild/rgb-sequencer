@@ -39,7 +39,41 @@ echo ""
 # 1. Format check
 print_step "Checking code formatting..."
 cargo fmt --all -- --check
-print_success "Code formatting OK"
+print_success "Code formatting OK (main library)"
+
+# Check examples formatting
+if [ -d "examples/rp-pico" ]; then
+    print_step "  Checking rp-pico example formatting..."
+    (cd examples/rp-pico && cargo fmt -- --check)
+    print_success "  rp-pico formatting OK"
+else
+    print_warning "  rp-pico example not found, skipping"
+fi
+
+if [ -d "examples/stm32f0" ]; then
+    print_step "  Checking stm32f0 example formatting..."
+    (cd examples/stm32f0 && cargo fmt -- --check)
+    print_success "  stm32f0 formatting OK"
+else
+    print_warning "  stm32f0 example not found, skipping"
+fi
+
+if [ -d "examples/stm32f0-embassy" ]; then
+    print_step "  Checking stm32f0-embassy example formatting..."
+    (cd examples/stm32f0-embassy && cargo fmt -- --check)
+    print_success "  stm32f0-embassy formatting OK"
+else
+    print_warning "  stm32f0-embassy example not found, skipping"
+fi
+
+# Check size-analysis/minimal formatting
+if [ -d "size-analysis/minimal" ]; then
+    print_step "  Checking size-analysis/minimal formatting..."
+    (cd size-analysis/minimal && cargo fmt -- --check)
+    print_success "  size-analysis/minimal formatting OK"
+else
+    print_warning "  size-analysis/minimal not found, skipping"
+fi
 echo ""
 
 # 2. Clippy (no features)
