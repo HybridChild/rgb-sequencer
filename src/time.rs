@@ -8,10 +8,13 @@ pub trait TimeSource<I: TimeInstant> {
 
 /// Abstracts over duration types.
 pub trait TimeDuration: Copy + PartialEq {
+    /// Zero duration constant.
     const ZERO: Self;
 
+    /// Converts duration to milliseconds.
     fn as_millis(&self) -> u64;
 
+    /// Creates duration from milliseconds.
     fn from_millis(millis: u64) -> Self;
 
     /// Saturating subtraction (returns ZERO on underflow).
@@ -20,11 +23,15 @@ pub trait TimeDuration: Copy + PartialEq {
 
 /// Abstracts over instant types.
 pub trait TimeInstant: Copy {
+    /// Duration type for this instant.
     type Duration: TimeDuration;
 
+    /// Calculates duration since an earlier instant.
     fn duration_since(&self, earlier: Self) -> Self::Duration;
 
+    /// Adds duration to instant, returns None on overflow.
     fn checked_add(self, duration: Self::Duration) -> Option<Self>;
 
+    /// Subtracts duration from instant, returns None on underflow.
     fn checked_sub(self, duration: Self::Duration) -> Option<Self>;
 }

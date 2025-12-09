@@ -24,4 +24,5 @@ pub use sequencer::{RgbLed, RgbSequencer, SequencerError, SequencerState, Servic
 pub use time::{TimeDuration, TimeInstant, TimeSource};
 pub use types::{LoopCount, SequenceError, SequenceStep, TransitionStyle};
 
+/// Black color (all channels off).
 pub const COLOR_OFF: Srgb = Srgb::new(0.0, 0.0, 0.0);

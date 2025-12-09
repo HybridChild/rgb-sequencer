@@ -25,7 +25,9 @@ pub enum SequencerAction<D: TimeDuration, const N: usize> {
 /// Command targeting a specific LED.
 #[derive(Debug, Clone)]
 pub struct SequencerCommand<Id, D: TimeDuration, const N: usize> {
+    /// LED identifier.
     pub led_id: Id,
+    /// Action to execute.
     pub action: SequencerAction<D, N>,
 }
 
