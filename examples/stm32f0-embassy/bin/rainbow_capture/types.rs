@@ -19,8 +19,8 @@ pub enum LedId {
 /// The library's SequencerCommand handles Load/Start/Pause/Resume/etc,
 /// but we need an additional GetColor command for querying LED state.
 pub enum ExtendedCommand {
-    /// Standard sequencer command targeting a specific LED
-    Sequencer(SequencerCommand<LedId, EmbassyDuration, SEQUENCE_STEP_CAPACITY>),
+    /// Standard sequencer command targeting a specific LED with 8-step capacity
+    Sequencer(SequencerCommand<LedId, EmbassyDuration, 8>),
 
     /// Query the current color of a specific LED
     /// Response will be sent via the provided signal
@@ -38,6 +38,3 @@ pub static RGB_COMMAND_CHANNEL: Channel<ThreadModeRawMutex, ExtendedCommand, 4> 
 
 /// Signal for receiving color query responses
 pub static COLOR_RESPONSE_SIGNAL: Signal<ThreadModeRawMutex, Srgb> = Signal::new();
-
-/// Maximum number of steps that can be stored in a sequence
-pub const SEQUENCE_STEP_CAPACITY: usize = 8;

@@ -53,3 +53,23 @@ pub const COLOR_ORANGE: Srgb = Srgb::new(1.0, 0.647, 0.0);
 
 /// Purple color.
 pub const COLOR_PURPLE: Srgb = Srgb::new(0.502, 0.0, 0.502);
+
+// Type aliases for common sequencer capacities
+
+/// RGB sequencer with capacity for 4 steps.
+pub type RgbSequencer4<'t, I, L, T> = RgbSequencer<'t, I, L, T, 4>;
+
+/// RGB sequencer with capacity for 8 steps.
+pub type RgbSequencer8<'t, I, L, T> = RgbSequencer<'t, I, L, T, 8>;
+
+/// RGB sequencer with capacity for 16 steps.
+pub type RgbSequencer16<'t, I, L, T> = RgbSequencer<'t, I, L, T, 16>;
+
+/// RGB sequence with capacity for 4 steps.
+pub type RgbSequence4<D> = RgbSequence<D, 4>;
+
+/// RGB sequence with capacity for 8 steps.
+pub type RgbSequence8<D> = RgbSequence<D, 8>;
+
+/// RGB sequence with capacity for 16 steps.
+pub type RgbSequence16<D> = RgbSequence<D, 16>;

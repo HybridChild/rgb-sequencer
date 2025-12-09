@@ -1,16 +1,18 @@
 use defmt::info;
 use embassy_stm32::gpio::Output;
 use palette::{FromColor, Hsv, Srgb};
-use rgb_sequencer::{LoopCount, RgbSequence, SequencerAction, SequencerCommand, TransitionStyle};
+use rgb_sequencer::{
+    LoopCount, RgbSequence8, SequencerAction, SequencerCommand, TransitionStyle,
+};
 
 use crate::types::{
     BUTTON_SIGNAL, COLOR_RESPONSE_SIGNAL, EmbassyDuration, ExtendedCommand, LedId,
-    RGB_COMMAND_CHANNEL, SEQUENCE_STEP_CAPACITY,
+    RGB_COMMAND_CHANNEL,
 };
 
 /// Create a rainbow cycle sequence (red -> green -> blue)
-fn create_rainbow_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACITY> {
-    RgbSequence::builder()
+fn create_rainbow_sequence() -> RgbSequence8<EmbassyDuration> {
+    RgbSequence8::builder()
         .step(
             Srgb::from_color(Hsv::new(0.0, 1.0, 1.0)), // Red
             EmbassyDuration(embassy_time::Duration::from_millis(4000)),
@@ -32,8 +34,8 @@ fn create_rainbow_sequence() -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPAC
 }
 
 /// Create a static color sequence that holds a single color
-fn create_static_sequence(color: Srgb) -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACITY> {
-    RgbSequence::builder()
+fn create_static_sequence(color: Srgb) -> RgbSequence8<EmbassyDuration> {
+    RgbSequence8::builder()
         .step(
             color,
             EmbassyDuration(embassy_time::Duration::from_millis(0)),
@@ -48,8 +50,8 @@ fn create_transition_sequence(
     from: Srgb,
     to: Srgb,
     duration_ms: u64,
-) -> RgbSequence<EmbassyDuration, SEQUENCE_STEP_CAPACITY> {
-    RgbSequence::builder()
+) -> RgbSequence8<EmbassyDuration> {
+    RgbSequence8::builder()
         .start_color(from)
         .step(
             to,

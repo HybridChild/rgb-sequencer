@@ -4,11 +4,9 @@ use embassy_stm32::peripherals::TIM3;
 use embassy_stm32::timer::simple_pwm::SimplePwm;
 use embassy_time::{Duration, Timer};
 use palette::Srgb;
-use rgb_sequencer::{RgbLed, RgbSequencer, ServiceTiming};
+use rgb_sequencer::{RgbLed, RgbSequencer8, ServiceTiming};
 
-use crate::types::{
-    EmbassyInstant, EmbassyTimeSource, RGB_COMMAND_CHANNEL, SEQUENCE_STEP_CAPACITY,
-};
+use crate::types::{EmbassyInstant, EmbassyTimeSource, RGB_COMMAND_CHANNEL};
 
 // ============================================================================
 // PWM-based RGB LED implementation for Embassy
@@ -69,8 +67,7 @@ pub async fn rgb_task(pwm_tim3: SimplePwm<'static, TIM3>, max_duty_tim3: u16) {
     let time_source = EmbassyTimeSource::new();
 
     // Create sequencer
-    let mut sequencer =
-        RgbSequencer::<EmbassyInstant, _, _, SEQUENCE_STEP_CAPACITY>::new(led_1, &time_source);
+    let mut sequencer = RgbSequencer8::<EmbassyInstant, _, _>::new(led_1, &time_source);
 
     info!("Sequencer created");
 
@@ -116,12 +113,7 @@ pub async fn rgb_task(pwm_tim3: SimplePwm<'static, TIM3>, max_duty_tim3: u16) {
 
 /// Service the sequencer and return the appropriate delay.
 fn service_and_get_delay(
-    sequencer: &mut RgbSequencer<
-        EmbassyInstant,
-        EmbassyPwmRgbLed<TIM3>,
-        EmbassyTimeSource,
-        SEQUENCE_STEP_CAPACITY,
-    >,
+    sequencer: &mut RgbSequencer8<EmbassyInstant, EmbassyPwmRgbLed<TIM3>, EmbassyTimeSource>,
 ) -> Duration {
     if !sequencer.is_running() {
         return Duration::from_secs(3600);

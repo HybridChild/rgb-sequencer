@@ -18,8 +18,8 @@ use stm32f0xx_hal::{
 use stm32f0::rgb_led::PwmRgbLed;
 
 use rgb_sequencer::{
-    COLOR_OFF, LoopCount, RgbSequence, RgbSequencer, ServiceTiming, TimeDuration, TimeInstant,
-    TimeSource, TransitionStyle,
+    LoopCount, RgbSequence8, RgbSequencer8, ServiceTiming, TimeDuration, TimeInstant, TimeSource,
+    TransitionStyle, COLOR_OFF,
 };
 
 /// Type alias for LED 1
@@ -29,8 +29,6 @@ pub type Led1 = PwmRgbLed<
     pwm::PwmChannels<pac::TIM3, pwm::C3>,
 >;
 
-/// Maximum number of steps that can be stored in a sequence
-pub const SEQUENCE_STEP_CAPACITY: usize = 8;
 pub const FRAME_RATE_MS: u64 = 16;
 
 /// Duration type using milliseconds
@@ -159,11 +157,11 @@ fn main() -> ! {
 
     rprintln!("=== Hardware Ready ===");
 
-    let mut sequencer: RgbSequencer<BlinkyInstant, Led1, BlinkyTimeSource, SEQUENCE_STEP_CAPACITY> =
-        RgbSequencer::new(led_1, &time_source);
+    let mut sequencer: RgbSequencer8<BlinkyInstant, Led1, BlinkyTimeSource> =
+        RgbSequencer8::new(led_1, &time_source);
 
     // Create a sequence
-    let sequence = RgbSequence::<BlinkyDuration, SEQUENCE_STEP_CAPACITY>::builder()
+    let sequence = RgbSequence8::<BlinkyDuration>::builder()
         .step(
             Srgb::from_color(Hsv::new(60.0, 1.0, 1.0)),
             BlinkyDuration(0),
