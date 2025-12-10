@@ -22,7 +22,7 @@ A `no_std`-compatible Rust library for controlling RGB LEDs through timed color 
 
 The library supports two animation approaches:
 
-1. **Step-based sequences**: Define explicit color waypoints with durations and transition styles (instant or smooth linear interpolation). Perfect for discrete animations like police lights, status indicators, or scripted color shows. Support finite or infinite looping with configurable landing colors, and smooth entry animations via start colors.
+1. **Step-based sequences**: Define explicit color waypoints with durations and transition styles (instant, linear, or eased interpolation). Supports quadratic easing functions (ease-in, ease-out, ease-in-out) for more natural-looking transitions. Perfect for discrete animations like police lights, status indicators, or scripted color shows. Support finite or infinite looping with configurable landing colors, and smooth entry animations via start colors.
 
 2. **Function-based sequences**: Use custom functions to compute colors algorithmically based on elapsed time. Ideal for mathematical animations like sine wave breathing effects, HSV color wheels, or any procedurally generated pattern.
 
@@ -132,7 +132,9 @@ Cortex-M4F, M7, M33 (e.g., STM32F4, STM32H7, nRF52) - Hardware-accelerated f32 o
 Cortex-M0/M0+, M3 (e.g., STM32F0, STM32F1, RP2040) - Software-emulated f32 is **10-100x slower**.
 
 **Recommendations for non-FPU targets:**
-- Prefer Step transitions over Linear (avoids interpolation)
+- Prefer Step transitions (no interpolation math)
+- Linear is acceptable for simple transitions
+- Avoid easing functions (EaseIn/EaseOut/EaseInOut - additional f32 operations)
 - Avoid math-heavy function-based sequences
 
 The library works on all targets but is optimized for microcontrollers with FPU.

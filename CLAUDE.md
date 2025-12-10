@@ -55,6 +55,32 @@ let sequence = RgbSequence::<_, 3>::builder()
 - First loop uses `start_color` if set, subsequent loops use step 0
 - Landing color used only when finite loops complete
 
+### Easing Functions
+
+**Pattern:** Use easing functions for smoother, more natural-looking transitions.
+
+```rust
+let sequence = RgbSequence::<_, 3>::builder()
+    .start_color(Srgb::new(0.0, 0.0, 0.0))
+    .step(Srgb::new(1.0, 0.0, 0.0), ms(1000), TransitionStyle::EaseIn)?     // Slow start
+    .step(Srgb::new(0.0, 1.0, 0.0), ms(1000), TransitionStyle::EaseOut)?    // Slow end
+    .step(Srgb::new(0.0, 0.0, 1.0), ms(1000), TransitionStyle::EaseInOut)?  // Slow both
+    .build()?;
+```
+
+**Available easing types:**
+- `TransitionStyle::Step` - Instant color change, hold for duration
+- `TransitionStyle::Linear` - Constant-speed interpolation
+- `TransitionStyle::EaseIn` - Slow start, accelerating (quadratic)
+- `TransitionStyle::EaseOut` - Fast start, decelerating (quadratic)
+- `TransitionStyle::EaseInOut` - Slow start and end, fast middle (quadratic)
+
+**Key points:**
+- All easing functions use quadratic interpolation (computationally efficient)
+- Easing requires non-zero duration (like Linear)
+- Returns `ServiceTiming::Continuous` (requires frequent updates)
+- Performance note: Uses f32 math, consider impact on non-FPU targets
+
 ### Creating a Function-Based Sequence
 
 **Pattern:** Use custom functions for algorithmic animations.
@@ -126,13 +152,16 @@ See README.md and examples for complete usage patterns.
 - **RP2040** (Cortex-M0+): No FPU, software emulation
 
 **For non-FPU targets:**
-- Prefer `TransitionStyle::Step` over `Linear` (no interpolation math)
+- Prefer `TransitionStyle::Step` (no interpolation math)
+- `Linear` is acceptable for simple transitions (single multiply/divide)
+- Avoid `EaseIn/EaseOut/EaseInOut` (additional f32 operations)
 - Avoid complex function-based sequences
 - Use simple color patterns
 - Profile your specific target
 
 **For FPU targets:**
-- Full flexibility with Linear transitions
+- Full flexibility with all transition types
+- Easing functions add minimal overhead
 - Mathematical function-based sequences work well
 - HSV color wheels, sine wave breathing, etc.
 
@@ -273,13 +302,14 @@ let sequence = RgbSequence::<_, 4>::builder()  // Capacity matches steps
     .build()?;
 ```
 
-### ❌ Zero-Duration with Linear Transition
+### ❌ Zero-Duration with Interpolating Transitions
 ```rust
 // WRONG - Validation error
-.step(color, Duration::zero(), TransitionStyle::Linear)  // Invalid!
+.step(color, Duration::zero(), TransitionStyle::Linear)    // Invalid!
+.step(color, Duration::zero(), TransitionStyle::EaseIn)    // Invalid!
 
 // RIGHT
-.step(color, Duration::zero(), TransitionStyle::Step)  // OK
+.step(color, Duration::zero(), TransitionStyle::Step)  // OK - only Step allows zero duration
 ```
 
 ### ❌ Complex Math on Non-FPU Targets

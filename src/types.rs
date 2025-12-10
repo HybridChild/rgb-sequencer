@@ -9,8 +9,17 @@ pub enum TransitionStyle {
     /// Instantly jump to target color, hold for duration.
     Step,
 
-    /// Smoothly interpolate over duration.
+    /// Linear interpolation over duration.
     Linear,
+
+    /// Quadratic ease-in: slow start, accelerating toward end.
+    EaseIn,
+
+    /// Quadratic ease-out: fast start, decelerating toward end.
+    EaseOut,
+
+    /// Quadratic ease-in-out: slow start and end, fast middle.
+    EaseInOut,
 }
 
 /// How many times a sequence should repeat.
@@ -73,7 +82,10 @@ impl core::fmt::Display for SequenceError {
                 write!(f, "sequence must have at least one step")
             }
             SequenceError::ZeroDurationWithLinear => {
-                write!(f, "zero-duration steps must use Step transition")
+                write!(
+                    f,
+                    "zero-duration steps must use Step transition (interpolating transitions require non-zero duration)"
+                )
             }
             SequenceError::CapacityExceeded => {
                 write!(f, "sequence capacity exceeded")
