@@ -335,6 +335,22 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
             now.duration_since(start)
         })
     }
+
+    /// Returns current playback position (step index, loop number).
+    #[inline]
+    pub fn current_position(&self) -> Option<(usize, u32)> {
+        if self.state != SequencerState::Running {
+            return None;
+        }
+
+        let sequence = self.sequence.as_ref()?;
+        let start_time = self.start_time?;
+        let current_time = self.time_source.now();
+        let elapsed = current_time.duration_since(start_time);
+
+        let position = sequence.find_step_position(elapsed)?;
+        Some((position.step_index, position.current_loop))
+    }
 }
 
 #[cfg(test)]
@@ -1288,5 +1304,216 @@ mod tests {
         timer.advance(TestDuration(50));
         sequencer.service().unwrap();
         assert!(colors_equal(sequencer.current_color(), BLUE));
+    }
+
+    #[test]
+    fn current_position_returns_none_when_not_running() {
+        let led = MockLed::new();
+        let timer = MockTimeSource::new();
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+
+        // Idle state - no position
+        assert_eq!(sequencer.current_position(), None);
+
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
+            .step(RED, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
+            .build()
+            .unwrap();
+
+        // Loaded state - no position
+        sequencer.load(sequence);
+        assert_eq!(sequencer.current_position(), None);
+
+        // Running state - should have position
+        sequencer.start().unwrap();
+        assert!(sequencer.current_position().is_some());
+
+        // Paused state - no position
+        sequencer.pause().unwrap();
+        assert_eq!(sequencer.current_position(), None);
+    }
+
+    #[test]
+    fn current_position_tracks_step_changes() {
+        let led = MockLed::new();
+        let timer = MockTimeSource::new();
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
+            .step(RED, TestDuration(100), TransitionStyle::Step)
+            .unwrap()
+            .step(GREEN, TestDuration(100), TransitionStyle::Step)
+            .unwrap()
+            .step(BLUE, TestDuration(100), TransitionStyle::Step)
+            .unwrap()
+            .loop_count(LoopCount::Finite(1))
+            .build()
+            .unwrap();
+
+        sequencer.load(sequence);
+        sequencer.start().unwrap();
+
+        // At start - step 0, loop 0
+        assert_eq!(sequencer.current_position(), Some((0, 0)));
+
+        // After 50ms - still step 0, loop 0
+        timer.advance(TestDuration(50));
+        sequencer.service().unwrap();
+        assert_eq!(sequencer.current_position(), Some((0, 0)));
+
+        // After 100ms - step 1, loop 0
+        timer.advance(TestDuration(50));
+        sequencer.service().unwrap();
+        assert_eq!(sequencer.current_position(), Some((1, 0)));
+
+        // After 200ms - step 2, loop 0
+        timer.advance(TestDuration(100));
+        sequencer.service().unwrap();
+        assert_eq!(sequencer.current_position(), Some((2, 0)));
+
+        // After 300ms - sequence complete, no position
+        timer.advance(TestDuration(100));
+        sequencer.service().unwrap();
+        assert_eq!(sequencer.current_position(), None);
+    }
+
+    #[test]
+    fn current_position_tracks_loop_changes() {
+        let led = MockLed::new();
+        let timer = MockTimeSource::new();
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
+            .step(RED, TestDuration(100), TransitionStyle::Step)
+            .unwrap()
+            .step(GREEN, TestDuration(100), TransitionStyle::Step)
+            .unwrap()
+            .loop_count(LoopCount::Finite(3))
+            .build()
+            .unwrap();
+
+        sequencer.load(sequence);
+        sequencer.start().unwrap();
+
+        // Loop 0
+        assert_eq!(sequencer.current_position(), Some((0, 0)));
+
+        // Advance to loop 1
+        timer.advance(TestDuration(200));
+        sequencer.service().unwrap();
+        assert_eq!(sequencer.current_position(), Some((0, 1)));
+
+        // Mid loop 1
+        timer.advance(TestDuration(50));
+        sequencer.service().unwrap();
+        assert_eq!(sequencer.current_position(), Some((0, 1)));
+
+        // Advance to loop 2
+        timer.advance(TestDuration(150));
+        sequencer.service().unwrap();
+        assert_eq!(sequencer.current_position(), Some((0, 2)));
+
+        // Complete all loops
+        timer.advance(TestDuration(200));
+        sequencer.service().unwrap();
+        assert_eq!(sequencer.current_position(), None);
+    }
+
+    #[test]
+    fn current_position_enables_event_detection() {
+        let led = MockLed::new();
+        let timer = MockTimeSource::new();
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
+            .step(RED, TestDuration(100), TransitionStyle::Step)
+            .unwrap()
+            .step(GREEN, TestDuration(100), TransitionStyle::Step)
+            .unwrap()
+            .step(BLUE, TestDuration(100), TransitionStyle::Step)
+            .unwrap()
+            .loop_count(LoopCount::Finite(2))
+            .build()
+            .unwrap();
+
+        sequencer.load(sequence);
+        sequencer.start().unwrap();
+
+        let mut last_position = None;
+        let mut step_enter_events = heapless::Vec::<(usize, u32), 16>::new();
+        let mut loop_complete_events = heapless::Vec::<u32, 8>::new();
+
+        // Simulate event loop - advance time in small increments to catch all transitions
+        // Each step is 100ms, we advance by 30ms per iteration to catch all step boundaries
+        for _ in 0..20 {
+            let current = sequencer.current_position();
+
+            // Detect position changes (step enter or loop change)
+            if current != last_position {
+                if let Some((step, loop_num)) = current {
+                    step_enter_events.push((step, loop_num)).ok();
+
+                    // Detect loop completion (when returning to step 0 with higher loop number)
+                    if step == 0 && loop_num > 0 {
+                        if let Some((_, last_loop)) = last_position {
+                            if loop_num > last_loop {
+                                loop_complete_events.push(last_loop).ok();
+                            }
+                        }
+                    }
+                }
+                last_position = current;
+            }
+
+            sequencer.service().ok();
+            timer.advance(TestDuration(30));
+        }
+
+        // Verify step enter events were detected
+        // Should see: (0,0), (1,0), (2,0), (0,1), (1,1), (2,1)
+        assert!(
+            step_enter_events.len() >= 6,
+            "Expected at least 6 step events, got {}",
+            step_enter_events.len()
+        );
+        assert_eq!(step_enter_events[0], (0, 0)); // Start of loop 0
+        assert_eq!(step_enter_events[1], (1, 0)); // Step 1 of loop 0
+        assert_eq!(step_enter_events[2], (2, 0)); // Step 2 of loop 0
+        assert_eq!(step_enter_events[3], (0, 1)); // Start of loop 1
+        assert_eq!(step_enter_events[4], (1, 1)); // Step 1 of loop 1
+        assert_eq!(step_enter_events[5], (2, 1)); // Step 2 of loop 1
+
+        // Verify loop completion events
+        assert!(loop_complete_events.len() >= 1);
+        assert_eq!(loop_complete_events[0], 0); // Loop 0 completed
+    }
+
+    #[test]
+    fn current_position_returns_none_for_function_based_sequences() {
+        let led = MockLed::new();
+        let timer = MockTimeSource::new();
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+
+        fn color_fn(base: Srgb, _elapsed: TestDuration) -> Srgb {
+            base
+        }
+
+        fn timing_fn(_elapsed: TestDuration) -> Option<TestDuration> {
+            Some(TestDuration::ZERO)
+        }
+
+        let sequence = RgbSequence::<TestDuration, 8>::from_function(RED, color_fn, timing_fn);
+
+        sequencer.load(sequence);
+        sequencer.start().unwrap();
+
+        // Function-based sequences don't have step positions
+        assert_eq!(sequencer.current_position(), None);
     }
 }
