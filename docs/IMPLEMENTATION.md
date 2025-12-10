@@ -260,12 +260,13 @@ Invalid transitions return `SequencerError::InvalidState` with expected and actu
 
 ## LED Update Optimization
 
-The sequencer maintains `current_color: Srgb` and compares before hardware writes:
+The sequencer maintains `current_color: Srgb` and uses epsilon-based comparison before hardware writes:
 
 ```rust
 let (new_color, timing) = sequence.evaluate(elapsed);
 
-if new_color != self.current_color {
+// Compare using epsilon threshold (0.001) to handle f32 imprecision
+if !colors_approximately_equal(new_color, self.current_color) {
     self.led.set_color(new_color);
     self.current_color = new_color;
 }
@@ -273,6 +274,8 @@ if new_color != self.current_color {
 
 This optimization:
 - Reduces unnecessary hardware writes during static color holds
+- Uses epsilon comparison (threshold: 0.001) to handle floating-point rounding errors
+- Prevents spurious LED updates from imperceptible color differences (<0.1%)
 - Particularly valuable for slow SPI/I2C LED drivers
 - Enables safe repeated `service()` calls without time advancement
 

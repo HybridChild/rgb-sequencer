@@ -83,6 +83,17 @@ pub struct RgbSequencer<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N
     current_color: Srgb,
 }
 
+/// Epsilon for floating-point color comparisons.
+const COLOR_EPSILON: f32 = 0.001;
+
+/// Checks if two colors are approximately equal within epsilon threshold.
+#[inline]
+fn colors_approximately_equal(a: Srgb, b: Srgb) -> bool {
+    (a.red - b.red).abs() < COLOR_EPSILON
+        && (a.green - b.green).abs() < COLOR_EPSILON
+        && (a.blue - b.blue).abs() < COLOR_EPSILON
+}
+
 impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequencer<'t, I, L, T, N> {
     /// Creates sequencer with LED off.
     pub fn new(mut led: L, time_source: &'t T) -> Self {
@@ -199,8 +210,8 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
         // Evaluate color and timing
         let (new_color, next_service) = sequence.evaluate(elapsed);
 
-        // Update LED only if color changed
-        if new_color != self.current_color {
+        // Update LED only if color changed (using approximate equality for f32)
+        if !colors_approximately_equal(new_color, self.current_color) {
             self.led.set_color(new_color);
             self.current_color = new_color;
         }

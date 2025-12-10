@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Removed unintended `std` dependency to maintain full `no_std` compatibility
+- Color updates now use epsilon-based f32 comparison to prevent spurious LED updates from floating-point rounding errors
 
 ## [0.1.1] - 2025-11-20
 
