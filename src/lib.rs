@@ -48,12 +48,6 @@ pub const COLOR_CYAN: Srgb = Srgb::new(0.0, 1.0, 1.0);
 /// Magenta color (red + blue).
 pub const COLOR_MAGENTA: Srgb = Srgb::new(1.0, 0.0, 1.0);
 
-/// Orange color.
-pub const COLOR_ORANGE: Srgb = Srgb::new(1.0, 0.647, 0.0);
-
-/// Purple color.
-pub const COLOR_PURPLE: Srgb = Srgb::new(0.502, 0.0, 0.502);
-
 // Type aliases for common sequencer capacities
 
 /// RGB sequencer with capacity for 4 steps.
