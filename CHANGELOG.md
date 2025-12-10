@@ -13,21 +13,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README updates for clarity and structure
 - Removed Memory calculator tool in favor of size-analysis script
 - `.gitignore` updated to track `.cargo/config.toml` for examples
-- Examples updated to use new convenience method and type aliases
-- CI workflow and ci-local script extended to check formatting for examples and size-analysis/minimal
+- Examples updated to use new convenience methods and type aliases
 
 ### Added
 - Introduce CHANGELOG.md (this file)
 - `CLAUDE.md` file for AI assistant guidance
 - Comprehensive CI workflow for automated testing
+- ci-local script for verifying CI workflow locally
 - Size analysis script for tracking binary size impact
 - Compiler directives: `#![forbid(unsafe_code)]` and `#![warn(missing_docs)]`
 - Comprehensive documentation for all public API items
-- Common color constants: `COLOR_RED`, `COLOR_GREEN`, `COLOR_BLUE`, `COLOR_WHITE`, `COLOR_YELLOW`, `COLOR_CYAN`, `COLOR_MAGENTA`, `COLOR_ORANGE`, `COLOR_PURPLE`
+- Common color constants: `COLOR_RED`, `COLOR_GREEN`, `COLOR_BLUE`, `COLOR_WHITE`, `COLOR_YELLOW`, `COLOR_CYAN`, `COLOR_MAGENTA`
 - `load_and_start()` convenience method for `RgbSequencer`
 - Type aliases for common capacities: `RgbSequencer4/8/16` and `RgbSequence4/8/16`
 - `SequenceError::CapacityExceeded` variant for robust error handling
 - Easing functions: `TransitionStyle::EaseIn`, `EaseOut`, and `EaseInOut` for smoother, more natural transitions using quadratic interpolation
+- Example project demonstrating new transition styles
 - `RgbSequencer::current_position()` method for event detection - enables tracking step and loop changes without callbacks
 - `RgbSequence::find_step_position()` is now public for advanced use cases
 
