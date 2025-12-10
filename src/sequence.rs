@@ -6,6 +6,25 @@ use crate::types::{LoopCount, SequenceError, SequenceStep, TransitionStyle};
 use heapless::Vec;
 use palette::{Mix, Srgb};
 
+/// Applies easing function to linear progress value (0.0 to 1.0).
+#[inline]
+fn apply_easing(t: f32, transition: TransitionStyle) -> f32 {
+    match transition {
+        TransitionStyle::Step => t,
+        TransitionStyle::Linear => t,
+        TransitionStyle::EaseIn => t * t, // Quadratic ease-in
+        TransitionStyle::EaseOut => t * (2.0 - t), // Quadratic ease-out
+        TransitionStyle::EaseInOut => {
+            // Quadratic ease-in-out
+            if t < 0.5 {
+                2.0 * t * t
+            } else {
+                -1.0 + (4.0 - 2.0 * t) * t
+            }
+        }
+    }
+}
+
 /// Position within a sequence.
 #[derive(Debug, Clone, Copy)]
 pub struct StepPosition<D: TimeDuration> {
@@ -160,11 +179,19 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
 
     #[inline]
     fn interpolate_color(&self, position: &StepPosition<D>, step: &SequenceStep<D>) -> Srgb {
-        let previous_color = if position.step_index == 0
-            && step.transition == TransitionStyle::Linear
+        // Determine if this transition should use start_color for first step of first loop
+        let use_start_color = position.step_index == 0
             && position.current_loop == 0
             && self.start_color.is_some()
-        {
+            && matches!(
+                step.transition,
+                TransitionStyle::Linear
+                    | TransitionStyle::EaseIn
+                    | TransitionStyle::EaseOut
+                    | TransitionStyle::EaseInOut
+            );
+
+        let previous_color = if use_start_color {
             self.start_color.unwrap()
         } else if position.step_index == 0 {
             self.steps.last().unwrap().color
@@ -178,8 +205,11 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
         }
 
         let time_millis = position.time_in_step.as_millis();
-        let progress = (time_millis as f32) / (duration_millis as f32);
-        let progress = progress.clamp(0.0, 1.0);
+        let mut progress = (time_millis as f32) / (duration_millis as f32);
+        progress = progress.clamp(0.0, 1.0);
+
+        // Apply easing function
+        progress = apply_easing(progress, step.transition);
 
         previous_color.mix(step.color, progress)
     }
@@ -218,7 +248,10 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
 
         match step.transition {
             TransitionStyle::Step => step.color,
-            TransitionStyle::Linear => self.interpolate_color(position, step),
+            TransitionStyle::Linear
+            | TransitionStyle::EaseIn
+            | TransitionStyle::EaseOut
+            | TransitionStyle::EaseInOut => self.interpolate_color(position, step),
         }
     }
 
@@ -230,7 +263,12 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
 
         let step = &self.steps[position.step_index];
         match step.transition {
-            TransitionStyle::Linear => Some(D::ZERO),
+            // Interpolating transitions need continuous updates
+            TransitionStyle::Linear
+            | TransitionStyle::EaseIn
+            | TransitionStyle::EaseOut
+            | TransitionStyle::EaseInOut => Some(D::ZERO),
+            // Step transition can wait until the end
             TransitionStyle::Step => Some(position.time_until_step_end),
         }
     }
@@ -339,7 +377,15 @@ impl<D: TimeDuration, const N: usize> SequenceBuilder<D, N> {
         }
 
         for step in &self.steps {
-            if step.duration.as_millis() == 0 && step.transition == TransitionStyle::Linear {
+            if step.duration.as_millis() == 0
+                && matches!(
+                    step.transition,
+                    TransitionStyle::Linear
+                        | TransitionStyle::EaseIn
+                        | TransitionStyle::EaseOut
+                        | TransitionStyle::EaseInOut
+                )
+            {
                 return Err(SequenceError::ZeroDurationWithLinear);
             }
         }
@@ -1097,5 +1143,199 @@ mod tests {
         // Verify error types can be constructed
         let _error1 = SequenceError::EmptySequence;
         let _error2 = SequenceError::ZeroDurationWithLinear;
+    }
+
+    #[test]
+    fn ease_in_transition_accelerates() {
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
+            .start_color(BLACK)
+            .step(RED, TestDuration(1000), TransitionStyle::EaseIn)
+            .unwrap()
+            .build()
+            .unwrap();
+
+        // At 25% time, ease-in should be at less than 25% progress (0.25² = 0.0625)
+        let (color_25, _) = sequence.evaluate(TestDuration(250));
+        // Expected: mix(BLACK, RED, 0.0625) = (0.0625, 0, 0)
+        assert!(color_25.red < 0.1);
+
+        // At 50% time, ease-in should be at 25% progress (0.5² = 0.25)
+        let (color_50, _) = sequence.evaluate(TestDuration(500));
+        assert!(color_50.red > 0.2 && color_50.red < 0.3);
+
+        // At 75% time, ease-in should be at ~56% progress (0.75² = 0.5625)
+        let (color_75, _) = sequence.evaluate(TestDuration(750));
+        assert!(color_75.red > 0.5 && color_75.red < 0.6);
+
+        // At 100% time, should be at full color
+        let (color_100, _) = sequence.evaluate(TestDuration(1000));
+        assert!(colors_equal(color_100, RED));
+    }
+
+    #[test]
+    fn ease_out_transition_decelerates() {
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
+            .start_color(BLACK)
+            .step(RED, TestDuration(1000), TransitionStyle::EaseOut)
+            .unwrap()
+            .build()
+            .unwrap();
+
+        // At 25% time, ease-out should be at more than 25% progress
+        // Formula: t * (2 - t) = 0.25 * 1.75 = 0.4375
+        let (color_25, _) = sequence.evaluate(TestDuration(250));
+        assert!(color_25.red > 0.4 && color_25.red < 0.5);
+
+        // At 50% time, ease-out should be at 75% progress (0.5 * 1.5 = 0.75)
+        let (color_50, _) = sequence.evaluate(TestDuration(500));
+        assert!(color_50.red > 0.7 && color_50.red < 0.8);
+
+        // At 75% time, ease-out should be at ~94% progress (0.75 * 1.25 = 0.9375)
+        let (color_75, _) = sequence.evaluate(TestDuration(750));
+        assert!(color_75.red > 0.9);
+
+        // At 100% time, should be at full color
+        let (color_100, _) = sequence.evaluate(TestDuration(1000));
+        assert!(colors_equal(color_100, RED));
+    }
+
+    #[test]
+    fn ease_in_out_transition_symmetric() {
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
+            .start_color(BLACK)
+            .step(RED, TestDuration(1000), TransitionStyle::EaseInOut)
+            .unwrap()
+            .build()
+            .unwrap();
+
+        // At 25% time, should be in ease-in phase (slow)
+        // Formula: 2 * t² = 2 * 0.25² = 0.125
+        let (color_25, _) = sequence.evaluate(TestDuration(250));
+        assert!(color_25.red < 0.2);
+
+        // At 50% time, should be at midpoint
+        let (color_50, _) = sequence.evaluate(TestDuration(500));
+        assert!(color_50.red > 0.45 && color_50.red < 0.55);
+
+        // At 75% time, should be in ease-out phase (fast then slow)
+        // Formula: -1 + (4 - 2*t) * t = -1 + 2.5 * 0.75 = 0.875
+        let (color_75, _) = sequence.evaluate(TestDuration(750));
+        assert!(color_75.red > 0.8 && color_75.red < 0.9);
+
+        // At 100% time, should be at full color
+        let (color_100, _) = sequence.evaluate(TestDuration(1000));
+        assert!(colors_equal(color_100, RED));
+    }
+
+    #[test]
+    fn easing_transitions_return_continuous_timing() {
+        let test_cases = [
+            TransitionStyle::EaseIn,
+            TransitionStyle::EaseOut,
+            TransitionStyle::EaseInOut,
+        ];
+
+        for transition in test_cases {
+            let sequence = RgbSequence::<TestDuration, 8>::builder()
+                .step(RED, TestDuration(1000), transition)
+                .unwrap()
+                .build()
+                .unwrap();
+
+            let (_, timing) = sequence.evaluate(TestDuration(500));
+            assert_eq!(
+                timing,
+                Some(TestDuration::ZERO),
+                "Easing transitions should return continuous timing"
+            );
+        }
+    }
+
+    #[test]
+    fn zero_duration_with_easing_is_rejected() {
+        let test_cases = [
+            TransitionStyle::EaseIn,
+            TransitionStyle::EaseOut,
+            TransitionStyle::EaseInOut,
+        ];
+
+        for transition in test_cases {
+            let result = RgbSequence::<TestDuration, 8>::builder()
+                .step(RED, TestDuration(0), transition)
+                .unwrap()
+                .build();
+
+            assert!(
+                matches!(result, Err(SequenceError::ZeroDurationWithLinear)),
+                "Zero-duration with {:?} should be rejected",
+                transition
+            );
+        }
+    }
+
+    #[test]
+    fn easing_works_with_start_color() {
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
+            .start_color(BLACK)
+            .step(RED, TestDuration(1000), TransitionStyle::EaseIn)
+            .unwrap()
+            .build()
+            .unwrap();
+
+        // Should interpolate from BLACK to RED with ease-in
+        let (color_50, _) = sequence.evaluate(TestDuration(500));
+        // At 50% time with ease-in: 0.5² = 0.25 progress
+        assert!(color_50.red > 0.2 && color_50.red < 0.3);
+        assert!(color_50.green < 0.01);
+        assert!(color_50.blue < 0.01);
+    }
+
+    #[test]
+    fn easing_works_in_multi_step_sequences() {
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
+            .step(RED, TestDuration(100), TransitionStyle::Step)
+            .unwrap()
+            .step(GREEN, TestDuration(1000), TransitionStyle::EaseOut)
+            .unwrap()
+            .step(BLUE, TestDuration(1000), TransitionStyle::EaseIn)
+            .unwrap()
+            .build()
+            .unwrap();
+
+        // At 100ms: Should be RED (end of first step)
+        let (color_100, _) = sequence.evaluate(TestDuration(100));
+        assert!(colors_equal(color_100, RED));
+
+        // At 600ms (500ms into ease-out transition): Should be mostly green
+        // Ease-out at 50%: 0.5 * 1.5 = 0.75 progress from RED to GREEN
+        let (color_600, _) = sequence.evaluate(TestDuration(600));
+        assert!(color_600.red < 0.3); // Less red
+        assert!(color_600.green > 0.7); // More green
+
+        // At 1600ms (500ms into ease-in transition): Should be transitioning slowly to blue
+        // Ease-in at 50%: 0.5² = 0.25 progress from GREEN to BLUE
+        let (color_1600, _) = sequence.evaluate(TestDuration(1600));
+        assert!(color_1600.green > 0.7); // Still mostly green
+        assert!(color_1600.blue < 0.3); // Not much blue yet
+    }
+
+    #[test]
+    fn easing_loops_correctly() {
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
+            .step(RED, TestDuration(100), TransitionStyle::EaseIn)
+            .unwrap()
+            .step(GREEN, TestDuration(100), TransitionStyle::EaseOut)
+            .unwrap()
+            .loop_count(LoopCount::Infinite)
+            .build()
+            .unwrap();
+
+        // First loop
+        let (color_50, _) = sequence.evaluate(TestDuration(50));
+        let first_loop_red = color_50.red;
+
+        // Second loop - should have same color at same position
+        let (color_250, _) = sequence.evaluate(TestDuration(250));
+        assert!((color_250.red - first_loop_red).abs() < 0.01);
     }
 }

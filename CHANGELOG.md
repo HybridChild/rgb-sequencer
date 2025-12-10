@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `load_and_start()` convenience method for `RgbSequencer`
 - Type aliases for common capacities: `RgbSequencer4/8/16` and `RgbSequence4/8/16`
 - `SequenceError::CapacityExceeded` variant for robust error handling
+- Easing functions: `TransitionStyle::EaseIn`, `EaseOut`, and `EaseInOut` for smoother, more natural transitions using quadratic interpolation
 
 ### Fixed
 - Removed unintended `std` dependency to maintain full `no_std` compatibility

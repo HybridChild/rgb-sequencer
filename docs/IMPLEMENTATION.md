@@ -17,19 +17,48 @@ Both approaches evaluate to `(Srgb, Option<Duration>)` tuples at runtime (when c
 
 ### Interpolation Algorithm
 
-Linear RGB interpolation using `palette::Srgb<f32>` in 0.0-1.0 range. Performed via `palette::Mix::mix()` with progress calculated as:
+RGB interpolation using `palette::Srgb<f32>` in 0.0-1.0 range. Performed via `palette::Mix::mix()` with progress calculated and transformed by easing function:
 
 ```rust
 progress = (time_in_step_ms as f32) / (step_duration_ms as f32)
 progress = progress.clamp(0.0, 1.0)
+progress = apply_easing(progress, transition_style)
 result = previous_color.mix(target_color, progress)
 ```
 
-This provides perceptually incorrect but computationally fast interpolation suitable for embedded targets with FPU.
+This provides perceptually fast but computationally efficient interpolation suitable for embedded targets with FPU.
+
+### Easing Functions
+
+The library supports five transition styles that modify the interpolation progress curve:
+
+**`TransitionStyle::Step`**
+No interpolation. Returns target color immediately, holds for duration.
+
+**`TransitionStyle::Linear`**
+Linear interpolation with constant velocity: `f(t) = t`
+
+**`TransitionStyle::EaseIn`** (Quadratic)
+Slow start, accelerating toward end: `f(t) = t²`
+
+**`TransitionStyle::EaseOut`** (Quadratic)
+Fast start, decelerating toward end: `f(t) = t × (2 - t)`
+
+**`TransitionStyle::EaseInOut`** (Quadratic)
+Slow start and end, fast middle:
+```rust
+if t < 0.5 {
+    f(t) = 2 × t²
+} else {
+    f(t) = -1 + (4 - 2 × t) × t
+}
+```
+
+All easing functions use quadratic interpolation for computational efficiency. More complex easing (cubic, sinusoidal, etc.) can be implemented via function-based sequences.
 
 ### Source Color Selection
 
-For `TransitionStyle::Linear`, determining the interpolation source color follows three cases:
+For all interpolating transitions (`Linear`, `EaseIn`, `EaseOut`, `EaseInOut`), determining the interpolation source color follows three cases:
 
 **Case 1: Smooth Entry (First Step, First Loop)**
 ```rust
@@ -294,15 +323,15 @@ The builder validates at `build()` time:
    }
    ```
 
-2. **Zero Duration with Linear**
+2. **Zero Duration with Interpolating Transitions**
    ```rust
    for step in steps {
-       if step.duration == 0 && step.transition == Linear {
+       if step.duration == 0 && matches!(step.transition, Linear | EaseIn | EaseOut | EaseInOut) {
            return Err(SequenceError::ZeroDurationWithLinear);
        }
    }
    ```
-   Linear interpolation requires non-zero duration. Zero-duration steps only valid with `Step` transition.
+   All interpolating transitions require non-zero duration. Zero-duration steps only valid with `Step` transition.
 
 ### Capacity Enforcement
 
