@@ -6,19 +6,19 @@ use palette::Srgb;
 /// How to transition to a step's target color.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransitionStyle {
-    /// Instantly jump to target color, hold for duration.
+    /// Instantly jump to target color, hold for duration. Works with zero duration.
     Step,
 
-    /// Linear interpolation over duration.
+    /// Linear interpolation over duration. Requires non-zero duration.
     Linear,
 
-    /// Quadratic ease-in: slow start, accelerating toward end.
+    /// Quadratic ease-in: slow start, accelerating toward end. Requires non-zero duration.
     EaseIn,
 
-    /// Quadratic ease-out: fast start, decelerating toward end.
+    /// Quadratic ease-out: fast start, decelerating toward end. Requires non-zero duration.
     EaseOut,
 
-    /// Quadratic ease-in-out: slow start and end, fast middle.
+    /// Quadratic ease-in-out: slow start and end, fast middle. Requires non-zero duration.
     EaseInOut,
 }
 
@@ -33,6 +33,7 @@ pub enum LoopCount {
 }
 
 impl Default for LoopCount {
+    /// Returns the default loop count (one iteration).
     fn default() -> Self {
         LoopCount::Finite(1)
     }
@@ -41,13 +42,13 @@ impl Default for LoopCount {
 /// A single step in an RGB sequence.
 #[derive(Debug, Clone, Copy)]
 pub struct SequenceStep<D: TimeDuration> {
-    /// Target color.
+    /// Target color (0.0-1.0 range).
     pub color: Srgb,
 
-    /// Step duration.
+    /// Step duration (how long to hold for Step, or interpolate over for Linear/easing).
     pub duration: D,
 
-    /// Transition style.
+    /// Transition style (how to animate to this color).
     pub transition: TransitionStyle,
 }
 
@@ -77,6 +78,7 @@ pub enum SequenceError {
 }
 
 impl core::fmt::Display for SequenceError {
+    /// Formats the error for display.
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             SequenceError::EmptySequence => {

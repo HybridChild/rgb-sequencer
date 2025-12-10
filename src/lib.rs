@@ -7,6 +7,14 @@
 //! Provides step-based and function-based color sequences with trait abstractions for LED hardware and timing.
 //! Zero heap allocation, platform-independent, type-safe colors via `palette::Srgb<f32>`.
 //!
+//! # Core Types
+//!
+//! - **`RgbSequence`** - Defines an animation (steps, loops, transitions, colors)
+//! - **`RgbSequencer`** - Controls a single LED through sequences with state management
+//! - **`RgbLed`** - Trait for LED hardware abstraction
+//! - **`TimeSource`** - Trait for timing system abstraction
+//! - **`TransitionStyle`** - How to animate between colors (Step, Linear, EaseIn/Out)
+//!
 //! Uses f32 extensively - performance varies by FPU availability. See CLAUDE.md for details.
 
 // Re-export Srgb from palette for user convenience

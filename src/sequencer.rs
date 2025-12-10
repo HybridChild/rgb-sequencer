@@ -9,6 +9,9 @@ use palette::Srgb;
 /// Trait for abstracting RGB LED hardware.
 pub trait RgbLed {
     /// Sets LED to specified color.
+    ///
+    /// Color components are in 0.0-1.0 range. Convert to your hardware's native format
+    /// (PWM duty cycles, 8-bit values, etc.) in your implementation.
     fn set_color(&mut self, color: Srgb);
 }
 
@@ -32,11 +35,11 @@ pub enum SequencerState {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum ServiceTiming<D> {
-    /// Continuous animation.
+    /// Continuous animation - service again at your target frame rate (e.g., 16-33ms for 30-60 FPS).
     Continuous,
-    /// Static hold.
+    /// Static hold - can delay this duration before next service call.
     Delay(D),
-    /// Sequence complete.
+    /// Sequence complete - no further servicing needed.
     Complete,
 }
 
@@ -56,6 +59,7 @@ pub enum SequencerError {
 }
 
 impl core::fmt::Display for SequencerError {
+    /// Formats the error for display.
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             SequencerError::InvalidState { expected, actual } => {
@@ -86,7 +90,7 @@ pub struct RgbSequencer<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N
 /// Epsilon for floating-point color comparisons.
 const COLOR_EPSILON: f32 = 0.001;
 
-/// Checks if two colors are approximately equal within epsilon threshold.
+/// Returns true if two colors are approximately equal.
 #[inline]
 fn colors_approximately_equal(a: Srgb, b: Srgb) -> bool {
     (a.red - b.red).abs() < COLOR_EPSILON
@@ -193,7 +197,9 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
         }
     }
 
-    /// Services sequencer, updating LED.
+    /// Services sequencer, updating LED if color changed.
+    ///
+    /// Must be called from `Running` state. Returns timing hint for next service call.
     #[inline]
     pub fn service(&mut self) -> Result<ServiceTiming<I::Duration>, SequencerError> {
         if self.state != SequencerState::Running {
@@ -248,7 +254,9 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
         }
     }
 
-    /// Pauses sequence.
+    /// Pauses sequence at current color.
+    ///
+    /// Timing is compensated on resume - sequence continues from same position.
     pub fn pause(&mut self) -> Result<(), SequencerError> {
         if self.state != SequencerState::Running {
             return Err(SequencerError::InvalidState {
@@ -337,6 +345,9 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
     }
 
     /// Returns current playback position (step index, loop number).
+    ///
+    /// Returns `None` if not running or sequence is function-based. Useful for event detection
+    /// (step changes, loop completions) - see examples in tests.
     #[inline]
     pub fn current_position(&self) -> Option<(usize, u32)> {
         if self.state != SequencerState::Running {

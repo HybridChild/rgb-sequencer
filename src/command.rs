@@ -4,21 +4,24 @@ use crate::sequence::RgbSequence;
 use crate::time::TimeDuration;
 
 /// Actions for controlling sequencers.
+///
+/// Each variant corresponds to a method on `RgbSequencer`. Use with `SequencerCommand`
+/// for routing in multi-LED systems.
 #[derive(Debug, Clone)]
 pub enum SequencerAction<D: TimeDuration, const N: usize> {
-    /// Load sequence.
+    /// Load sequence (transitions to `Loaded` state).
     Load(RgbSequence<D, N>),
-    /// Start sequence.
+    /// Start loaded sequence (requires `Loaded` state).
     Start,
-    /// Stop sequence.
+    /// Stop and turn off LED (keeps sequence loaded).
     Stop,
-    /// Pause sequence.
+    /// Pause at current color (requires `Running` state).
     Pause,
-    /// Resume sequence.
+    /// Resume from pause with timing compensation.
     Resume,
-    /// Restart sequence.
+    /// Restart from beginning (from `Running`, `Paused`, or `Complete`).
     Restart,
-    /// Clear sequence.
+    /// Clear sequence and turn off LED.
     Clear,
 }
 
