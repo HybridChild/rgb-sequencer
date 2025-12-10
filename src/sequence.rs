@@ -216,8 +216,12 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
         previous_color.mix(step.color, progress)
     }
 
+    /// Returns the current position within the sequence at the given elapsed time.
+    ///
+    /// This includes the current step index, loop number, and timing information.
+    /// Returns `None` if the sequence is empty or function-based.
     #[inline]
-    fn find_step_position(&self, elapsed: D) -> Option<StepPosition<D>> {
+    pub fn find_step_position(&self, elapsed: D) -> Option<StepPosition<D>> {
         if self.steps.is_empty() {
             return None;
         }

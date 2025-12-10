@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Type aliases for common capacities: `RgbSequencer4/8/16` and `RgbSequence4/8/16`
 - `SequenceError::CapacityExceeded` variant for robust error handling
 - Easing functions: `TransitionStyle::EaseIn`, `EaseOut`, and `EaseInOut` for smoother, more natural transitions using quadratic interpolation
+- `RgbSequencer::current_position()` method for event detection - enables tracking step and loop changes without callbacks
+- `RgbSequence::find_step_position()` is now public for advanced use cases
 
 ### Fixed
 - Removed unintended `std` dependency to maintain full `no_std` compatibility
