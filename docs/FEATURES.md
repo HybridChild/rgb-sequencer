@@ -50,7 +50,7 @@ let sequence = RgbSequence::builder()
 - **First loop**: Uses `start_color` for interpolation to first step (black → red)
 - **Subsequent loops**: Uses last step's color for interpolation to first step (blue → red)
 
-This is particularly useful for creating smooth entry animations into looping sequences without affecting loop-to-loop transitions. The `start_color` only affects the first step if it uses `TransitionStyle::Linear`.
+This is particularly useful for creating smooth entry animations into looping sequences without affecting loop-to-loop transitions. The `start_color` only affects the first step if `TransitionStyle != Step`.
 
 ### Landing Color for Completion
 
@@ -87,6 +87,51 @@ Control how many times a sequence repeats:
 ```
 
 If no Loop Count is specified, the sequence will default to `LoopCount::Finite(1)`
+
+## Choosing Sequence Capacity
+
+Sequences use a const generic parameter `N` to determine maximum step capacity at compile time. For convenience, the library provides type aliases for common sizes:
+
+**Type Aliases:**
+```rust
+// Sequences
+RgbSequence4<D>   // Up to 4 steps
+RgbSequence8<D>   // Up to 8 steps
+RgbSequence16<D>  // Up to 16 steps
+
+// Sequencers
+RgbSequencer4<'t, I, L, T>   // Up to 4 steps
+RgbSequencer8<'t, I, L, T>   // Up to 8 steps
+RgbSequencer16<'t, I, L, T>  // Up to 16 steps
+```
+
+**Guidelines:**
+- **4 steps**: Simple patterns (blink, pulse, 2-3 color cycles)
+- **8 steps**: Most animations (multi-color sequences, basic effects)
+- **16 steps**: Complex sequences (rainbow cycles, elaborate shows)
+- **32+ steps**: Use explicit `RgbSequence<D, N>` for data-driven animations
+- **0 steps**: Function-based sequences (`RgbSequence<D, 0>`) - no step storage needed
+
+**Examples:**
+```rust
+// Using type alias for step-based sequence
+let sequence = RgbSequence8::builder()
+    .step(red, ms(500), TransitionStyle::Linear)?
+    .step(blue, ms(500), TransitionStyle::Linear)?
+    .build()?;
+
+// Function-based sequence needs no step storage
+let sequence = RgbSequence::<Duration, 0>::from_function(
+    white,
+    breathing_effect,
+    continuous_timing,
+);
+
+// Custom capacity for elaborate sequences
+let sequence = RgbSequence::<_, 32>::builder()
+    // ... 32 color waypoints
+    .build()?;
+```
 
 ## Function-Based Sequences
 
@@ -226,6 +271,59 @@ Use function-based sequences when:
 - You want to reuse the same animation logic with different colors
 - Your animation depends on complex calculations
 
+## State Machine
+
+The sequencer implements a state machine that validates operation preconditions and prevents invalid state transitions.
+
+### States
+
+- **`Idle`**: No sequence loaded, LED is off
+- **`Loaded`**: Sequence loaded but not started, LED is off
+- **`Running`**: Sequence actively executing, LED displays animated colors
+- **`Paused`**: Sequence paused at current color
+- **`Complete`**: Finite sequence finished, LED displays landing color or last step color
+
+### Sequencer operations and resulting State changes
+
+| Method      | Required State                     | Result State            |
+|-------------|------------------------------------|-------------------------|
+| `load()`    | Any                                | `Loaded`                |
+| `start()`   | `Loaded`                           | `Running`               |
+| `service()` | `Running`                          | `Running` or `Complete` |
+| `pause()`   | `Running`                          | `Paused`                |
+| `resume()`  | `Paused`                           | `Running`               |
+| `restart()` | `Running`, `Paused`, or `Complete` | `Running`               |
+| `stop()`    | `Running`, `Paused`, or `Complete` | `Loaded`                |
+| `clear()`   | Any                                | `Idle`                  |
+
+Calling a method from an invalid state returns `Err(SequencerError::InvalidState)`.
+
+### Checking State
+
+```rust
+match sequencer.get_state() {
+    SequencerState::Running => {
+        // Safe to call service(), pause(), stop(), restart()
+    }
+    SequencerState::Paused => {
+        // Safe to call resume(), stop(), restart()
+    }
+    SequencerState::Complete => {
+        // Sequence finished, safe to call restart(), stop(), clear()
+    }
+    // ... handle other states
+}
+
+// Convenience methods
+if sequencer.is_running() {
+    sequencer.service()?;
+}
+
+if sequencer.is_paused() {
+    sequencer.resume()?;
+}
+```
+
 ## Servicing the Sequencer
 
 The `service()` method is the heart of the sequencer. It calculates the appropriate color for the current time, updates its LED and tells you when to call it again.
@@ -310,59 +408,6 @@ if has_continuous {
 }
 ```
 
-## State Machine
-
-The sequencer implements a state machine that validates operation preconditions and prevents invalid state transitions.
-
-### States
-
-- **`Idle`**: No sequence loaded, LED is off
-- **`Loaded`**: Sequence loaded but not started, LED is off
-- **`Running`**: Sequence actively executing, LED displays animated colors
-- **`Paused`**: Sequence paused at current color
-- **`Complete`**: Finite sequence finished, LED displays landing color or last step color
-
-### Sequencer operations and resulting State changes
-
-| Method      | Required State                     | Result State            |
-|-------------|------------------------------------|-------------------------|
-| `load()`    | Any                                | `Loaded`                |
-| `start()`   | `Loaded`                           | `Running`               |
-| `service()` | `Running`                          | `Running` or `Complete` |
-| `pause()`   | `Running`                          | `Paused`                |
-| `resume()`  | `Paused`                           | `Running`               |
-| `restart()` | `Running`, `Paused`, or `Complete` | `Running`               |
-| `stop()`    | `Running`, `Paused`, or `Complete` | `Loaded`                |
-| `clear()`   | Any                                | `Idle`                  |
-
-Calling a method from an invalid state returns `Err(SequencerError::InvalidState)`.
-
-### Checking State
-
-```rust
-match sequencer.get_state() {
-    SequencerState::Running => {
-        // Safe to call service(), pause(), stop(), restart()
-    }
-    SequencerState::Paused => {
-        // Safe to call resume(), stop(), restart()
-    }
-    SequencerState::Complete => {
-        // Sequence finished, safe to call restart(), stop(), clear()
-    }
-    // ... handle other states
-}
-
-// Convenience methods
-if sequencer.is_running() {
-    sequencer.service()?;
-}
-
-if sequencer.is_paused() {
-    sequencer.resume()?;
-}
-```
-
 ## Pause and Resume with Timing Compensation
 
 The pause/resume functionality maintains perfect timing continuity, as if the pause never occurred.
@@ -430,8 +475,6 @@ loop {
 
 Here's a more explanatory version:
 
----
-
 ### Pattern 2: Heterogeneous Collections (Advanced)
 
 When you have multiple LEDs connected to different hardware peripherals (e.g., one LED on TIM1, another on TIM3), you face a type system challenge: each LED has a different concrete type (`PwmRgbLed<TIM1>` vs `PwmRgbLed<TIM3>`), which means you can't store them in the same `Vec` or array.
@@ -467,40 +510,144 @@ for (i, sequencer) in sequencers.iter_mut().enumerate() {
 }
 ```
 
-See `examples/stm32f0-embassy/bin/rainbow_capture` for a complete implementation.
+See [Embassy Rainbow Capture example](../examples/stm32f0-embassy/README.md) for a complete implementation.
 
-### Pattern 3: Command-Based Control
+### Pattern 3: Using Commands for Multi-LED Control
 
-For task-based systems (like Embassy), use the `SequencerCommand` type for message passing:
+For task-based systems, you can use the command-based control pattern to route commands to multiple sequencers. See the [Command-Based Control](#command-based-control) section below for details and examples.
+
+## Command-Based Control
+
+For task-based systems (Embassy, RTOS, async runtimes), the command-based pattern decouples control logic from LED servicing by using message passing. This pattern works for both single and multi-LED scenarios.
+
+### Core Concept
+
+The `SequencerCommand<ID, D, N>` type packages an action with a target identifier:
+
+```rust
+pub struct SequencerCommand<ID, D, const N: usize> {
+    pub led_id: ID,
+    pub action: SequencerAction<D, N>,
+}
+```
+
+`SequencerAction` represents operations like `Load`, `Start`, `Pause`, `Resume`, `Stop`, etc.
+
+### Single LED Example
+
+Decouple button handling from LED servicing:
+
+```rust
+use rgb_sequencer::{SequencerCommand, SequencerAction};
+
+// Use () as the LED ID for single-LED scenarios
+static COMMAND_CHANNEL: Channel<SequencerCommand<(), Duration, 8>, 4> = Channel::new();
+
+// Button handler task
+#[embassy_executor::task]
+async fn button_task() {
+    loop {
+        button.wait_for_press().await;
+
+        // Send pause command
+        COMMAND_CHANNEL.send(SequencerCommand::new(
+            (),  // Single LED, no ID needed
+            SequencerAction::Pause,
+        )).await;
+    }
+}
+
+// RGB servicing task
+#[embassy_executor::task]
+async fn rgb_task(led: MyLed, timer: &'static MyTimer) {
+    let mut sequencer = RgbSequencer8::new(led, timer);
+
+    loop {
+        select! {
+            command = COMMAND_CHANNEL.receive() => {
+                sequencer.handle_action(command.action)?;
+            }
+            _ = Timer::after(Duration::from_millis(16)) => {
+                if sequencer.is_running() {
+                    sequencer.service()?;
+                }
+            }
+        }
+    }
+}
+```
+
+### Multi-LED Example
+
+Route commands to different LEDs:
 
 ```rust
 use rgb_sequencer::{SequencerCommand, SequencerAction};
 
 // Define LED identifiers
-enum LedId { Led1, Led2 }
+enum LedId { Led1, Led2, Led3 }
 
 // Create command channel
 static COMMAND_CHANNEL: Channel<SequencerCommand<LedId, Duration, 8>, 4> = Channel::new();
 
-// Send commands from control task
-COMMAND_CHANNEL.send(SequencerCommand::new(
-    LedId::Led1,
-    SequencerAction::Load(sequence),
-)).await;
+// Control task - sends commands
+#[embassy_executor::task]
+async fn control_task() {
+    // Load different sequences on different LEDs
+    COMMAND_CHANNEL.send(SequencerCommand::new(
+        LedId::Led1,
+        SequencerAction::Load(rainbow_sequence),
+    )).await;
 
-COMMAND_CHANNEL.send(SequencerCommand::new(
-    LedId::Led2,
-    SequencerAction::Pause,
-)).await;
+    COMMAND_CHANNEL.send(SequencerCommand::new(
+        LedId::Led2,
+        SequencerAction::Load(pulse_sequence),
+    )).await;
 
-// Handle commands in RGB task
-let command = COMMAND_CHANNEL.receive().await;
-if let Some(sequencer) = get_sequencer_mut(command.led_id) {
-    sequencer.handle_action(command.action)?;
+    // Start all LEDs
+    for led_id in [LedId::Led1, LedId::Led2, LedId::Led3] {
+        COMMAND_CHANNEL.send(SequencerCommand::new(
+            led_id,
+            SequencerAction::Start,
+        )).await;
+    }
+}
+
+// RGB task - handles commands and services sequencers
+#[embassy_executor::task]
+async fn rgb_task(/* ... */) {
+    let mut sequencers = [sequencer1, sequencer2, sequencer3];
+
+    loop {
+        select! {
+            command = COMMAND_CHANNEL.receive() => {
+                let sequencer = match command.led_id {
+                    LedId::Led1 => &mut sequencers[0],
+                    LedId::Led2 => &mut sequencers[1],
+                    LedId::Led3 => &mut sequencers[2],
+                };
+                sequencer.handle_action(command.action)?;
+            }
+            _ = Timer::after(Duration::from_millis(16)) => {
+                for sequencer in &mut sequencers {
+                    if sequencer.is_running() {
+                        sequencer.service()?;
+                    }
+                }
+            }
+        }
+    }
 }
 ```
 
-See `examples/stm32f0-embassy/bin/mode_switcher` for a complete implementation.
+### Benefits
+
+- **Separation of concerns**: Control logic separate from LED servicing
+- **Task safety**: Commands cross task boundaries safely
+- **Flexibility**: Easy to add new control inputs (buttons, UART, network)
+- **Testability**: Control logic can be tested independently
+
+See [Embassy Mode Switcher example](../examples/stm32f0-embassy/README.md) for a complete implementation.
 
 ## Querying Sequencer State
 
@@ -522,31 +669,54 @@ if let Some(sequence) = sequencer.current_sequence() {
     // ... inspect sequence properties
 }
 
-// Check if a finite sequence has completed 
+// Check if a finite sequence has completed
 if sequence.has_completed(elapsed) {
     // Do something when done
 }
 ```
 
-These methods are useful for:
-- **Color capture**: Getting the current color to create derived sequences
-- **Synchronization**: Coordinating multiple LEDs based on elapsed time
-- **UI feedback**: Displaying sequence progress to users
-- **Debugging**: Inspecting sequence state during development
+### Event Detection with Position Tracking
 
-## Choosing Sequence Capacity
-
-The const generic parameter `N` determines how many steps a sequence can hold:
+For step-based sequences, you can detect when the sequencer enters a new step or starts a new loop iteration:
 
 ```rust
-RgbSequencer<MyInstant, MyLed, MyTimer, 8>   // Up to 8 steps
-RgbSequencer<MyInstant, MyLed, MyTimer, 16>  // Up to 16 steps
-RgbSequencer<MyInstant, MyLed, MyTimer, 32>  // Up to 32 steps
+// Simple event detection using current_position()
+let mut last_position = None;
+
+loop {
+    sequencer.service()?;
+
+    let current = sequencer.current_position();
+    if current != last_position {
+        if let Some((step, loop_num)) = current {
+            println!("Entered step {} in loop {}", step, loop_num);
+            // Trigger event, play sound, update UI, etc.
+        }
+        last_position = current;
+    }
+
+    sleep_ms(16);
+}
+
+// Detailed timing using find_step_position()
+if let Some(sequence) = sequencer.current_sequence() {
+    let elapsed = sequencer.elapsed_time().unwrap();
+
+    if let Some(pos) = sequence.find_step_position(elapsed) {
+        println!("Step {}: {}ms in, {}ms remaining",
+            pos.step_index,
+            pos.time_in_step.as_millis(),
+            pos.time_until_step_end.as_millis()
+        );
+    }
+}
 ```
 
-### Guidelines
+These methods are useful for:
+- **Event detection**: Trigger actions when entering specific steps (play sounds, update UI, log events)
+- **Color capture**: Getting the current color to create derived sequences
+- **Synchronization**: Coordinating multiple LEDs based on elapsed time or step position
+- **Progress tracking**: Displaying sequence progress with precise timing information
+- **Debugging**: Inspecting sequence state during development
 
-- **Start with 8**: Sufficient for most simple animations (blinks, pulses, basic cycles)
-- **Use 16**: For complex multi-color sequences (rainbow cycles, multi-stage effects)
-- **Use 32+**: For elaborate shows or data-driven animations
-- **Function-based**: Don't need any steps — they compute colors algorithmically
+Note: `current_position()` returns `None` for function-based sequences since they don't have discrete steps.
