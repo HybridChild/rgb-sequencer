@@ -55,7 +55,10 @@ palette = { version = "0.7.6", default-features = false, features = ["libm"] }
 
 ### Minimal Example
 ```rust
-use rgb_sequencer::{RgbSequencer, RgbSequence, RgbLed, TimeSource, TransitionStyle, LoopCount};
+use rgb_sequencer::{
+    RgbSequencer8, RgbSequence8, RgbLed, TimeSource, TransitionStyle,
+    LoopCount, COLOR_WHITE, COLOR_OFF
+};
 use palette::Srgb;
 
 // 1. Implement the RgbLed trait for your hardware
@@ -78,20 +81,20 @@ impl TimeSource<MyInstant> for MyTimer {
     }
 }
 
-// 3. Create a blinking sequence
-let sequence = RgbSequence::builder()
-    .step(Srgb::new(1.0, 1.0, 1.0), Duration::from_millis(500), TransitionStyle::Step)?  // White
-    .step(Srgb::new(0.0, 0.0, 0.0), Duration::from_millis(500), TransitionStyle::Step)?  // Off
-    .loop_count(LoopCount::Infinite)                                                     // Loop indefinitely
-    .build()?;
+// 3. Create a blinking sequence (capacity of 8 steps)
+let sequence = RgbSequence8::<MyDuration>::builder()
+    .step(COLOR_WHITE, Duration::from_millis(500), TransitionStyle::Step).unwrap()  // White
+    .step(COLOR_OFF, Duration::from_millis(500), TransitionStyle::Step).unwrap()    // Off
+    .loop_count(LoopCount::Infinite)                                                // Loop indefinitely
+    .build()
+    .unwrap();
 
-// 4. Create sequencer and start
+// 4. Create sequencer and start (load_and_start convenience method)
 let led = MyLed::new();
 let timer = MyTimer::new();
-let mut sequencer = RgbSequencer::<_, _, _, 8>::new(led, &timer);
+let mut sequencer = RgbSequencer8::new(led, &timer);
 
-sequencer.load(sequence);
-sequencer.start().unwrap();
+sequencer.load_and_start(sequence).unwrap();
 
 // 5. Service in your main loop
 loop {
