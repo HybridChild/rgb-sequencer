@@ -53,6 +53,7 @@ pub struct SequenceStep<D: TimeDuration> {
 
 impl<D: TimeDuration> SequenceStep<D> {
     /// Creates a new sequence step.
+    #[inline]
     pub fn new(color: Srgb, duration: D, transition: TransitionStyle) -> Self {
         Self {
             color,

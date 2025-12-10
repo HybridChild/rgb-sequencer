@@ -194,6 +194,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
     }
 
     /// Services sequencer, updating LED.
+    #[inline]
     pub fn service(&mut self) -> Result<ServiceTiming<I::Duration>, SequencerError> {
         if self.state != SequencerState::Running {
             return Err(SequencerError::InvalidState {
@@ -299,21 +300,25 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
     }
 
     /// Returns current state.
+    #[inline]
     pub fn get_state(&self) -> SequencerState {
         self.state
     }
 
     /// Returns current color.
+    #[inline]
     pub fn current_color(&self) -> Srgb {
         self.current_color
     }
 
     /// Returns true if paused.
+    #[inline]
     pub fn is_paused(&self) -> bool {
         self.state == SequencerState::Paused
     }
 
     /// Returns true if running.
+    #[inline]
     pub fn is_running(&self) -> bool {
         self.state == SequencerState::Running
     }

@@ -77,6 +77,7 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
     }
 
     /// Evaluates color and next service time at elapsed time.
+    #[inline]
     pub fn evaluate(&self, elapsed: D) -> (Srgb, Option<D>) {
         // Use custom functions if present
         if let (Some(color_fn), Some(timing_fn)) = (self.color_fn, self.timing_fn) {
@@ -143,6 +144,7 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
         }
     }
 
+    #[inline]
     fn find_step_at_time(&self, time_in_loop: D, current_loop: u32) -> StepPosition<D> {
         let mut accumulated_time = D::ZERO;
 
@@ -214,6 +216,7 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
         previous_color.mix(step.color, progress)
     }
 
+    #[inline]
     fn find_step_position(&self, elapsed: D) -> Option<StepPosition<D>> {
         if self.steps.is_empty() {
             return None;
