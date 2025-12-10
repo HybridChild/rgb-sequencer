@@ -4,6 +4,7 @@ Embassy async examples for STM32F NUCLEO-F072RB board.
 
 - **[mode_switcher](#mode_switcher)** - Embassy async example demonstrating single-LED control with mode switching using async tasks and channels. Features a **function-based breathing sequence** using sine wave animation.
 - **[rainbow_capture](#rainbow_capture)** - Embassy async example demonstrating smooth rainbow transitions with interactive color capture using async tasks, channels, and signals. Shows **individual LED control** with the enum wrapper pattern for managing heterogeneous LED types.
+- **[transition_styles](#transition_styles)** - Embassy async example demonstrating all 5 TransitionStyle variants (Step, Linear, EaseIn, EaseOut, EaseInOut) with visual mode indication using the onboard LED.
 
 ## Hardware Setup
 
@@ -25,7 +26,7 @@ These examples use **one or two external RGB LEDs** depending on the example. Co
 
 ### User Button
 
-Both examples use the onboard user button on PC13 (blue button on Nucleo board).
+All examples use the onboard user button on PC13 (blue button on Nucleo board).
 
 ## Building and Flashing
 
@@ -57,7 +58,7 @@ probe-rs run --chip STM32F072RBTx target/thumbv6m-none-eabi/release/<example_nam
 ```
 
 ### Viewing logs
-Both examples use `defmt` for logging. Logs appear automatically when running with `probe-rs`.
+All examples use `defmt` for logging. Logs appear automatically when running with `probe-rs`.
 
 ## Common Anode vs Common Cathode
 
@@ -157,4 +158,47 @@ This enables individual LED control through `get_mut(led_id)` while maintaining 
 **Run:**
 ```bash
 cargo run --release --bin rainbow_capture
+```
+
+### transition_styles
+
+Demonstrates all five TransitionStyle variants using a single RGB LED with visual mode indication via the onboard LED. Cycles through Step (instant), Linear (constant-speed), EaseIn (slow start), EaseOut (slow end), and EaseInOut (slow both ends) transitions.
+
+**Features:**
+- **Single RGB LED**: Cycles through color sequence with different transition styles
+- **All 5 TransitionStyle variants**: Step, Linear, EaseIn, EaseOut, EaseInOut
+- **Visual mode indication**: Onboard LED blinks to show current transition mode
+- **Button-controlled mode switching**: Press button to cycle through transition styles
+- **Task-based architecture**: Separate tasks for button, blink pattern, app logic, and RGB control
+- Uses Embassy's time driver for precise async timing
+- Demonstrates easing functions for smooth, natural-looking animations
+
+**What you'll learn:**
+- **Easing functions**: How quadratic easing creates natural acceleration/deceleration
+- **Transition comparison**: Visual comparison of all transition styles side-by-side
+- Dynamic sequence reloading with different transition parameters
+- Multi-task coordination using channels and signals
+- Visual feedback patterns for mode indication
+
+**Technical Highlights:**
+The example cycles through the same color sequence (red, green, blue, white, yellow, cyan, magenta with black transitions) using all five transition styles. The onboard LED provides visual feedback:
+- **Solid ON**: Step mode (instant color changes)
+- **1 blink**: Linear mode (constant-speed interpolation)
+- **2 blinks**: EaseIn mode (slow start, accelerating)
+- **3 blinks**: EaseOut mode (fast start, decelerating)
+- **4 blinks**: EaseInOut mode (slow start and end)
+
+This allows direct comparison of how each transition style affects the animation feel and demonstrates the practical differences between linear and eased interpolation.
+
+**Behavior:**
+1. On startup, LED begins with Step transitions (instant color changes), onboard LED solid ON
+2. Press button → switches to Linear transitions (constant-speed), onboard LED blinks once per cycle
+3. Press again → switches to EaseIn transitions (slow start), onboard LED blinks twice per cycle
+4. Press again → switches to EaseOut transitions (slow end), onboard LED blinks three times per cycle
+5. Press again → switches to EaseInOut transitions (slow both ends), onboard LED blinks four times per cycle
+6. Press again → back to Step mode (cycle repeats)
+
+**Run:**
+```bash
+cargo run --release --bin transition_styles
 ```
