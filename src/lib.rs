@@ -15,11 +15,16 @@
 //! - **`TimeSource`** - Trait for timing system abstraction
 //! - **`TransitionStyle`** - How to animate between colors (Step, Linear, EaseIn/Out)
 //!
+//! # Color Helpers
+//!
+//! - **`colors`** module - HSV color space helpers for intuitive color creation
+//!
 //! Uses f32 extensively - performance varies by FPU availability. See CLAUDE.md for details.
 
 // Re-export Srgb from palette for user convenience
 pub use palette::Srgb;
 
+pub mod colors;
 pub mod command;
 pub mod sequence;
 pub mod sequencer;
