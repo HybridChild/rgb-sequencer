@@ -95,21 +95,22 @@ pub struct RgbSequencer<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N
     start_time: Option<I>,
     pause_start_time: Option<I>,
     current_color: Srgb,
+    color_epsilon: f32,
 }
 
-/// Epsilon for floating-point color comparisons.
-const COLOR_EPSILON: f32 = 0.001;
+/// Default epsilon for floating-point color comparisons.
+pub const DEFAULT_COLOR_EPSILON: f32 = 0.001;
 
-/// Returns true if two colors are approximately equal.
+/// Returns true if two colors are approximately equal within the given epsilon.
 #[inline]
-fn colors_approximately_equal(a: Srgb, b: Srgb) -> bool {
-    (a.red - b.red).abs() < COLOR_EPSILON
-        && (a.green - b.green).abs() < COLOR_EPSILON
-        && (a.blue - b.blue).abs() < COLOR_EPSILON
+fn colors_approximately_equal(a: Srgb, b: Srgb, epsilon: f32) -> bool {
+    (a.red - b.red).abs() < epsilon
+        && (a.green - b.green).abs() < epsilon
+        && (a.blue - b.blue).abs() < epsilon
 }
 
 impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequencer<'t, I, L, T, N> {
-    /// Creates sequencer with LED off.
+    /// Creates sequencer with LED off and default color epsilon.
     pub fn new(mut led: L, time_source: &'t T) -> Self {
         led.set_color(COLOR_OFF);
 
@@ -121,6 +122,23 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
             start_time: None,
             pause_start_time: None,
             current_color: COLOR_OFF,
+            color_epsilon: DEFAULT_COLOR_EPSILON,
+        }
+    }
+
+    /// Creates sequencer with custom color epsilon threshold.
+    pub fn with_epsilon(mut led: L, time_source: &'t T, epsilon: f32) -> Self {
+        led.set_color(COLOR_OFF);
+
+        Self {
+            led,
+            time_source,
+            state: SequencerState::Idle,
+            sequence: None,
+            start_time: None,
+            pause_start_time: None,
+            current_color: COLOR_OFF,
+            color_epsilon: epsilon,
         }
     }
 
@@ -228,7 +246,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
         let (new_color, next_service) = sequence.evaluate(elapsed);
 
         // Update LED only if color changed (using approximate equality for f32)
-        if !colors_approximately_equal(new_color, self.current_color) {
+        if !colors_approximately_equal(new_color, self.current_color, self.color_epsilon) {
             self.led.set_color(new_color);
             self.current_color = new_color;
         }
@@ -381,6 +399,20 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
             let now = self.time_source.now();
             now.duration_since(start)
         })
+    }
+
+    /// Returns the current color epsilon threshold.
+    #[inline]
+    pub fn color_epsilon(&self) -> f32 {
+        self.color_epsilon
+    }
+
+    /// Sets the color epsilon threshold.
+    ///
+    /// Controls the sensitivity of color change detection.
+    #[inline]
+    pub fn set_color_epsilon(&mut self, epsilon: f32) {
+        self.color_epsilon = epsilon;
     }
 
     /// Returns current playback position.
@@ -1753,5 +1785,33 @@ mod tests {
 
         // Sequence should be None
         assert!(sequence.is_none());
+    }
+
+    #[test]
+    fn color_epsilon_is_configurable() {
+        let led = MockLed::new();
+        let timer = MockTimeSource::new();
+
+        // Test default epsilon
+        let sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        assert_eq!(sequencer.color_epsilon(), DEFAULT_COLOR_EPSILON);
+
+        // Test with_epsilon constructor
+        let led = MockLed::new();
+        let custom_epsilon = 0.0001;
+        let sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::with_epsilon(
+            led,
+            &timer,
+            custom_epsilon,
+        );
+        assert_eq!(sequencer.color_epsilon(), custom_epsilon);
+
+        // Test set_color_epsilon
+        let led = MockLed::new();
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+        let new_epsilon = 0.01;
+        sequencer.set_color_epsilon(new_epsilon);
+        assert_eq!(sequencer.color_epsilon(), new_epsilon);
     }
 }

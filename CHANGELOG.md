@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Examples updated to use new convenience methods and type aliases
 
 ### Added
+- Configurable color epsilon via `RgbSequencer::with_epsilon()`, `color_epsilon()`, and `set_color_epsilon()` for customizable color change detection sensitivity
+- `DEFAULT_COLOR_EPSILON` constant for the default threshold value
 - `Position` struct for representing playback position with named fields (`step_index`, `loop_number`)
 - `colors` module with HSV color space helpers (`hsv()` and `hue()`) for more intuitive color creation
 - `RgbSequencer::into_led()` and `into_parts()` methods for extracting LED from sequencer
