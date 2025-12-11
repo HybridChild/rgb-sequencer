@@ -7,8 +7,8 @@ use palette::Srgb;
 use rgb_sequencer::sequence::RgbSequence;
 use rgb_sequencer::types::{LoopCount, TransitionStyle};
 use rgb_sequencer::{
-    DEFAULT_COLOR_EPSILON, RgbSequencer, SequencerAction, SequencerError, SequencerState,
-    ServiceTiming, TimeDuration,
+    DEFAULT_COLOR_EPSILON, RgbLed, RgbSequencer, SequencerAction, SequencerError, SequencerState,
+    ServiceTiming, TimeDuration, TimeSource,
 };
 
 #[test]
@@ -1420,4 +1420,116 @@ fn brightness_does_not_affect_sequence_timing() {
         sequencer.current_color(),
         Srgb::new(0.0, 0.1, 0.0)
     ));
+}
+
+#[test]
+fn mock_led_color_history_records_all_changes() {
+    let mut led = MockLed::new();
+
+    // Initially BLACK
+    assert_eq!(led.color_history().len(), 0);
+
+    // Set RED
+    led.set_color(RED);
+    assert_eq!(led.color_history().len(), 1);
+    assert!(colors_equal(led.color_history()[0], RED));
+
+    // Set GREEN
+    led.set_color(GREEN);
+    assert_eq!(led.color_history().len(), 2);
+    assert!(colors_equal(led.color_history()[1], GREEN));
+
+    // Set BLUE
+    led.set_color(BLUE);
+    assert_eq!(led.color_history().len(), 3);
+    assert!(colors_equal(led.color_history()[2], BLUE));
+
+    // Verify complete history
+    let history = led.color_history();
+    assert!(colors_equal(history[0], RED));
+    assert!(colors_equal(history[1], GREEN));
+    assert!(colors_equal(history[2], BLUE));
+}
+
+#[test]
+fn mock_time_source_set_time_allows_absolute_time_control() {
+    let timer = MockTimeSource::new();
+
+    // Initial time is 0
+    assert_eq!(timer.now(), TestInstant(0));
+
+    // Set to specific time
+    timer.set_time(TestInstant(1000));
+    assert_eq!(timer.now(), TestInstant(1000));
+
+    // Set to another time
+    timer.set_time(TestInstant(5000));
+    assert_eq!(timer.now(), TestInstant(5000));
+
+    // Can set backwards (useful for testing edge cases)
+    timer.set_time(TestInstant(2000));
+    assert_eq!(timer.now(), TestInstant(2000));
+
+    // Advance still works after set_time
+    timer.advance(TestDuration(500));
+    assert_eq!(timer.now(), TestInstant(2500));
+}
+
+#[test]
+fn colors_equal_epsilon_allows_custom_tolerance() {
+    let color1 = Srgb::new(1.0, 0.5, 0.0);
+    let color2 = Srgb::new(1.0, 0.502, 0.0);
+    let color3 = Srgb::new(1.0, 0.52, 0.0);
+
+    // Standard epsilon (0.001) - colors are not equal (difference is 0.002)
+    assert!(!colors_equal(color1, color2));
+
+    // Custom larger epsilon (0.01) - now they're equal
+    assert!(colors_equal_epsilon(color1, color2, 0.01));
+
+    // Even with larger epsilon, bigger differences still fail (difference is 0.02)
+    assert!(!colors_equal_epsilon(color1, color3, 0.01));
+
+    // Very tight epsilon
+    assert!(!colors_equal_epsilon(color1, color2, 0.0001));
+
+    // Exact match works with any epsilon
+    assert!(colors_equal_epsilon(color1, color1, 0.00001));
+}
+
+#[test]
+fn color_history_verifies_exact_color_sequence_progression() {
+    let led = MockLed::new();
+    let timer = MockTimeSource::new();
+    let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+
+    let sequence = RgbSequence::<TestDuration, 8>::builder()
+        .step(RED, TestDuration(100), TransitionStyle::Step)
+        .unwrap()
+        .step(GREEN, TestDuration(100), TransitionStyle::Step)
+        .unwrap()
+        .step(BLUE, TestDuration(100), TransitionStyle::Step)
+        .unwrap()
+        .loop_count(LoopCount::Finite(1))
+        .build()
+        .unwrap();
+
+    sequencer.load(sequence);
+    sequencer.start().unwrap(); // Sets RED
+
+    timer.advance(TestDuration(100));
+    sequencer.service().unwrap(); // Sets GREEN
+
+    timer.advance(TestDuration(100));
+    sequencer.service().unwrap(); // Sets BLUE
+
+    let extracted_led = sequencer.into_led();
+    let history = extracted_led.color_history();
+
+    // History includes: BLACK (initial), RED, GREEN, BLUE
+    assert_eq!(history.len(), 4);
+    assert!(colors_equal(history[0], BLACK)); // Initial color from new()
+    assert!(colors_equal(history[1], RED));
+    assert!(colors_equal(history[2], GREEN));
+    assert!(colors_equal(history[3], BLUE));
 }
