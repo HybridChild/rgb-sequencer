@@ -23,61 +23,9 @@ The examples configure PWM with:
 - **Resolution**: 10-bit (0-1000 duty cycle range)
 - **Mode**: Phase-correct PWM for smoother output
 
-## Building and Flashing
-
-### Prerequisites
-
-- Rust toolchain with `thumbv6m-none-eabi` target
-- probe-rs or picotool for flashing
-- (Optional) probe-rs or RTT viewer for viewing logs
-
-### Install Target
-```bash
-rustup target add thumbv6m-none-eabi
-```
-
-### Build
-```bash
-cargo build --release --bin <example_name>
-```
-
-### Flash
-
-#### Method 1: probe-rs (recommended for debugging)
-With a debug probe connected:
-```bash
-cargo run --release --bin <example_name>
-```
-
-Or manually:
-```bash
-probe-rs run --chip RP2040 target/thumbv6m-none-eabi/release/<example_name>
-```
-
-#### Method 2: UF2 bootloader (no debug probe needed)
-1. Build the UF2 file:
-```bash
-cargo build --release --bin <example_name>
-elf2uf2-rs target/thumbv6m-none-eabi/release/<example_name> <example_name>.uf2
-```
-
-2. Enter bootloader mode:
-   - Hold BOOTSEL button while connecting USB
-   - Or hold BOOTSEL and press RESET if already connected
-
-3. Copy the UF2 file to the RPI-RP2 drive that appears
-
 ### Viewing Logs
 
-The examples use RTT (Real-Time Transfer) for logging. To view logs with probe-rs:
-```bash
-probe-rs attach --chip RP2040
-```
-
-Or run directly with logging:
-```bash
-cargo run --release --bin <example_name>
-```
+The examples use RTT (Real-Time Transfer) for logging.
 
 ## Common Anode vs Common Cathode
 
@@ -92,58 +40,16 @@ let led = PwmRgbLed::new(red_channel, green_channel, blue_channel, false);
 
 ### blinky
 
-A simple, clean example demonstrating basic LED sequencing with blocking delays on the RP2040. This is the perfect starting point for learning the library on Raspberry Pi Pico.
+Simple LED sequencing with blocking delays. Perfect starting point for learning the library.
 
 **Features:**
-- **Single RGB LED**: Controls one RGB LED through a colorful sequence using PWM
-- **Infinite loop**: Sequence repeats continuously forever
-- **Blocking approach**: Uses Cortex-M `Delay` for simple, easy-to-understand timing
-- **Simple time source**: Advances time manually after each delay
-- **Zero-duration steps**: Demonstrates instant color changes before fade-outs
-- **RTT logging**: Real-time logging for debugging and monitoring
-- No interrupt handlers or manual WFI calls needed
-
-**What you'll learn:**
-- Basic sequencer usage with minimal setup on RP2040
-- PWM-based RGB LED control on Raspberry Pi Pico
-- How to create sequences with steps and transitions
-- The difference between Step (instant) and Linear (fade) transitions
-- Zero-duration steps as color waypoints
-- Infinite loop sequencing
-- Simple blocking delay pattern
-
-**Technical Highlights:**
-This example shows the simplest possible integration pattern for RP2040:
-```rust
-// Create a simple time source
-let time_source = BlinkyTimeSource::new();
-
-// Service loop
-loop {
-    if let Some(delay_duration) = sequencer.service().unwrap() {
-        if delay_duration == TimeDuration::ZERO {
-            // Linear transition - maintain frame rate
-            delay.delay_ms(FRAME_RATE_MS as u32);
-            time_source.advance(BlinkyDuration(FRAME_RATE_MS));
-        } else {
-            // Step transition - delay for the specified time
-            delay.delay_ms(delay_duration.as_millis() as u32);
-            time_source.advance(delay_duration);
-        }
-    } else {
-        // Sequence complete
-        break;
-    }
-}
-```
-
-The time source is dead simple - just a counter that advances after each delay. This works perfectly for applications where the sequencer is the only thing happening.
-
-**PWM Setup:**
-The example configures three PWM channels for RGB control:
-- PWM1 handles Red (Channel A) and Green (Channel B) on GPIO2 and GPIO3
-- PWM2 handles Blue (Channel A) on GPIO4
-- Both slices run at 1 kHz with phase-correct mode for smooth color transitions
+- Single RGB LED with colorful sequence (yellow, cyan, purple) using PWM
+- Infinite loop with Step and Linear transitions
+- Blocking approach using Cortex-M `Delay`
+- Manual time source (counter-based, no interrupts)
+- Zero-duration steps for instant color changes
+- RTT logging for debugging
+- PWM configuration: 1 kHz with phase-correct mode
 
 **Behavior:**
 1. LED instantly changes to Yellow, then fades to off over 1 second

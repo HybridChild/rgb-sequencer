@@ -28,35 +28,6 @@ These examples use **one or two external RGB LEDs** depending on the example. Co
 
 The rainbow_capture and mode_switcher examples use the onboard user button on PC13 (blue button on Nucleo board).
 
-## Building and Flashing
-
-### Prerequisites
-
-- Rust toolchain with `thumbv6m-none-eabi` target
-- probe-rs or OpenOCD for flashing
-
-### Install Target
-```bash
-rustup target add thumbv6m-none-eabi
-```
-
-### Build
-```bash
-cargo build --release --bin <example_name>
-```
-
-### Flash
-
-With probe-rs (recommended):
-```bash
-cargo run --release --bin <example_name>
-```
-
-Or manually:
-```bash
-probe-rs run --chip STM32F072RBTx target/thumbv6m-none-eabi/release/<example_name>
-```
-
 ## Common Anode vs Common Cathode
 
 The examples assume a **common anode** RGB LED (common pin connected to 3.3V).
@@ -70,49 +41,14 @@ let led = PwmRgbLed::new(red_pwm, green_pwm, blue_pwm, false);
 
 ### blinky
 
-A simple, clean example demonstrating basic LED sequencing with blocking delays. This is the perfect starting point for learning the library.
+Simple LED sequencing with blocking delays. Perfect starting point for learning the library.
 
 **Features:**
-- **Single RGB LED**: Controls one RGB LED through a colorful sequence
-- **Infinite loop**: Sequence repeats continuously forever
-- **Blocking approach**: Uses HAL's `Delay` for simple, easy-to-understand timing
-- **Simple time source**: Advances time manually after each delay
-- **Zero-duration steps**: Demonstrates instant color changes before fade-outs
-- No interrupt handlers or manual WFI calls needed
-
-**What you'll learn:**
-- Basic sequencer usage with minimal setup
-- How to create sequences with steps and transitions
-- The difference between Step (instant) and Linear (fade) transitions
-- Zero-duration steps as color waypoints
-- Infinite loop sequencing
-- Simple blocking delay pattern
-
-**Technical Highlights:**
-This example shows the simplest possible integration pattern:
-```rust
-// Create a simple time source
-let time_source = BlinkyTimeSource::new();
-
-// Service loop
-loop {
-    if let Some(delay_duration) = sequencer.service().unwrap() {
-        if delay_duration == TimeDuration::ZERO {
-            // Linear transition - maintain frame rate
-            delay.delay_ms(FRAME_RATE_MS as u32);
-            time_source.advance(BlinkyDuration(FRAME_RATE_MS));
-        } else {
-            // Step transition - delay for the specified time
-            delay.delay_ms(delay_duration.as_millis() as u32);
-            time_source.advance(delay_duration);
-        }
-    } else {
-        break; // Sequence complete
-    }
-}
-```
-
-The time source is dead simple - just a counter that advances after each delay. This works perfectly for applications where the sequencer is the only thing happening.
+- Single RGB LED with colorful sequence (yellow, cyan, purple)
+- Infinite loop with Step and Linear transitions
+- Blocking approach using HAL's `Delay`
+- Manual time source (counter-based, no interrupts)
+- Zero-duration steps for instant color changes
 
 **Behavior:**
 1. LED fades from Yellow to off over 1 second
@@ -127,32 +63,14 @@ cargo run --release --bin blinky
 
 ### mode_switcher
 
-An RGB LED controller demonstrating mode switching with different animations. **Features function-based sequences** using sine wave mathematics for the breathing and flame effects.
+RGB LED controller with mode switching and function-based sequences.
 
 **Features:**
-- **Four display modes**: Breathing (sine wave), Rainbow, Police, and Flame (flickering)
-- **Function-based sequences**: Uses algorithmic animation for breathing and flame effects instead of step-based interpolation
-- **Mode indicator**: Onboard LED (PA5) indicates current mode
-- Uses SysTick timer for precise 1ms timing
-- Efficient power management with WFI (Wait For Interrupt)
-- Demonstrates both function-based and step-based sequencing approaches
-
-**What you'll learn:**
-- **Function-based sequences**: How to create algorithmic animations using custom functions
-- **Sine wave mathematics**: Applying trigonometric functions for smooth breathing and flickering flame effects
-- **Multi-frequency animation**: Combining multiple sine waves to create complex, pseudo-random effects
-- Dynamic sequence loading and mode switching
-- Mode state management
-- Efficient sequencer servicing with optimal timing hints
-
-**Technical Highlights:**
-The breathing and flame modes demonstrate the library's function-based sequence feature, where mathematical functions compute LED color and brightness algorithmically based on elapsed time. This approach:
-- **Breathing**: Uses a single sine wave for smooth, periodic brightness oscillation
-- **Flame**: Combines multiple sine waves at different frequencies (fast, medium, slow) to create realistic flickering with color temperature variation
-- Allows the same functions to be reused with different base colors
-- Provides smooth, natural-looking animations through mathematical curves
-- Uses `libm` for `no_std` sine calculations
-- Returns to the sequencer continuously for frame-by-frame updates
+- Four modes: Rainbow, Police, Flame, Breathing
+- Function-based sequences for breathing and flame (algorithmic animation)
+- Step-based sequences for rainbow and police
+- Mode indicator via onboard LED
+- SysTick timer with efficient WFI power management
 
 **Behavior:**
 1. On startup, the RGB LED begins rainbow animation
@@ -169,20 +87,14 @@ cargo run --release --bin mode_switcher
 
 ### rainbow_capture
 
-A smooth rainbow animation with interactive color capture control using two independent RGB LEDs.
+Smooth rainbow animation with interactive color capture using two independent RGB LEDs.
 
 **Features:**
-- **LED 1**: Continuously cycles through red → green → blue with smooth linear color transitions
-- **LED 2**: Starts off, captures and displays the current color from LED 1 when button is pressed
-- Uses SysTick timer for precise 1ms timing
-- Efficient power management with WFI (Wait For Interrupt)
-- Demonstrates independent sequencer control for multi-LED systems
-
-**What you'll learn:**
-- Multi-LED sequencer usage with different animations
-- Color capture and dynamic sequence creation
-- Hardware timer integration (SysTick)
-- Pause/resume functionality
+- LED 1: Continuous red → green → blue rainbow cycle
+- LED 2: Captures and displays current color from LED 1 on button press
+- Independent sequencer control for multi-LED systems
+- Pause/resume with timing compensation
+- SysTick timer with efficient WFI power management
 
 **Behavior:**
 1. On startup, LED 1 begins its rainbow animation, LED 2 is off
