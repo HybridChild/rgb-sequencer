@@ -360,9 +360,24 @@ fn from_u8(r: u8, g: u8, b: u8) -> Srgb {
 
 ### Test Organization
 
-Tests are organized by module:
-- `sequence.rs`: 30 tests for sequence validation, evaluation, looping
-- `sequencer.rs`: 28 tests for state machine, timing, operations
+Tests are organized as **integration tests** in the `tests/` directory:
+- `tests/sequence_tests.rs`: Tests for sequence validation, evaluation, looping
+- `tests/sequencer_tests.rs`: Tests for state machine, timing, operations
+- `tests/colors_tests.rs`: Tests for HSV color conversion helpers
+- `tests/common/mod.rs`: Shared test infrastructure (mocks, helpers, constants)
+
+**Total: 94 integration tests**
+
+This organization keeps source files clean and provides true black-box testing of the public API.
+
+### Shared Test Infrastructure
+
+The `tests/common/` module provides reusable test utilities:
+- **`TestDuration`/`TestInstant`** - Mock time types implementing time traits
+- **`MockLed`** - Records all color changes for verification
+- **`MockTimeSource`** - Controllable time advancement for deterministic testing
+- **Color constants** - `RED`, `GREEN`, `BLUE`, `BLACK`, `YELLOW`
+- **`colors_equal()`** - Floating-point color comparison with epsilon tolerance
 
 ### Key Testing Patterns
 
@@ -398,8 +413,10 @@ assert_eq!(sequencer.pause(), Err(SequencerError::InvalidState));
 ### Running Tests
 
 ```bash
-cargo test --lib                  # Run all tests
-cargo test sequence::tests        # Test specific module
+cargo test                        # Run all tests (integration + unit)
+cargo test --test sequence_tests  # Run sequence tests only
+cargo test --test sequencer_tests # Run sequencer tests only
+cargo test --test colors_tests    # Run color tests only
 ```
 
 ---
@@ -411,7 +428,9 @@ cargo test sequence::tests        # Test specific module
 cargo check
 
 # Run tests
-cargo test --lib
+cargo test                         # All tests (integration + unit)
+cargo test --test '*'              # Integration tests only
+cargo test --lib                   # Unit tests only (currently none)
 
 # Lint
 cargo clippy --all-features -- -D warnings
