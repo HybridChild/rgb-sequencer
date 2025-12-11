@@ -1,28 +1,26 @@
 use defmt::info;
-use embassy_stm32::gpio::Output;
 
+use crate::blink_task::BLINK_COUNT_SIGNAL;
 use crate::types::{BrightnessLevel, RgbCommand, BUTTON_SIGNAL, RGB_COMMAND_CHANNEL};
 
-/// Update the onboard LED to indicate the current brightness level
-/// LED blinks in patterns to show brightness:
-/// - Full (100%): LED steady on
-/// - High (75%): LED off
-/// - Medium (50%): LED steady on
-/// - Low (25%): LED off
-/// - Dim (10%): LED steady on
-fn update_brightness_indicator(led: &mut Output<'static>, level: BrightnessLevel) {
+/// Get the blink count for the current brightness level
+/// - Full (100%): 0 blinks (solid ON)
+/// - High (75%): 1 blink
+/// - Medium (50%): 2 blinks
+/// - Low (25%): 3 blinks
+/// - Dim (10%): 4 blinks
+fn get_blink_count(level: BrightnessLevel) -> u8 {
     match level {
-        BrightnessLevel::Full | BrightnessLevel::Medium | BrightnessLevel::Dim => {
-            led.set_high();
-        }
-        BrightnessLevel::High | BrightnessLevel::Low => {
-            led.set_low();
-        }
+        BrightnessLevel::Full => 0,
+        BrightnessLevel::High => 1,
+        BrightnessLevel::Medium => 2,
+        BrightnessLevel::Low => 3,
+        BrightnessLevel::Dim => 4,
     }
 }
 
 #[embassy_executor::task]
-pub async fn app_logic_task(mut onboard_led: Output<'static>) {
+pub async fn app_logic_task() {
     info!("Starting app logic task...");
 
     let mut current_brightness = BrightnessLevel::Full;
@@ -33,7 +31,8 @@ pub async fn app_logic_task(mut onboard_led: Output<'static>) {
         .send(RgbCommand::SetBrightness(current_brightness))
         .await;
 
-    update_brightness_indicator(&mut onboard_led, current_brightness);
+    // Set initial blink pattern
+    BLINK_COUNT_SIGNAL.signal(get_blink_count(current_brightness));
 
     loop {
         // Wait for button press signal
@@ -48,8 +47,8 @@ pub async fn app_logic_task(mut onboard_led: Output<'static>) {
             (current_brightness.value() * 100.0) as u8
         );
 
-        // Update onboard LED indicator
-        update_brightness_indicator(&mut onboard_led, current_brightness);
+        // Update blink pattern
+        BLINK_COUNT_SIGNAL.signal(get_blink_count(current_brightness));
 
         // Send brightness command to RGB task
         RGB_COMMAND_CHANNEL
