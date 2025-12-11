@@ -149,7 +149,7 @@ fn test_sequence() {
         let _ = sequencer.restart();
 
         // Query state
-        let _ = sequencer.get_state();
+        let _ = sequencer.state();
 
         // Clear
         sequencer.clear();

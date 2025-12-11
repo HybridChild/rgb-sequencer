@@ -301,7 +301,7 @@ Calling a method from an invalid state returns `Err(SequencerError::InvalidState
 ### Checking State
 
 ```rust
-match sequencer.get_state() {
+match sequencer.state() {
     SequencerState::Running => {
         // Safe to call service(), pause(), stop(), restart()
     }

@@ -18,7 +18,7 @@ The analysis uses `size-analysis/minimal/` - a bare-bones embedded binary with:
 
 - **Single 4-step sequence**: Red → Green → Blue → White with Linear and Step transitions
 - **All features exercised**: `start_color`, `landing_color`, finite loop count
-- **All API methods exercised**: `load`, `start`, `service`, `pause`, `resume`, `restart`, `get_state`, `clear`
+- **All API methods exercised**: `load`, `start`, `service`, `pause`, `resume`, `restart`, `state`, `clear`
 - **Minimal trait implementations**: Zero-size stubs for `RgbLed` and `TimeSource` to isolate library overhead
 - **Multiple targets**: `thumbv6m-none-eabi` (Cortex-M0/M0+) and `thumbv7em-none-eabihf` (Cortex-M4F/M7)
 - **Production optimization**: `opt-level = "z"` with LTO enabled

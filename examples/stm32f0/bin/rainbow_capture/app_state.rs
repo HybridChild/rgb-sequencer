@@ -58,7 +58,7 @@ impl<'a> AppState<'a> {
 
     /// Handle button press - toggle pause/resume and color capture
     fn handle_button_press(&mut self) {
-        match self.sequencer_1.get_state() {
+        match self.sequencer_1.state() {
             SequencerState::Running => {
                 rprintln!("Pausing LED 1 and capturing color to LED 2");
 
@@ -99,7 +99,7 @@ impl<'a> AppState<'a> {
             _ => {
                 rprintln!(
                     "Cannot pause/resume from state: {:?}",
-                    self.sequencer_1.get_state()
+                    self.sequencer_1.state()
                 );
             }
         }
@@ -107,8 +107,8 @@ impl<'a> AppState<'a> {
 
     /// Service both sequencers and return the most urgent timing
     fn service_sequencers(&mut self) -> ServiceTiming<HalDuration> {
-        let state_1 = self.sequencer_1.get_state();
-        let state_2 = self.sequencer_2.get_state();
+        let state_1 = self.sequencer_1.state();
+        let state_2 = self.sequencer_2.state();
 
         let mut result = ServiceTiming::Complete;
 

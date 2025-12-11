@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **BREAKING**: Renamed `RgbSequencer::get_state()` to `state()` to follow Rust API naming conventions
 - **BREAKING**: `SequenceBuilder::step()` now returns `Result<Self, SequenceError>` instead of panicking when capacity is exceeded
 - License changed from MIT to dual MIT/Apache-2.0
 - README updates for clarity and structure
