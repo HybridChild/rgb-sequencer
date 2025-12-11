@@ -1,5 +1,5 @@
 use defmt::info;
-use embassy_futures::select::{select, Either};
+use embassy_futures::select::{Either, select};
 use embassy_stm32::peripherals::TIM3;
 use embassy_stm32::timer::simple_pwm::SimplePwm;
 use embassy_time::{Duration, Timer};
@@ -8,7 +8,7 @@ use rgb_sequencer::{
     LoopCount, RgbLed, RgbSequence8, RgbSequencer8, ServiceTiming, TransitionStyle,
 };
 
-use crate::types::{EmbassyDuration, EmbassyTimeSource, RgbCommand, RGB_COMMAND_CHANNEL};
+use crate::types::{EmbassyDuration, EmbassyTimeSource, RGB_COMMAND_CHANNEL, RgbCommand};
 
 // ============================================================================
 // PWM-based RGB LED implementation for Embassy
@@ -64,13 +64,13 @@ fn create_rainbow_sequence() -> RgbSequence8<EmbassyDuration> {
 
     RgbSequence8::builder()
         .step(
-            hue(0.0),   // Red
+            hue(0.0), // Red
             EmbassyDuration(Duration::from_millis(2000)),
             TransitionStyle::Linear,
         )
         .unwrap()
         .step(
-            hue(60.0),  // Yellow
+            hue(60.0), // Yellow
             EmbassyDuration(Duration::from_millis(2000)),
             TransitionStyle::Linear,
         )
