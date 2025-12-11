@@ -5,6 +5,7 @@ Embassy async examples for STM32F NUCLEO-F072RB board.
 - **[mode_switcher](#mode_switcher)** - Embassy async example demonstrating single-LED control with mode switching using async tasks and channels. Features a **function-based breathing sequence** using sine wave animation.
 - **[rainbow_capture](#rainbow_capture)** - Embassy async example demonstrating smooth rainbow transitions with interactive color capture using async tasks, channels, and signals. Shows **individual LED control** with the enum wrapper pattern for managing heterogeneous LED types.
 - **[transition_styles](#transition_styles)** - Embassy async example demonstrating all 5 TransitionStyle variants (Step, Linear, EaseIn, EaseOut, EaseInOut) with visual mode indication using the onboard LED.
+- **[brightness_control](#brightness_control)** - Embassy async example demonstrating **global brightness control** with runtime adjustment. Button press cycles through brightness levels while maintaining the same rainbow sequence.
 
 ## Hardware Setup
 
@@ -201,4 +202,47 @@ This allows direct comparison of how each transition style affects the animation
 **Run:**
 ```bash
 cargo run --release --bin transition_styles
+```
+
+### brightness_control
+
+Demonstrates global brightness control using a single RGB LED with a continuously running rainbow sequence. The brightness level is adjusted dynamically in response to button presses, showing how the same sequence appears at different brightness levels.
+
+**Features:**
+- **Single RGB LED**: Runs a continuous rainbow color cycle
+- **Global brightness control**: Adjusts overall LED brightness without modifying the sequence
+- **5 brightness levels**: Full (100%), High (75%), Medium (50%), Low (25%), Dim (10%)
+- **Runtime adjustment**: Brightness changes immediately during playback
+- **Task-based architecture**: Separate tasks for button handling, app logic, and RGB control
+- **Mode indicator**: Onboard LED pattern indicates current brightness level
+- Uses Embassy's time driver for precise async timing
+
+**What you'll learn:**
+- **Global brightness control**: How to use `set_brightness()` to dim LEDs without rebuilding sequences
+- **Runtime brightness adjustment**: Changing brightness during sequence playback
+- **Power management**: Using brightness control for battery saving and night mode
+- **Brightness vs sequence separation**: Understanding that brightness affects output but not sequence timing
+- Channel-based command routing for brightness commands
+
+**Technical Highlights:**
+The example demonstrates the library's global brightness feature, which multiplies all color values by a brightness factor (0.0-1.0) before sending them to the LED. This allows:
+- **Same sequence, different appearance**: The rainbow sequence runs unchanged while appearance varies
+- **Efficient dimming**: No need to recreate sequences or modify color values
+- **Instant updates**: Brightness changes apply on the next `service()` call
+- **Practical applications**: Night mode (low brightness), battery saving (reduced power), ambient light adaptation
+
+The brightness control is independent of sequence logic - timing, transitions, and color progression remain unchanged while the overall output intensity varies.
+
+**Behavior:**
+1. On startup, LED begins rainbow animation at full brightness (100%)
+2. Press button → brightness reduces to 75% (High), onboard LED turns off
+3. Press again → brightness reduces to 50% (Medium), onboard LED turns on
+4. Press again → brightness reduces to 25% (Low), onboard LED turns off
+5. Press again → brightness reduces to 10% (Dim), onboard LED turns on
+6. Press again → brightness returns to 100% (Full), onboard LED turns on (cycle repeats)
+7. The rainbow sequence continues running throughout - only brightness changes
+
+**Run:**
+```bash
+cargo run --release --bin brightness_control
 ```
