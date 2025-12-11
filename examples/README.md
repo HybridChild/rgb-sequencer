@@ -16,9 +16,10 @@ Bare-metal examples for STM32F NUCLEO-F072RB using `stm32f0xx-hal` and SysTick t
 Async examples for STM32F NUCLEO-F072RB using Embassy runtime and async tasks.
 
 **Examples:**
-- `mode_switcher` - Single-LED control with 4 sequences (rainbow, police, flame, breathing)
+- `mode_switcher` - Single-LED with 4 sequences (rainbow, police, flame, breathing)
 - `rainbow_capture` - Multi-LED heterogeneous collection with enum wrapper pattern
-- `transition_styles` - Single-LED control demonstrating all 5 TransitionStyle variants
+- `transition_styles` - Single-LED demonstrating all 5 TransitionStyle variants
+- `brightness_control` - Single-LED demonstrating global brightness control
 
 ### [RP Pico (Bare-Metal)](rp-pico/)
 Bare-metal examples for Raspberry Pi Pico using `rp-pico` HAL and PWM-based RGB LED control.
