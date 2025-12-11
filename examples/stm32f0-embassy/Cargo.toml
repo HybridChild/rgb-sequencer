@@ -46,6 +46,10 @@ path = "bin/rainbow_capture/main.rs"
 name = "transition_styles"
 path = "bin/transition_styles/main.rs"
 
+[[bin]]
+name = "brightness_control"
+path = "bin/brightness_control/main.rs"
+
 [profile.dev]
 opt-level = "z"
 debug = 1

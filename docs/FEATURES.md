@@ -720,3 +720,60 @@ These methods are useful for:
 - **Debugging**: Inspecting sequence state during development
 
 Note: `current_position()` returns `None` for function-based sequences since they don't have discrete steps.
+
+## Global Brightness Control
+
+The sequencer supports global brightness control, allowing you to dim or brighten all colors without modifying the sequence itself.
+
+### Basic Usage
+
+```rust
+let mut sequencer = RgbSequencer8::new(led, &timer);
+sequencer.load(sequence);
+
+// Set brightness to 50%
+sequencer.set_brightness(0.5);
+
+sequencer.start()?;
+```
+
+### Brightness Range
+
+- **`1.0`** (default): Full brightness
+- **`0.5`**: 50% brightness
+- **`0.0`**: LED off (black)
+- Values are automatically clamped to 0.0-1.0 range
+
+```rust
+// These are automatically clamped
+sequencer.set_brightness(2.5);   // Becomes 1.0 (full)
+sequencer.set_brightness(-0.5);  // Becomes 0.0 (off)
+
+// Query current brightness
+let current = sequencer.brightness();  // Returns 0.0-1.0
+```
+
+Brightness can be changed at any time, including during playback:
+
+### How It Works
+
+Brightness is applied as a multiplier to all color channels after sequence evaluation:
+
+```rust
+// Evaluated sequence color: Srgb::new(1.0, 0.5, 0.0) (orange)
+// Brightness: 0.5
+// Actual LED color: Srgb::new(0.5, 0.25, 0.0) (dimmed orange)
+```
+
+This means:
+- Brightness affects all sequences uniformly (step-based and function-based)
+- Works with all transition styles
+- Timing is unaffected - only colors are scaled
+- Minimal performance overhead (single multiplication per channel)
+
+### Use Cases
+
+- Night Mode
+- Battery Saving
+- Ambient Light Adaptation
+- Fade In/Out Effects
