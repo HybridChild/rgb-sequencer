@@ -1,6 +1,6 @@
 //! RGB color sequence definitions and evaluation.
 
-use crate::COLOR_OFF;
+use crate::BLACK;
 use crate::time::TimeDuration;
 use crate::types::{LoopCount, SequenceError, SequenceStep, TransitionStyle};
 use heapless::Vec;
@@ -97,7 +97,7 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
     pub fn evaluate(&self, elapsed: D) -> (Srgb, Option<D>) {
         // Use custom functions if present
         if let (Some(color_fn), Some(timing_fn)) = (self.color_fn, self.timing_fn) {
-            let base = self.start_color.unwrap_or(COLOR_OFF);
+            let base = self.start_color.unwrap_or(BLACK);
             return (color_fn(base, elapsed), timing_fn(elapsed));
         }
 
@@ -108,7 +108,7 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
             (color, timing)
         } else {
             // Empty sequence fallback (shouldn't happen after validation)
-            (COLOR_OFF, None)
+            (BLACK, None)
         }
     }
 

@@ -1,8 +1,9 @@
 use defmt::info;
 use embassy_time::Duration;
-use palette::{FromColor, Hsv, Srgb};
+use palette::Srgb;
 use rgb_sequencer::{
-    LoopCount, RgbSequence8, SequencerAction, SequencerCommand, TimeDuration, TransitionStyle,
+    BLACK, BLUE, GREEN, LoopCount, RED, RgbSequence8, SequencerAction, SequencerCommand,
+    TimeDuration, TransitionStyle, WHITE,
 };
 
 use crate::blink_task::BLINK_COUNT_SIGNAL;
@@ -60,28 +61,26 @@ fn continuous_timing(_elapsed: EmbassyDuration) -> Option<EmbassyDuration> {
 /// the function-based sequence feature. The brightness oscillates between
 /// 10% and 100% over a 4-second cycle.
 fn create_breathing_sequence() -> RgbSequence8<EmbassyDuration> {
-    let white = Srgb::new(1.0, 1.0, 1.0);
-
-    RgbSequence8::from_function(white, breathing_sine_wave, continuous_timing)
+    RgbSequence8::from_function(WHITE, breathing_sine_wave, continuous_timing)
 }
 
 /// Create a rainbow cycle sequence
 fn create_rainbow_sequence() -> RgbSequence8<EmbassyDuration> {
     RgbSequence8::builder()
         .step(
-            Srgb::from_color(Hsv::new(0.0, 1.0, 1.0)),
+            RED,
             EmbassyDuration(Duration::from_millis(4000)),
             TransitionStyle::Linear,
         )
         .unwrap()
         .step(
-            Srgb::from_color(Hsv::new(120.0, 1.0, 1.0)),
+            GREEN,
             EmbassyDuration(Duration::from_millis(4000)),
             TransitionStyle::Linear,
         )
         .unwrap()
         .step(
-            Srgb::from_color(Hsv::new(240.0, 1.0, 1.0)),
+            BLUE,
             EmbassyDuration(Duration::from_millis(4000)),
             TransitionStyle::Linear,
         )
@@ -93,55 +92,51 @@ fn create_rainbow_sequence() -> RgbSequence8<EmbassyDuration> {
 
 /// Create a police lights sequence
 fn create_police_sequence() -> RgbSequence8<EmbassyDuration> {
-    let red = Srgb::new(1.0, 0.0, 0.0);
-    let blue = Srgb::new(0.0, 0.0, 1.0);
-    let off = Srgb::new(0.0, 0.0, 0.0);
-
     RgbSequence8::builder()
         .step(
-            red,
+            RED,
             EmbassyDuration(Duration::from_millis(100)),
             TransitionStyle::Step,
         )
         .unwrap()
         .step(
-            off,
+            BLACK,
             EmbassyDuration(Duration::from_millis(100)),
             TransitionStyle::Step,
         )
         .unwrap()
         .step(
-            red,
+            RED,
             EmbassyDuration(Duration::from_millis(100)),
             TransitionStyle::Step,
         )
         .unwrap()
         .step(
-            off,
+            BLACK,
             EmbassyDuration(Duration::from_millis(100)),
             TransitionStyle::Step,
         )
         .unwrap()
         .step(
-            blue,
+            BLUE,
             EmbassyDuration(Duration::from_millis(100)),
             TransitionStyle::Step,
         )
         .unwrap()
         .step(
-            off,
+            BLACK,
             EmbassyDuration(Duration::from_millis(100)),
             TransitionStyle::Step,
         )
         .unwrap()
         .step(
-            blue,
+            BLUE,
             EmbassyDuration(Duration::from_millis(100)),
             TransitionStyle::Step,
         )
         .unwrap()
         .step(
-            off,
+            BLACK,
             EmbassyDuration(Duration::from_millis(100)),
             TransitionStyle::Step,
         )

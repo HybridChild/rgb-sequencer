@@ -2,8 +2,8 @@ use rtt_target::rprintln;
 use stm32f0xx_hal::prelude::*;
 
 use rgb_sequencer::{
-    COLOR_OFF, RgbSequence8, RgbSequencer8, SequencerState, ServiceTiming, TimeDuration,
-    TimeSource, TransitionStyle,
+    BLACK, RgbSequence8, RgbSequencer8, SequencerState, ServiceTiming, TimeDuration, TimeSource,
+    TransitionStyle,
 };
 use stm32f0::time_source::{HalDuration, HalInstant, HalTimeSource};
 
@@ -34,7 +34,7 @@ impl<'a> AppState<'a> {
         // Create and load sequences
         let sequence_1 = create_rainbow_sequence();
         let sequence_2 = RgbSequence8::builder()
-            .step(COLOR_OFF, HalDuration(0), TransitionStyle::Step)
+            .step(BLACK, HalDuration(0), TransitionStyle::Step)
             .unwrap()
             .build()
             .unwrap();

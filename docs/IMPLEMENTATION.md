@@ -230,7 +230,7 @@ Function-based sequences bypass step evaluation entirely:
 ```rust
 pub fn evaluate(&self, elapsed: D) -> (Srgb, Option<D>) {
     if let (Some(color_fn), Some(timing_fn)) = (self.color_fn, self.timing_fn) {
-        let base = self.start_color.unwrap_or(COLOR_OFF);
+        let base = self.start_color.unwrap_or(BLACK);
         return (color_fn(base, elapsed), timing_fn(elapsed));
     }
 

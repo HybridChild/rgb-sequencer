@@ -1,7 +1,10 @@
 use defmt::info;
 use embassy_stm32::gpio::Output;
-use palette::{FromColor, Hsv, Srgb};
-use rgb_sequencer::{LoopCount, RgbSequence8, SequencerAction, SequencerCommand, TransitionStyle};
+use palette::Srgb;
+use rgb_sequencer::{
+    BLACK, BLUE, GREEN, LoopCount, RED, RgbSequence8, SequencerAction, SequencerCommand,
+    TransitionStyle,
+};
 
 use crate::types::{
     BUTTON_SIGNAL, COLOR_RESPONSE_SIGNAL, EmbassyDuration, ExtendedCommand, LedId,
@@ -12,19 +15,19 @@ use crate::types::{
 fn create_rainbow_sequence() -> RgbSequence8<EmbassyDuration> {
     RgbSequence8::builder()
         .step(
-            Srgb::from_color(Hsv::new(0.0, 1.0, 1.0)), // Red
+            RED,
             EmbassyDuration(embassy_time::Duration::from_millis(4000)),
             TransitionStyle::Linear,
         )
         .unwrap()
         .step(
-            Srgb::from_color(Hsv::new(120.0, 1.0, 1.0)), // Green
+            GREEN,
             EmbassyDuration(embassy_time::Duration::from_millis(4000)),
             TransitionStyle::Linear,
         )
         .unwrap()
         .step(
-            Srgb::from_color(Hsv::new(240.0, 1.0, 1.0)), // Blue
+            BLUE,
             EmbassyDuration(embassy_time::Duration::from_millis(4000)),
             TransitionStyle::Linear,
         )
@@ -91,7 +94,7 @@ pub async fn app_logic_task(mut onboard_led: Output<'static>) {
         .await;
 
     // Load and start black (off) on LED 2
-    let off_sequence = create_static_sequence(Srgb::new(0.0, 0.0, 0.0));
+    let off_sequence = create_static_sequence(BLACK);
     RGB_COMMAND_CHANNEL
         .send(ExtendedCommand::Sequencer(SequencerCommand::new(
             LedId::Led2,
