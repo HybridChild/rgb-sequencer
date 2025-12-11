@@ -34,7 +34,8 @@ pub mod types;
 pub use command::{SequencerAction, SequencerCommand};
 pub use sequence::{RgbSequence, SequenceBuilder, StepPosition};
 pub use sequencer::{
-    Position, RgbLed, RgbSequencer, SequencerError, SequencerState, ServiceTiming,
+    DEFAULT_COLOR_EPSILON, Position, RgbLed, RgbSequencer, SequencerError, SequencerState,
+    ServiceTiming,
 };
 pub use time::{TimeDuration, TimeInstant, TimeSource};
 pub use types::{LoopCount, SequenceError, SequenceStep, TransitionStyle};
