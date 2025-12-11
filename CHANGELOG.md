@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Examples updated to use new convenience methods and type aliases
 
 ### Added
+- `RgbSequencer::into_led()` and `into_parts()` methods for extracting LED from sequencer
 - `RgbSequence::solid()` convenience method for creating single-color sequences
 - `RgbSequencer::peek_next_timing()` method for checking timing hints without state mutation
 - `#[inline]` attributes on all simple getter methods for better optimization

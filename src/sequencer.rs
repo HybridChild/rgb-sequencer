@@ -391,6 +391,18 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
         let position = sequence.find_step_position(elapsed)?;
         Some((position.step_index, position.current_loop))
     }
+
+    /// Consumes the sequencer and returns the LED.
+    #[inline]
+    pub fn into_led(self) -> L {
+        self.led
+    }
+
+    /// Consumes the sequencer and returns the LED and current sequence.
+    #[inline]
+    pub fn into_parts(self) -> (L, Option<RgbSequence<I::Duration, N>>) {
+        (self.led, self.sequence)
+    }
 }
 
 #[cfg(test)]
@@ -454,6 +466,10 @@ mod tests {
                 current_color: Srgb::new(0.0, 0.0, 0.0),
                 color_history: heapless::Vec::new(),
             }
+        }
+
+        fn get_last_color(&self) -> Srgb {
+            self.current_color
         }
     }
 
@@ -1627,5 +1643,85 @@ mod tests {
 
         // Function-based sequences don't have step positions
         assert_eq!(sequencer.current_position(), None);
+    }
+
+    #[test]
+    fn into_led_extracts_led_from_sequencer() {
+        let led = MockLed::new();
+        let timer = MockTimeSource::new();
+        let sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+
+        // Extract LED
+        let extracted_led = sequencer.into_led();
+
+        // LED should be extractable (compilation test)
+        let _ = extracted_led;
+    }
+
+    #[test]
+    fn into_led_preserves_current_color() {
+        let led = MockLed::new();
+        let timer = MockTimeSource::new();
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
+            .step(RED, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
+            .build()
+            .unwrap();
+
+        sequencer.load(sequence);
+        sequencer.start().unwrap();
+        sequencer.service().unwrap();
+
+        // Verify color is RED before extraction
+        assert!(colors_equal(sequencer.current_color(), RED));
+
+        // Extract LED - it should have the color displayed
+        let extracted_led = sequencer.into_led();
+        assert!(colors_equal(extracted_led.get_last_color(), RED));
+    }
+
+    #[test]
+    fn into_parts_extracts_led_and_sequence() {
+        let led = MockLed::new();
+        let timer = MockTimeSource::new();
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
+            .step(RED, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
+            .step(GREEN, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
+            .build()
+            .unwrap();
+
+        sequencer.load(sequence);
+
+        // Extract both LED and sequence
+        let (extracted_led, extracted_sequence) = sequencer.into_parts();
+
+        // LED should be extractable
+        let _ = extracted_led;
+
+        // Sequence should be present
+        assert!(extracted_sequence.is_some());
+        let seq = extracted_sequence.unwrap();
+        assert_eq!(seq.step_count(), 2);
+    }
+
+    #[test]
+    fn into_parts_returns_none_when_no_sequence_loaded() {
+        let led = MockLed::new();
+        let timer = MockTimeSource::new();
+        let sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+
+        // Extract without loading a sequence
+        let (_led, sequence) = sequencer.into_parts();
+
+        // Sequence should be None
+        assert!(sequence.is_none());
     }
 }
