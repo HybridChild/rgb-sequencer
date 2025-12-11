@@ -80,6 +80,15 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
         }
     }
 
+    /// Creates a simple solid color sequence.
+    ///
+    /// Returns `SequenceError::CapacityExceeded` if `N < 1`.
+    pub fn solid(color: Srgb, duration: D) -> Result<Self, SequenceError> {
+        Self::builder()
+            .step(color, duration, TransitionStyle::Step)?
+            .build()
+    }
+
     /// Evaluates color and next service time at elapsed time.
     ///
     /// Returns `(color, timing)` where timing is `Some(D::ZERO)` for continuous animation,
@@ -506,6 +515,40 @@ mod tests {
             .unwrap()
             .build();
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn solid_creates_single_step_sequence() {
+        let seq = RgbSequence::<TestDuration, 1>::solid(RED, TestDuration(1000)).unwrap();
+
+        // Should have exactly one step
+        assert_eq!(seq.step_count(), 1);
+
+        // Should use Step transition
+        let step = seq.get_step(0).unwrap();
+        assert!(colors_equal(step.color, RED));
+        assert_eq!(step.duration, TestDuration(1000));
+        assert_eq!(step.transition, TransitionStyle::Step);
+
+        // Should hold the color for the duration
+        let (color, timing) = seq.evaluate(TestDuration(500));
+        assert!(colors_equal(color, RED));
+        assert_eq!(timing, Some(TestDuration(500))); // 500ms remaining
+
+        // Should complete after duration
+        let (color, timing) = seq.evaluate(TestDuration(1000));
+        assert!(colors_equal(color, RED));
+        assert_eq!(timing, None); // Sequence complete
+    }
+
+    #[test]
+    fn solid_requires_capacity_of_at_least_one() {
+        let result = RgbSequence::<TestDuration, 0>::solid(RED, TestDuration(1000));
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            SequenceError::CapacityExceeded
+        ));
     }
 
     #[test]
