@@ -309,7 +309,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
 
     /// Returns current state.
     #[inline]
-    pub fn get_state(&self) -> SequencerState {
+    pub fn state(&self) -> SequencerState {
         self.state
     }
 
@@ -558,10 +558,10 @@ mod tests {
             .unwrap();
 
         sequencer.load(sequence);
-        assert_eq!(sequencer.get_state(), SequencerState::Loaded);
+        assert_eq!(sequencer.state(), SequencerState::Loaded);
 
         sequencer.start().unwrap();
-        assert_eq!(sequencer.get_state(), SequencerState::Running);
+        assert_eq!(sequencer.state(), SequencerState::Running);
 
         // LED should now be RED
         assert!(colors_equal(sequencer.current_color(), RED));
@@ -671,14 +671,14 @@ mod tests {
 
         // Pause
         sequencer.pause().unwrap();
-        assert_eq!(sequencer.get_state(), SequencerState::Paused);
+        assert_eq!(sequencer.state(), SequencerState::Paused);
 
         // Advance time while paused (simulating delay)
         timer.advance(TestDuration(3000));
 
         // Resume - should still be in RED step
         sequencer.resume().unwrap();
-        assert_eq!(sequencer.get_state(), SequencerState::Running);
+        assert_eq!(sequencer.state(), SequencerState::Running);
         assert!(colors_equal(sequencer.current_color(), RED));
 
         // Advance 500ms more - should transition to GREEN (total 1000ms in RED)
@@ -705,7 +705,7 @@ mod tests {
         assert!(colors_equal(sequencer.current_color(), RED));
 
         sequencer.stop().unwrap();
-        assert_eq!(sequencer.get_state(), SequencerState::Loaded);
+        assert_eq!(sequencer.state(), SequencerState::Loaded);
         assert!(colors_equal(sequencer.current_color(), BLACK));
     }
 
@@ -727,7 +727,7 @@ mod tests {
         assert!(colors_equal(sequencer.current_color(), RED));
 
         sequencer.clear();
-        assert_eq!(sequencer.get_state(), SequencerState::Idle);
+        assert_eq!(sequencer.state(), SequencerState::Idle);
         assert!(colors_equal(sequencer.current_color(), BLACK));
     }
 
@@ -805,7 +805,7 @@ mod tests {
 
         // Should return Complete to indicate completion
         assert_eq!(timing, ServiceTiming::Complete);
-        assert_eq!(sequencer.get_state(), SequencerState::Complete);
+        assert_eq!(sequencer.state(), SequencerState::Complete);
         assert!(colors_equal(sequencer.current_color(), BLUE));
     }
 
@@ -836,7 +836,7 @@ mod tests {
         // Restart should reset to beginning
         let restart_result = sequencer.restart();
         assert!(restart_result.is_ok());
-        assert_eq!(sequencer.get_state(), SequencerState::Running);
+        assert_eq!(sequencer.state(), SequencerState::Running);
         assert!(colors_equal(sequencer.current_color(), RED));
     }
 
@@ -863,7 +863,7 @@ mod tests {
 
         // Restart from paused should reset and run
         sequencer.restart().unwrap();
-        assert_eq!(sequencer.get_state(), SequencerState::Running);
+        assert_eq!(sequencer.state(), SequencerState::Running);
         assert!(colors_equal(sequencer.current_color(), RED));
     }
 
@@ -886,11 +886,11 @@ mod tests {
         sequencer.start().unwrap();
         timer.advance(TestDuration(200));
         sequencer.service().unwrap();
-        assert_eq!(sequencer.get_state(), SequencerState::Complete);
+        assert_eq!(sequencer.state(), SequencerState::Complete);
 
         // Restart should reset and run from beginning
         sequencer.restart().unwrap();
-        assert_eq!(sequencer.get_state(), SequencerState::Running);
+        assert_eq!(sequencer.state(), SequencerState::Running);
         assert!(colors_equal(sequencer.current_color(), RED));
     }
 
@@ -933,38 +933,38 @@ mod tests {
         // Test Load action
         let result = sequencer.handle_action(SequencerAction::Load(sequence));
         assert!(result.is_ok());
-        assert_eq!(sequencer.get_state(), SequencerState::Loaded);
+        assert_eq!(sequencer.state(), SequencerState::Loaded);
 
         // Test Start action
         let result = sequencer.handle_action(SequencerAction::Start);
         assert!(result.is_ok());
-        assert_eq!(sequencer.get_state(), SequencerState::Running);
+        assert_eq!(sequencer.state(), SequencerState::Running);
 
         // Test Pause action
         let result = sequencer.handle_action(SequencerAction::Pause);
         assert!(result.is_ok());
-        assert_eq!(sequencer.get_state(), SequencerState::Paused);
+        assert_eq!(sequencer.state(), SequencerState::Paused);
 
         // Test Resume action
         let result = sequencer.handle_action(SequencerAction::Resume);
         assert!(result.is_ok());
-        assert_eq!(sequencer.get_state(), SequencerState::Running);
+        assert_eq!(sequencer.state(), SequencerState::Running);
 
         // Test Stop action
         let result = sequencer.handle_action(SequencerAction::Stop);
         assert!(result.is_ok());
-        assert_eq!(sequencer.get_state(), SequencerState::Loaded);
+        assert_eq!(sequencer.state(), SequencerState::Loaded);
 
         // Test Restart action
         sequencer.start().unwrap();
         let result = sequencer.handle_action(SequencerAction::Restart);
         assert!(result.is_ok());
-        assert_eq!(sequencer.get_state(), SequencerState::Running);
+        assert_eq!(sequencer.state(), SequencerState::Running);
 
         // Test Clear action
         let result = sequencer.handle_action(SequencerAction::Clear);
         assert!(result.is_ok());
-        assert_eq!(sequencer.get_state(), SequencerState::Idle);
+        assert_eq!(sequencer.state(), SequencerState::Idle);
     }
 
     #[test]
@@ -975,7 +975,7 @@ mod tests {
             RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
         // Initial state queries
-        assert_eq!(sequencer.get_state(), SequencerState::Idle);
+        assert_eq!(sequencer.state(), SequencerState::Idle);
         assert!(!sequencer.is_running());
         assert!(!sequencer.is_paused());
         assert!(sequencer.current_sequence().is_none());
@@ -1028,7 +1028,7 @@ mod tests {
         // Stop from paused should work
         let result = sequencer.stop();
         assert!(result.is_ok());
-        assert_eq!(sequencer.get_state(), SequencerState::Loaded);
+        assert_eq!(sequencer.state(), SequencerState::Loaded);
         assert!(colors_equal(sequencer.current_color(), BLACK));
     }
 
@@ -1051,11 +1051,11 @@ mod tests {
         timer.advance(TestDuration(200));
         sequencer.service().unwrap();
 
-        assert_eq!(sequencer.get_state(), SequencerState::Complete);
+        assert_eq!(sequencer.state(), SequencerState::Complete);
 
         let result = sequencer.stop();
         assert!(result.is_ok());
-        assert_eq!(sequencer.get_state(), SequencerState::Loaded);
+        assert_eq!(sequencer.state(), SequencerState::Loaded);
     }
 
     #[test]
@@ -1117,7 +1117,7 @@ mod tests {
         // degradation would kick in.
 
         sequencer.resume().unwrap();
-        assert_eq!(sequencer.get_state(), SequencerState::Running);
+        assert_eq!(sequencer.state(), SequencerState::Running);
     }
 
     #[test]
@@ -1153,7 +1153,7 @@ mod tests {
 
         // State: Idle -> Loaded
         sequencer.load(sequence);
-        assert_eq!(sequencer.get_state(), SequencerState::Loaded);
+        assert_eq!(sequencer.state(), SequencerState::Loaded);
 
         // State: Loaded -> Invalid operations
         assert!(sequencer.pause().is_err());
@@ -1164,11 +1164,11 @@ mod tests {
 
         // State: Loaded -> Running
         assert!(sequencer.start().is_ok());
-        assert_eq!(sequencer.get_state(), SequencerState::Running);
+        assert_eq!(sequencer.state(), SequencerState::Running);
 
         // State: Running -> Paused
         assert!(sequencer.pause().is_ok());
-        assert_eq!(sequencer.get_state(), SequencerState::Paused);
+        assert_eq!(sequencer.state(), SequencerState::Paused);
 
         // State: Paused -> Invalid operations
         assert!(sequencer.start().is_err());
@@ -1177,25 +1177,25 @@ mod tests {
 
         // State: Paused -> Running
         assert!(sequencer.resume().is_ok());
-        assert_eq!(sequencer.get_state(), SequencerState::Running);
+        assert_eq!(sequencer.state(), SequencerState::Running);
 
         // State: Running -> Loaded (via stop)
         assert!(sequencer.stop().is_ok());
-        assert_eq!(sequencer.get_state(), SequencerState::Loaded);
+        assert_eq!(sequencer.state(), SequencerState::Loaded);
 
         // State: Loaded -> Running -> Complete
         sequencer.start().unwrap();
         timer.advance(TestDuration(200));
         sequencer.service().unwrap();
-        assert_eq!(sequencer.get_state(), SequencerState::Complete);
+        assert_eq!(sequencer.state(), SequencerState::Complete);
 
         // State: Complete -> Running (via restart)
         assert!(sequencer.restart().is_ok());
-        assert_eq!(sequencer.get_state(), SequencerState::Running);
+        assert_eq!(sequencer.state(), SequencerState::Running);
 
         // State: Running -> Idle (via clear)
         sequencer.clear();
-        assert_eq!(sequencer.get_state(), SequencerState::Idle);
+        assert_eq!(sequencer.state(), SequencerState::Idle);
     }
 
     #[test]
@@ -1224,7 +1224,7 @@ mod tests {
 
         // Load second sequence should stop the first and transition to Loaded
         sequencer.load(sequence2);
-        assert_eq!(sequencer.get_state(), SequencerState::Loaded);
+        assert_eq!(sequencer.state(), SequencerState::Loaded);
 
         // Start second sequence
         sequencer.start().unwrap();
@@ -1272,7 +1272,7 @@ mod tests {
 
         // Should go from Idle -> Loaded -> Running in one call
         let timing = sequencer.load_and_start(sequence).unwrap();
-        assert_eq!(sequencer.get_state(), SequencerState::Running);
+        assert_eq!(sequencer.state(), SequencerState::Running);
         assert!(colors_equal(sequencer.current_color(), RED));
         assert_eq!(timing, ServiceTiming::Delay(TestDuration(1000)));
 

@@ -239,7 +239,7 @@ Single 4-step sequence (Red → Green → Blue → White) with:
 - Linear and Step transitions
 - \`start_color\` and \`landing_color\`
 - Finite loop count (3 iterations)
-- All API methods exercised: load, start, service, pause, resume, restart, get_state, clear
+- All API methods exercised: load, start, service, pause, resume, restart, state, clear
 
 Trait implementations are minimal stubs (zero-size) to isolate library overhead.
 
