@@ -19,7 +19,7 @@
 //!
 //! - **`colors`** module - HSV color space helpers for intuitive color creation
 //!
-//! Uses f32 extensively - performance varies by FPU availability. See CLAUDE.md for details.
+//! Uses f32 extensively - performance varies by FPU availability.
 
 // Re-export Srgb from palette for user convenience
 pub use palette::Srgb;
@@ -33,7 +33,9 @@ pub mod types;
 
 pub use command::{SequencerAction, SequencerCommand};
 pub use sequence::{RgbSequence, SequenceBuilder, StepPosition};
-pub use sequencer::{RgbLed, RgbSequencer, SequencerError, SequencerState, ServiceTiming};
+pub use sequencer::{
+    Position, RgbLed, RgbSequencer, SequencerError, SequencerState, ServiceTiming,
+};
 pub use time::{TimeDuration, TimeInstant, TimeSource};
 pub use types::{LoopCount, SequenceError, SequenceStep, TransitionStyle};
 

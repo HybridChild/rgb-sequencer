@@ -43,6 +43,16 @@ pub enum ServiceTiming<D> {
     Complete,
 }
 
+/// Current playback position within a sequence.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct Position {
+    /// Current step index (0-based).
+    pub step_index: usize,
+    /// Current loop number (0-based).
+    pub loop_number: u32,
+}
+
 /// Errors that can occur during sequencer operations.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -373,12 +383,11 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
         })
     }
 
-    /// Returns current playback position (step index, loop number).
+    /// Returns current playback position.
     ///
-    /// Returns `None` if not running or sequence is function-based. Useful for event detection
-    /// (step changes, loop completions) - see examples in tests.
+    /// Returns `None` if not running or sequence is function-based.
     #[inline]
-    pub fn current_position(&self) -> Option<(usize, u32)> {
+    pub fn current_position(&self) -> Option<Position> {
         if self.state != SequencerState::Running {
             return None;
         }
@@ -388,8 +397,11 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
         let current_time = self.time_source.now();
         let elapsed = current_time.duration_since(start_time);
 
-        let position = sequence.find_step_position(elapsed)?;
-        Some((position.step_index, position.current_loop))
+        let step_position = sequence.find_step_position(elapsed)?;
+        Some(Position {
+            step_index: step_position.step_index,
+            loop_number: step_position.current_loop,
+        })
     }
 
     /// Consumes the sequencer and returns the LED.
@@ -1485,22 +1497,30 @@ mod tests {
         sequencer.start().unwrap();
 
         // At start - step 0, loop 0
-        assert_eq!(sequencer.current_position(), Some((0, 0)));
+        let pos = sequencer.current_position().unwrap();
+        assert_eq!(pos.step_index, 0);
+        assert_eq!(pos.loop_number, 0);
 
         // After 50ms - still step 0, loop 0
         timer.advance(TestDuration(50));
         sequencer.service().unwrap();
-        assert_eq!(sequencer.current_position(), Some((0, 0)));
+        let pos = sequencer.current_position().unwrap();
+        assert_eq!(pos.step_index, 0);
+        assert_eq!(pos.loop_number, 0);
 
         // After 100ms - step 1, loop 0
         timer.advance(TestDuration(50));
         sequencer.service().unwrap();
-        assert_eq!(sequencer.current_position(), Some((1, 0)));
+        let pos = sequencer.current_position().unwrap();
+        assert_eq!(pos.step_index, 1);
+        assert_eq!(pos.loop_number, 0);
 
         // After 200ms - step 2, loop 0
         timer.advance(TestDuration(100));
         sequencer.service().unwrap();
-        assert_eq!(sequencer.current_position(), Some((2, 0)));
+        let pos = sequencer.current_position().unwrap();
+        assert_eq!(pos.step_index, 2);
+        assert_eq!(pos.loop_number, 0);
 
         // After 300ms - sequence complete, no position
         timer.advance(TestDuration(100));
@@ -1528,22 +1548,30 @@ mod tests {
         sequencer.start().unwrap();
 
         // Loop 0
-        assert_eq!(sequencer.current_position(), Some((0, 0)));
+        let pos = sequencer.current_position().unwrap();
+        assert_eq!(pos.step_index, 0);
+        assert_eq!(pos.loop_number, 0);
 
         // Advance to loop 1
         timer.advance(TestDuration(200));
         sequencer.service().unwrap();
-        assert_eq!(sequencer.current_position(), Some((0, 1)));
+        let pos = sequencer.current_position().unwrap();
+        assert_eq!(pos.step_index, 0);
+        assert_eq!(pos.loop_number, 1);
 
         // Mid loop 1
         timer.advance(TestDuration(50));
         sequencer.service().unwrap();
-        assert_eq!(sequencer.current_position(), Some((0, 1)));
+        let pos = sequencer.current_position().unwrap();
+        assert_eq!(pos.step_index, 0);
+        assert_eq!(pos.loop_number, 1);
 
         // Advance to loop 2
         timer.advance(TestDuration(150));
         sequencer.service().unwrap();
-        assert_eq!(sequencer.current_position(), Some((0, 2)));
+        let pos = sequencer.current_position().unwrap();
+        assert_eq!(pos.step_index, 0);
+        assert_eq!(pos.loop_number, 2);
 
         // Complete all loops
         timer.advance(TestDuration(200));
@@ -1583,14 +1611,16 @@ mod tests {
 
             // Detect position changes (step enter or loop change)
             if current != last_position {
-                if let Some((step, loop_num)) = current {
-                    step_enter_events.push((step, loop_num)).ok();
+                if let Some(pos) = current {
+                    step_enter_events
+                        .push((pos.step_index, pos.loop_number))
+                        .ok();
 
                     // Detect loop completion (when returning to step 0 with higher loop number)
-                    if step == 0 && loop_num > 0 {
-                        if let Some((_, last_loop)) = last_position {
-                            if loop_num > last_loop {
-                                loop_complete_events.push(last_loop).ok();
+                    if pos.step_index == 0 && pos.loop_number > 0 {
+                        if let Some(last_pos) = last_position {
+                            if pos.loop_number > last_pos.loop_number {
+                                loop_complete_events.push(last_pos.loop_number).ok();
                             }
                         }
                     }

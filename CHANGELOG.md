@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **BREAKING**: `RgbSequencer::current_position()` now returns `Option<Position>` instead of `Option<(usize, u32)>`
 - **BREAKING**: Renamed `RgbSequencer::get_state()` to `state()` to follow Rust API naming conventions
 - **BREAKING**: `SequenceBuilder::step()` now returns `Result<Self, SequenceError>` instead of panicking when capacity is exceeded
 - License changed from MIT to dual MIT/Apache-2.0
@@ -17,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Examples updated to use new convenience methods and type aliases
 
 ### Added
+- `Position` struct for representing playback position with named fields (`step_index`, `loop_number`)
 - `colors` module with HSV color space helpers (`hsv()` and `hue()`) for more intuitive color creation
 - `RgbSequencer::into_led()` and `into_parts()` methods for extracting LED from sequencer
 - `RgbSequence::solid()` convenience method for creating single-color sequences
