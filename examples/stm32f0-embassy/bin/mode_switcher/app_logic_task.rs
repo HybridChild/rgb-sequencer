@@ -163,20 +163,20 @@ fn flame_flicker(base_color: Srgb, elapsed: EmbassyDuration) -> Srgb {
     let elapsed_ms = elapsed.as_millis();
 
     // Use multiple sine waves at different frequencies to create pseudo-random flicker
-    // Main flicker: fast, irregular brightness changes (50-150ms period)
-    let fast_angle = (elapsed_ms as f32 * 0.041) * 2.0 * core::f32::consts::PI; // ~24 Hz
+    // Main flicker: fast, irregular brightness changes (~4 Hz)
+    let fast_angle = (elapsed_ms as f32 * 0.004) * 2.0 * core::f32::consts::PI; // ~4 Hz
     let fast_flicker = libm::sinf(fast_angle);
 
-    // Medium flicker: adds complexity (200-400ms period)
-    let med_angle = (elapsed_ms as f32 * 0.0087) * 2.0 * core::f32::consts::PI; // ~8.7 Hz
+    // Medium flicker: adds complexity (~1.5 Hz)
+    let med_angle = (elapsed_ms as f32 * 0.0015) * 2.0 * core::f32::consts::PI; // ~1.5 Hz
     let med_flicker = libm::sinf(med_angle);
 
-    // Slow wave: gentle overall brightness variation (1-2s period)
-    let slow_angle = (elapsed_ms as f32 * 0.0013) * 2.0 * core::f32::consts::PI; // ~1.3 Hz
+    // Slow wave: gentle overall brightness variation (~0.7 Hz)
+    let slow_angle = (elapsed_ms as f32 * 0.0007) * 2.0 * core::f32::consts::PI; // ~0.7 Hz
     let slow_wave = libm::sinf(slow_angle);
 
     // Color temperature variation (flame shifts between deep orange and bright yellow)
-    let color_angle = (elapsed_ms as f32 * 0.0031) * 2.0 * core::f32::consts::PI; // ~3.1 Hz
+    let color_angle = (elapsed_ms as f32 * 0.001) * 2.0 * core::f32::consts::PI; // ~1 Hz
     let color_shift = libm::sinf(color_angle);
 
     // Combine flickers with different weights
