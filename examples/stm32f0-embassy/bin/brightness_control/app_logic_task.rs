@@ -1,7 +1,7 @@
 use defmt::info;
 
 use crate::blink_task::BLINK_COUNT_SIGNAL;
-use crate::types::{BrightnessLevel, RgbCommand, BUTTON_SIGNAL, RGB_COMMAND_CHANNEL};
+use crate::types::{BUTTON_SIGNAL, BrightnessLevel, RGB_COMMAND_CHANNEL, RgbCommand};
 
 /// Get the blink count for the current brightness level
 /// - Full (100%): 0 blinks (solid ON)
