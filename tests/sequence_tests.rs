@@ -4,9 +4,9 @@ mod common;
 use common::*;
 
 use palette::{Mix, Srgb};
-use rgb_sequencer::TimeDuration;
 use rgb_sequencer::sequence::RgbSequence;
 use rgb_sequencer::types::{LoopCount, SequenceError, TransitionStyle};
+use rgb_sequencer::{TimeDuration, YELLOW};
 
 #[test]
 fn builder_rejects_empty_sequence() {

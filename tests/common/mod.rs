@@ -1,5 +1,7 @@
 //! Shared test infrastructure for rgb-sequencer integration tests
 
+#![allow(dead_code)] // Items used across multiple test files; Rust analyzes per-file
+
 use palette::Srgb;
 use rgb_sequencer::{RgbLed, TimeDuration, TimeInstant, TimeSource};
 
@@ -69,7 +71,6 @@ impl MockLed {
         self.current_color
     }
 
-    #[allow(dead_code)]
     pub fn color_history(&self) -> &[Srgb] {
         &self.color_history
     }
@@ -104,7 +105,6 @@ impl MockTimeSource {
         self.current_time.set(TestInstant(current.0 + duration.0));
     }
 
-    #[allow(dead_code)]
     pub fn set_time(&self, time: TestInstant) {
         self.current_time.set(time);
     }
@@ -135,7 +135,6 @@ pub fn colors_equal(a: Srgb, b: Srgb) -> bool {
 }
 
 /// Compare two colors with custom epsilon
-#[allow(dead_code)]
 pub fn colors_equal_epsilon(a: Srgb, b: Srgb, epsilon: f32) -> bool {
     (a.red - b.red).abs() < epsilon
         && (a.green - b.green).abs() < epsilon
