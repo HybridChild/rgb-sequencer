@@ -234,6 +234,34 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
         }
     }
 
+    /// Peeks at next timing hint without updating LED or advancing state.
+    ///
+    /// Returns `SequencerError::InvalidState` if not in `Running` state.
+    #[inline]
+    pub fn peek_next_timing(&self) -> Result<ServiceTiming<I::Duration>, SequencerError> {
+        if self.state != SequencerState::Running {
+            return Err(SequencerError::InvalidState {
+                expected: "Running",
+                actual: self.state,
+            });
+        }
+
+        let sequence = self.sequence.as_ref().unwrap();
+        let start_time = self.start_time.unwrap();
+        let current_time = self.time_source.now();
+        let elapsed = current_time.duration_since(start_time);
+
+        // Evaluate timing without updating state
+        let (_color, next_service) = sequence.evaluate(elapsed);
+
+        // Convert timing hint to ServiceTiming
+        match next_service {
+            None => Ok(ServiceTiming::Complete),
+            Some(duration) if duration == I::Duration::ZERO => Ok(ServiceTiming::Continuous),
+            Some(duration) => Ok(ServiceTiming::Delay(duration)),
+        }
+    }
+
     /// Stops sequence and turns LED off.
     pub fn stop(&mut self) -> Result<(), SequencerError> {
         match self.state {
@@ -808,6 +836,78 @@ mod tests {
         assert_eq!(timing, ServiceTiming::Complete);
         assert_eq!(sequencer.state(), SequencerState::Complete);
         assert!(colors_equal(sequencer.current_color(), BLUE));
+    }
+
+    #[test]
+    fn peek_next_timing_returns_timing_without_state_changes() {
+        let led = MockLed::new();
+        let timer = MockTimeSource::new();
+        let mut sequencer =
+            RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+
+        let sequence = RgbSequence::<TestDuration, 8>::builder()
+            .step(RED, TestDuration(1000), TransitionStyle::Step)
+            .unwrap()
+            .step(GREEN, TestDuration(1000), TransitionStyle::Linear)
+            .unwrap()
+            .loop_count(LoopCount::Finite(1))
+            .build()
+            .unwrap();
+
+        sequencer.load(sequence);
+        sequencer.start().unwrap();
+
+        // Peek should return Delay for step transition
+        let peek_timing = sequencer.peek_next_timing().unwrap();
+        assert_eq!(peek_timing, ServiceTiming::Delay(TestDuration(1000)));
+
+        // LED should still be at initial color
+        assert!(colors_equal(sequencer.current_color(), RED));
+
+        // Advance into linear transition
+        timer.advance(TestDuration(1100));
+
+        // Peek should return Continuous for linear transition
+        let peek_timing = sequencer.peek_next_timing().unwrap();
+        assert_eq!(peek_timing, ServiceTiming::Continuous);
+
+        // LED color should not have changed from peek
+        assert!(colors_equal(sequencer.current_color(), RED));
+
+        // Now actually service - LED should update to transitioning color
+        sequencer.service().unwrap();
+        // At t=1100, we're 100ms into a 1000ms linear transition from RED to GREEN
+        // So we should be ~10% of the way from RED to GREEN
+        let current = sequencer.current_color();
+        assert!(current.red < 1.0); // Moving away from red
+        assert!(current.green > 0.0); // Moving toward green
+
+        // Peek when sequence is complete
+        timer.advance(TestDuration(1000));
+        let peek_timing = sequencer.peek_next_timing().unwrap();
+        assert_eq!(peek_timing, ServiceTiming::Complete);
+
+        // State should still be Running (peek doesn't change state)
+        assert_eq!(sequencer.state(), SequencerState::Running);
+
+        // Service should transition to Complete state
+        sequencer.service().unwrap();
+        assert_eq!(sequencer.state(), SequencerState::Complete);
+    }
+
+    #[test]
+    fn peek_next_timing_requires_running_state() {
+        let led = MockLed::new();
+        let timer = MockTimeSource::new();
+        let sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+
+        // Should fail when not running
+        let result = sequencer.peek_next_timing();
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            SequencerError::InvalidState { .. }
+        ));
     }
 
     #[test]
