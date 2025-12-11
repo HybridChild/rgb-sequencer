@@ -90,7 +90,7 @@ echo ""
 
 # 4. Test (no features)
 print_step "Running tests (no default features)..."
-cargo test --lib --no-default-features
+cargo test --no-default-features
 print_success "Tests passed (no features)"
 echo ""
 
