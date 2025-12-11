@@ -1,11 +1,11 @@
 use defmt::info;
-use embassy_stm32::gpio::Output;
 use embassy_time::Duration;
 use palette::{FromColor, Hsv, Srgb};
 use rgb_sequencer::{
     LoopCount, RgbSequence8, SequencerAction, SequencerCommand, TimeDuration, TransitionStyle,
 };
 
+use crate::blink_task::BLINK_COUNT_SIGNAL;
 use crate::types::{BUTTON_SIGNAL, EmbassyDuration, Mode, RGB_COMMAND_CHANNEL};
 
 /// Sine-based breathing effect function
@@ -228,30 +228,22 @@ fn get_sequence_for_mode(mode: Mode) -> RgbSequence8<EmbassyDuration> {
     }
 }
 
-/// Update the onboard LED to indicate the current mode
-fn update_mode_indicator(led: &mut Output<'static>, mode: Mode) {
+/// Get the blink count for the current mode
+/// - Rainbow: 1 blink
+/// - Police: 2 blinks
+/// - Flame: 3 blinks
+/// - Breathing: 4 blinks
+fn get_blink_count(mode: Mode) -> u8 {
     match mode {
-        Mode::Rainbow => {
-            // Mode 2: LED off
-            led.set_low();
-        }
-        Mode::Police => {
-            // Mode 3: LED on
-            led.set_high();
-        }
-        Mode::Breathing => {
-            // Mode 1: LED off
-            led.set_low();
-        }
-        Mode::Flame => {
-            // Mode 4: LED on
-            led.set_high();
-        }
+        Mode::Rainbow => 1,
+        Mode::Police => 2,
+        Mode::Flame => 3,
+        Mode::Breathing => 4,
     }
 }
 
 #[embassy_executor::task]
-pub async fn app_logic_task(mut onboard_led: Output<'static>) {
+pub async fn app_logic_task() {
     info!("Starting app logic task...");
 
     let mut current_mode = Mode::Rainbow;
@@ -266,7 +258,8 @@ pub async fn app_logic_task(mut onboard_led: Output<'static>) {
         ))
         .await;
 
-    update_mode_indicator(&mut onboard_led, current_mode);
+    // Set initial blink pattern
+    BLINK_COUNT_SIGNAL.signal(get_blink_count(current_mode));
 
     loop {
         // Wait for button press signal
@@ -277,8 +270,8 @@ pub async fn app_logic_task(mut onboard_led: Output<'static>) {
         current_mode = current_mode.next();
         info!("New mode: {:?}", current_mode);
 
-        // Update onboard LED indicator
-        update_mode_indicator(&mut onboard_led, current_mode);
+        // Update blink pattern
+        BLINK_COUNT_SIGNAL.signal(get_blink_count(current_mode));
 
         // Create and send new sequence using library's SequencerCommand
         let new_sequence = get_sequence_for_mode(current_mode);

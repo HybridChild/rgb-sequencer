@@ -13,11 +13,13 @@ use embassy_stm32::{Config, Peripherals, bind_interrupts};
 use {defmt_rtt as _, panic_probe as _};
 
 mod app_logic_task;
+mod blink_task;
 mod button_task;
 mod rgb_task;
 mod types;
 
 use app_logic_task::app_logic_task;
+use blink_task::blink_task;
 use button_task::button_task;
 use rgb_task::rgb_task;
 
@@ -107,7 +109,8 @@ async fn main(spawner: Spawner) {
 
     // Spawn tasks
     spawner.spawn(button_task(button)).unwrap();
-    spawner.spawn(app_logic_task(onboard_led)).unwrap();
+    spawner.spawn(blink_task(onboard_led)).unwrap();
+    spawner.spawn(app_logic_task()).unwrap();
     spawner.spawn(rgb_task(pwm_tim3, max_duty_tim3)).unwrap();
 
     info!("Ready!");

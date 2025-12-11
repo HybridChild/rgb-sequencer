@@ -50,18 +50,17 @@ Single-LED controller demonstrating Embassy async architecture with mode switchi
 **Features:**
 - Four modes: Rainbow, Police, Flame and Breathing
 - Function-based sequences for breathing and flame (algorithmic animation)
-- Three async tasks: button, app_logic, rgb
+- Four async tasks: button, blink pattern, app_logic, rgb
 - Inter-task communication via channels and signals
-- Mode indicator via onboard LED
+- Onboard LED blink pattern indicates current mode
 - Embassy time driver for precise async timing
 
 **Behavior:**
-1. On startup, LED begins rainbow animation (synchronized)
-2. Press button → switches to police mode (red/blue alternating)
-3. Press again → switches to flame mode (flickering orange/yellow fire effect)
-4. Press again → switches to breathing mode (gentle white fade using sine wave)
+1. On startup, LED begins rainbow animation, onboard LED blinks once per cycle
+2. Press button → switches to police mode (red/blue alternating), onboard LED blinks twice per cycle
+3. Press again → switches to flame mode (flickering orange/yellow fire effect), onboard LED blinks three times per cycle
+4. Press again → switches to breathing mode (gentle white fade using sine wave), onboard LED blinks four times per cycle
 5. Press again → back to rainbow mode (cycle repeats)
-6. Onboard LED indicates mode: low when breathing, high when rainbow/police/flame
 
 **Run:**
 ```bash
@@ -126,17 +125,17 @@ Demonstrates global brightness control with a continuously running rainbow seque
 - 5 brightness levels: Full (100%), High (75%), Medium (50%), Low (25%), Dim (10%)
 - Button cycles through brightness levels
 - Brightness changes immediately without rebuilding sequence
-- Three async tasks: button, app logic, RGB control
-- Onboard LED pattern indicates current brightness level
+- Four async tasks: button, blink pattern, app logic, RGB control
+- Onboard LED blink pattern indicates current brightness level
 - Embassy time driver for precise async timing
 
 **Behavior:**
-1. On startup, LED begins rainbow animation at full brightness (100%)
-2. Press button → brightness reduces to 75% (High), onboard LED turns off
-3. Press again → brightness reduces to 50% (Medium), onboard LED turns on
-4. Press again → brightness reduces to 25% (Low), onboard LED turns off
-5. Press again → brightness reduces to 10% (Dim), onboard LED turns on
-6. Press again → brightness returns to 100% (Full), onboard LED turns on (cycle repeats)
+1. On startup, LED begins rainbow animation at full brightness (100%), onboard LED solid ON
+2. Press button → brightness reduces to 75% (High), onboard LED blinks once per cycle
+3. Press again → brightness reduces to 50% (Medium), onboard LED blinks twice per cycle
+4. Press again → brightness reduces to 25% (Low), onboard LED blinks three times per cycle
+5. Press again → brightness reduces to 10% (Dim), onboard LED blinks four times per cycle
+6. Press again → brightness returns to 100% (Full), onboard LED solid ON (cycle repeats)
 7. The rainbow sequence continues running throughout - only brightness changes
 
 **Run:**
