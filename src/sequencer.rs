@@ -332,6 +332,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
     }
 
     /// Returns current sequence reference.
+    #[inline]
     pub fn current_sequence(&self) -> Option<&RgbSequence<I::Duration, N>> {
         self.sequence.as_ref()
     }
