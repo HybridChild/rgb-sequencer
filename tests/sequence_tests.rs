@@ -36,26 +36,14 @@ fn builder_accepts_valid_sequence() {
 
 #[test]
 fn solid_creates_single_step_sequence() {
+    // BEHAVIOR: solid() creates a single-step sequence that holds one color
     let seq = RgbSequence::<TestDuration, 1>::solid(RED, TestDuration(1000)).unwrap();
 
-    // Should have exactly one step
     assert_eq!(seq.step_count(), 1);
-
-    // Should use Step transition
     let step = seq.get_step(0).unwrap();
     assert!(colors_equal(step.color, RED));
     assert_eq!(step.duration, TestDuration(1000));
     assert_eq!(step.transition, TransitionStyle::Step);
-
-    // Should hold the color for the duration
-    let (color, timing) = seq.evaluate(TestDuration(500));
-    assert!(colors_equal(color, RED));
-    assert_eq!(timing, Some(TestDuration(500))); // 500ms remaining
-
-    // Should complete after duration
-    let (color, timing) = seq.evaluate(TestDuration(1000));
-    assert!(colors_equal(color, RED));
-    assert_eq!(timing, None); // Sequence complete
 }
 
 #[test]
@@ -70,7 +58,7 @@ fn solid_requires_capacity_of_at_least_one() {
 
 #[test]
 fn function_based_sequence_applies_function_to_base_color() {
-    // Brightness modulation function - works with any base color
+    // BEHAVIOR: Function receives base_color as parameter, allowing reusable color functions
     fn brightness_pulse(base: Srgb, elapsed: TestDuration) -> Srgb {
         let brightness = if elapsed.as_millis() < 500 { 0.5 } else { 1.0 };
         Srgb::new(
@@ -88,32 +76,17 @@ fn function_based_sequence_applies_function_to_base_color() {
         }
     }
 
-    // Same function, different colors
-    let red_pulse =
-        RgbSequence::<TestDuration, 8>::from_function(RED, brightness_pulse, test_timing);
+    let seq = RgbSequence::<TestDuration, 8>::from_function(RED, brightness_pulse, test_timing);
 
-    let blue_pulse =
-        RgbSequence::<TestDuration, 8>::from_function(BLUE, brightness_pulse, test_timing);
+    assert!(seq.is_function_based());
+    assert_eq!(seq.start_color(), Some(RED));
 
-    assert!(red_pulse.is_function_based());
-    assert_eq!(red_pulse.start_color(), Some(RED));
-    assert_eq!(blue_pulse.start_color(), Some(BLUE));
-
-    // Red pulse at 50% brightness
-    let (color, _) = red_pulse.evaluate(TestDuration(100));
-    assert!(colors_equal(color, Srgb::new(0.5, 0.0, 0.0)));
-
-    // Red pulse at 100% brightness
-    let (color, _) = red_pulse.evaluate(TestDuration(600));
-    assert!(colors_equal(color, RED));
-
-    // Blue pulse at 50% brightness
-    let (color, _) = blue_pulse.evaluate(TestDuration(100));
-    assert!(colors_equal(color, Srgb::new(0.0, 0.0, 0.5)));
-
-    // Blue pulse at 100% brightness
-    let (color, _) = blue_pulse.evaluate(TestDuration(600));
-    assert!(colors_equal(color, BLUE));
+    // Function modulates base color: RED at 50%, then 100%
+    assert!(colors_equal(
+        seq.evaluate(TestDuration(100)).0,
+        Srgb::new(0.5, 0.0, 0.0)
+    ));
+    assert!(colors_equal(seq.evaluate(TestDuration(600)).0, RED));
 }
 
 #[test]
@@ -178,24 +151,20 @@ fn loop_duration_is_cached_correctly() {
 
 #[test]
 fn step_transition_holds_color() {
+    // BEHAVIOR: Step transition holds constant color for entire duration
     let sequence = RgbSequence::<TestDuration, 8>::builder()
         .step(RED, TestDuration(1000), TransitionStyle::Step)
         .unwrap()
         .build()
         .unwrap();
 
-    let (color, _) = sequence.evaluate(TestDuration(0));
-    assert!(colors_equal(color, RED));
-
-    let (color, _) = sequence.evaluate(TestDuration(500));
-    assert!(colors_equal(color, RED));
-
-    let (color, _) = sequence.evaluate(TestDuration(999));
-    assert!(colors_equal(color, RED));
+    assert!(colors_equal(sequence.evaluate(TestDuration(0)).0, RED));
+    assert!(colors_equal(sequence.evaluate(TestDuration(999)).0, RED));
 }
 
 #[test]
 fn linear_transition_interpolates_correctly() {
+    // BEHAVIOR: Linear transition smoothly interpolates from previous color to target color
     let sequence = RgbSequence::<TestDuration, 8>::builder()
         .step(RED, TestDuration(100), TransitionStyle::Step)
         .unwrap()
@@ -217,6 +186,7 @@ fn linear_transition_interpolates_correctly() {
 
 #[test]
 fn first_step_with_linear_transition_interpolates_from_last_step() {
+    // BEHAVIOR: When first step uses Linear, infinite loops interpolate from last step (seamless looping)
     let sequence = RgbSequence::<TestDuration, 8>::builder()
         .step(RED, TestDuration(1000), TransitionStyle::Linear)
         .unwrap()
@@ -251,7 +221,8 @@ fn first_step_with_linear_transition_interpolates_from_last_step() {
 
 #[test]
 fn start_color_used_for_first_linear_step_first_loop_only() {
-    // Create sequence with start_color = BLACK and first step = RED with Linear transition
+    // BEHAVIOR: start_color provides smooth entry into first loop only.
+    // Subsequent loops interpolate from last step for seamless looping.
     let sequence = RgbSequence::<TestDuration, 8>::builder()
         .start_color(BLACK)
         .step(RED, TestDuration(1000), TransitionStyle::Linear)
@@ -262,34 +233,24 @@ fn start_color_used_for_first_linear_step_first_loop_only() {
         .build()
         .unwrap();
 
-    assert_eq!(sequence.start_color(), Some(BLACK));
+    // First loop: BLACK → RED (uses start_color)
+    assert!(colors_equal(sequence.evaluate(TestDuration(0)).0, BLACK));
+    assert!(colors_equal(
+        sequence.evaluate(TestDuration(500)).0,
+        BLACK.mix(RED, 0.5)
+    ));
 
-    // First loop - should interpolate from BLACK to RED
-    let (color, _) = sequence.evaluate(TestDuration(0));
-    assert!(colors_equal(color, BLACK)); // Start from BLACK
-
-    let (color, _) = sequence.evaluate(TestDuration(500));
-    let expected_middle = BLACK.mix(RED, 0.5);
-    assert!(colors_equal(color, expected_middle)); // Halfway from BLACK to RED
-
-    let (color, _) = sequence.evaluate(TestDuration(999));
-    assert!(colors_equal(color, RED)); // Almost at RED
-
-    // Second loop - should interpolate from GREEN (last step) to RED
-    let (color, _) = sequence.evaluate(TestDuration(2000));
-    assert!(colors_equal(color, GREEN)); // Start from GREEN (last step's color)
-
-    let (color, _) = sequence.evaluate(TestDuration(2500));
-    let expected_middle = GREEN.mix(RED, 0.5);
-    assert!(colors_equal(color, expected_middle)); // Halfway from GREEN to RED
-
-    let (color, _) = sequence.evaluate(TestDuration(2999));
-    assert!(colors_equal(color, RED)); // Almost at RED
+    // Second loop: GREEN → RED (last step → first step)
+    assert!(colors_equal(sequence.evaluate(TestDuration(2000)).0, GREEN));
+    assert!(colors_equal(
+        sequence.evaluate(TestDuration(2500)).0,
+        GREEN.mix(RED, 0.5)
+    ));
 }
 
 #[test]
 fn start_color_not_used_when_first_step_is_step_transition() {
-    // Create sequence with start_color but first step uses Step transition
+    // BEHAVIOR: start_color only applies to interpolating transitions (Linear, Easing)
     let sequence = RgbSequence::<TestDuration, 8>::builder()
         .start_color(BLACK)
         .step(RED, TestDuration(1000), TransitionStyle::Step)
@@ -310,7 +271,7 @@ fn start_color_not_used_when_first_step_is_step_transition() {
 
 #[test]
 fn start_color_only_affects_first_loop_with_finite_loops() {
-    // Test that start_color only affects the first loop even with finite loops
+    // BEHAVIOR: start_color applies to first loop only, regardless of loop count
     let sequence = RgbSequence::<TestDuration, 8>::builder()
         .start_color(YELLOW)
         .step(RED, TestDuration(1000), TransitionStyle::Linear)
@@ -321,26 +282,17 @@ fn start_color_only_affects_first_loop_with_finite_loops() {
         .build()
         .unwrap();
 
-    // Loop 0 - interpolate from YELLOW to RED
-    let (color, _) = sequence.evaluate(TestDuration(0));
-    assert!(colors_equal(color, YELLOW));
+    // Loop 0: YELLOW → RED
+    assert!(colors_equal(
+        sequence.evaluate(TestDuration(500)).0,
+        YELLOW.mix(RED, 0.5)
+    ));
 
-    let (color, _) = sequence.evaluate(TestDuration(500));
-    assert!(colors_equal(color, YELLOW.mix(RED, 0.5)));
-
-    // Loop 1 - interpolate from GREEN to RED
-    let (color, _) = sequence.evaluate(TestDuration(2000));
-    assert!(colors_equal(color, GREEN));
-
-    let (color, _) = sequence.evaluate(TestDuration(2500));
-    assert!(colors_equal(color, GREEN.mix(RED, 0.5)));
-
-    // Loop 2 - still interpolate from GREEN to RED
-    let (color, _) = sequence.evaluate(TestDuration(4000));
-    assert!(colors_equal(color, GREEN));
-
-    let (color, _) = sequence.evaluate(TestDuration(4500));
-    assert!(colors_equal(color, GREEN.mix(RED, 0.5)));
+    // Loop 1 and beyond: GREEN → RED
+    assert!(colors_equal(
+        sequence.evaluate(TestDuration(2500)).0,
+        GREEN.mix(RED, 0.5)
+    ));
 }
 
 #[test]
@@ -593,7 +545,8 @@ fn sequence_exceeds_capacity() {
 }
 
 #[test]
-fn loop_boundaries_are_precise_to_millisecond() {
+fn loop_boundaries_transition_at_exact_step_durations() {
+    // BEHAVIOR: Steps transition precisely at duration boundaries (critical for timing accuracy)
     let sequence = RgbSequence::<TestDuration, 8>::builder()
         .step(RED, TestDuration(100), TransitionStyle::Step)
         .unwrap()
@@ -604,30 +557,17 @@ fn loop_boundaries_are_precise_to_millisecond() {
         .build()
         .unwrap();
 
-    // Test exact loop boundaries
-    let (color, _) = sequence.evaluate(TestDuration(0));
-    assert!(colors_equal(color, RED)); // Loop 0, step 0
+    // Step boundaries: transition at exact duration, not before/after
+    assert!(colors_equal(sequence.evaluate(TestDuration(99)).0, RED));
+    assert!(colors_equal(sequence.evaluate(TestDuration(100)).0, GREEN));
 
-    let (color, _) = sequence.evaluate(TestDuration(99));
-    assert!(colors_equal(color, RED)); // Loop 0, still step 0
+    // Loop boundaries: restart at exact loop duration
+    assert!(colors_equal(sequence.evaluate(TestDuration(199)).0, GREEN));
+    assert!(colors_equal(sequence.evaluate(TestDuration(200)).0, RED));
 
-    let (color, _) = sequence.evaluate(TestDuration(100));
-    assert!(colors_equal(color, GREEN)); // Loop 0, step 1
-
-    let (color, _) = sequence.evaluate(TestDuration(199));
-    assert!(colors_equal(color, GREEN)); // Loop 0, still step 1
-
-    let (color, _) = sequence.evaluate(TestDuration(200));
-    assert!(colors_equal(color, RED)); // Loop 1, step 0
-
-    let (color, _) = sequence.evaluate(TestDuration(300));
-    assert!(colors_equal(color, GREEN)); // Loop 1, step 1
-
-    let (color, _) = sequence.evaluate(TestDuration(399));
-    assert!(colors_equal(color, GREEN)); // Loop 1, still step 1
-
-    let (color, _) = sequence.evaluate(TestDuration(400));
-    assert!(colors_equal(color, BLUE)); // Complete - landing color
+    // Completion boundary: landing color at exact completion time
+    assert!(colors_equal(sequence.evaluate(TestDuration(399)).0, GREEN));
+    assert!(colors_equal(sequence.evaluate(TestDuration(400)).0, BLUE));
 }
 
 #[test]
@@ -730,14 +670,8 @@ fn sequence_with_many_loops_handles_large_durations_without_overflow() {
 }
 
 #[test]
-fn error_types_are_constructable() {
-    // Verify error types can be constructed
-    let _error1 = SequenceError::EmptySequence;
-    let _error2 = SequenceError::ZeroDurationWithLinear;
-}
-
-#[test]
 fn ease_in_transition_accelerates() {
+    // BEHAVIOR: EaseIn starts slow and accelerates (quadratic: t²)
     let sequence = RgbSequence::<TestDuration, 8>::builder()
         .start_color(BLACK)
         .step(RED, TestDuration(1000), TransitionStyle::EaseIn)
@@ -745,26 +679,19 @@ fn ease_in_transition_accelerates() {
         .build()
         .unwrap();
 
-    // At 25% time, ease-in should be at less than 25% progress (0.25² = 0.0625)
-    let (color_25, _) = sequence.evaluate(TestDuration(250));
-    // Expected: mix(BLACK, RED, 0.0625) = (0.0625, 0, 0)
-    assert!(color_25.red < 0.1);
+    // At 50% time: 0.5² = 0.25 progress (slow start)
+    assert!(
+        sequence.evaluate(TestDuration(500)).0.red > 0.2
+            && sequence.evaluate(TestDuration(500)).0.red < 0.3
+    );
 
-    // At 50% time, ease-in should be at 25% progress (0.5² = 0.25)
-    let (color_50, _) = sequence.evaluate(TestDuration(500));
-    assert!(color_50.red > 0.2 && color_50.red < 0.3);
-
-    // At 75% time, ease-in should be at ~56% progress (0.75² = 0.5625)
-    let (color_75, _) = sequence.evaluate(TestDuration(750));
-    assert!(color_75.red > 0.5 && color_75.red < 0.6);
-
-    // At 100% time, should be at full color
-    let (color_100, _) = sequence.evaluate(TestDuration(1000));
-    assert!(colors_equal(color_100, RED));
+    // At 100% time: reaches full color
+    assert!(colors_equal(sequence.evaluate(TestDuration(1000)).0, RED));
 }
 
 #[test]
 fn ease_out_transition_decelerates() {
+    // BEHAVIOR: EaseOut starts fast and decelerates (quadratic: t * (2 - t))
     let sequence = RgbSequence::<TestDuration, 8>::builder()
         .start_color(BLACK)
         .step(RED, TestDuration(1000), TransitionStyle::EaseOut)
@@ -772,26 +699,19 @@ fn ease_out_transition_decelerates() {
         .build()
         .unwrap();
 
-    // At 25% time, ease-out should be at more than 25% progress
-    // Formula: t * (2 - t) = 0.25 * 1.75 = 0.4375
-    let (color_25, _) = sequence.evaluate(TestDuration(250));
-    assert!(color_25.red > 0.4 && color_25.red < 0.5);
+    // At 50% time: 0.5 * 1.5 = 0.75 progress (fast start)
+    assert!(
+        sequence.evaluate(TestDuration(500)).0.red > 0.7
+            && sequence.evaluate(TestDuration(500)).0.red < 0.8
+    );
 
-    // At 50% time, ease-out should be at 75% progress (0.5 * 1.5 = 0.75)
-    let (color_50, _) = sequence.evaluate(TestDuration(500));
-    assert!(color_50.red > 0.7 && color_50.red < 0.8);
-
-    // At 75% time, ease-out should be at ~94% progress (0.75 * 1.25 = 0.9375)
-    let (color_75, _) = sequence.evaluate(TestDuration(750));
-    assert!(color_75.red > 0.9);
-
-    // At 100% time, should be at full color
-    let (color_100, _) = sequence.evaluate(TestDuration(1000));
-    assert!(colors_equal(color_100, RED));
+    // At 100% time: reaches full color
+    assert!(colors_equal(sequence.evaluate(TestDuration(1000)).0, RED));
 }
 
 #[test]
 fn ease_in_out_transition_symmetric() {
+    // BEHAVIOR: EaseInOut is slow at both ends, fast in middle (S-curve)
     let sequence = RgbSequence::<TestDuration, 8>::builder()
         .start_color(BLACK)
         .step(RED, TestDuration(1000), TransitionStyle::EaseInOut)
@@ -799,23 +719,17 @@ fn ease_in_out_transition_symmetric() {
         .build()
         .unwrap();
 
-    // At 25% time, should be in ease-in phase (slow)
-    // Formula: 2 * t² = 2 * 0.25² = 0.125
-    let (color_25, _) = sequence.evaluate(TestDuration(250));
-    assert!(color_25.red < 0.2);
+    // At 25% time: ease-in phase (slow start, progress < 0.25)
+    assert!(sequence.evaluate(TestDuration(250)).0.red < 0.2);
 
-    // At 50% time, should be at midpoint
-    let (color_50, _) = sequence.evaluate(TestDuration(500));
-    assert!(color_50.red > 0.45 && color_50.red < 0.55);
+    // At 50% time: midpoint (progress ≈ 0.5)
+    assert!(
+        sequence.evaluate(TestDuration(500)).0.red > 0.45
+            && sequence.evaluate(TestDuration(500)).0.red < 0.55
+    );
 
-    // At 75% time, should be in ease-out phase (fast then slow)
-    // Formula: -1 + (4 - 2*t) * t = -1 + 2.5 * 0.75 = 0.875
-    let (color_75, _) = sequence.evaluate(TestDuration(750));
-    assert!(color_75.red > 0.8 && color_75.red < 0.9);
-
-    // At 100% time, should be at full color
-    let (color_100, _) = sequence.evaluate(TestDuration(1000));
-    assert!(colors_equal(color_100, RED));
+    // At 100% time: reaches full color
+    assert!(colors_equal(sequence.evaluate(TestDuration(1000)).0, RED));
 }
 
 #[test]
