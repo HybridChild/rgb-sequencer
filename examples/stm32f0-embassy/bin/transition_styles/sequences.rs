@@ -1,6 +1,6 @@
 use rgb_sequencer::{
-    COLOR_BLUE, COLOR_CYAN, COLOR_GREEN, COLOR_MAGENTA, COLOR_OFF, COLOR_RED, COLOR_WHITE,
-    COLOR_YELLOW, LoopCount, RgbSequence16, TimeDuration, TransitionStyle,
+    BLACK, BLUE, CYAN, GREEN, LoopCount, MAGENTA, RED, RgbSequence16, TimeDuration,
+    TransitionStyle, WHITE, YELLOW,
 };
 use stm32f0_embassy::time_wrapper::EmbassyDuration;
 
@@ -9,33 +9,33 @@ pub fn create_transition_sequence(transition: TransitionStyle) -> RgbSequence16<
     let duration = EmbassyDuration::from_millis(1000);
 
     RgbSequence16::builder()
-        .step(COLOR_RED, duration, transition)
+        .step(RED, duration, transition)
         .unwrap()
-        .step(COLOR_OFF, duration, transition)
+        .step(BLACK, duration, transition)
         .unwrap()
-        .step(COLOR_GREEN, duration, transition)
+        .step(GREEN, duration, transition)
         .unwrap()
-        .step(COLOR_OFF, duration, transition)
+        .step(BLACK, duration, transition)
         .unwrap()
-        .step(COLOR_BLUE, duration, transition)
+        .step(BLUE, duration, transition)
         .unwrap()
-        .step(COLOR_OFF, duration, transition)
+        .step(BLACK, duration, transition)
         .unwrap()
-        .step(COLOR_WHITE, duration, transition)
+        .step(WHITE, duration, transition)
         .unwrap()
-        .step(COLOR_OFF, duration, transition)
+        .step(BLACK, duration, transition)
         .unwrap()
-        .step(COLOR_YELLOW, duration, transition)
+        .step(YELLOW, duration, transition)
         .unwrap()
-        .step(COLOR_OFF, duration, transition)
+        .step(BLACK, duration, transition)
         .unwrap()
-        .step(COLOR_CYAN, duration, transition)
+        .step(CYAN, duration, transition)
         .unwrap()
-        .step(COLOR_OFF, duration, transition)
+        .step(BLACK, duration, transition)
         .unwrap()
-        .step(COLOR_MAGENTA, duration, transition)
+        .step(MAGENTA, duration, transition)
         .unwrap()
-        .step(COLOR_OFF, duration, transition)
+        .step(BLACK, duration, transition)
         .unwrap()
         .loop_count(LoopCount::Infinite)
         .build()

@@ -1,5 +1,7 @@
-use palette::{FromColor, Hsv, Srgb};
-use rgb_sequencer::{LoopCount, RgbSequence, TimeDuration, TransitionStyle};
+use palette::Srgb;
+use rgb_sequencer::{
+    BLACK, BLUE, GREEN, LoopCount, RED, RgbSequence, TimeDuration, TransitionStyle, WHITE,
+};
 use stm32f0::time_source::HalDuration;
 
 /// Sine-based breathing effect function
@@ -57,9 +59,7 @@ fn continuous_timing(_elapsed: HalDuration) -> Option<HalDuration> {
 /// This is an alternative to the step-based breathing sequence, showing
 /// how the same visual effect can be achieved with algorithmic animation.
 pub fn create_breathing_sequence() -> RgbSequence<HalDuration, 16> {
-    let white = Srgb::new(1.0, 1.0, 1.0);
-
-    RgbSequence::from_function(white, breathing_sine_wave, continuous_timing)
+    RgbSequence::from_function(WHITE, breathing_sine_wave, continuous_timing)
 }
 
 /// Create a breathing white sequence using step-based animation (original)
@@ -70,13 +70,12 @@ pub fn create_breathing_sequence() -> RgbSequence<HalDuration, 16> {
 /// This is the original step-based implementation, kept for comparison.
 #[allow(dead_code)]
 pub fn create_breathing_sequence_step_based() -> RgbSequence<HalDuration, 16> {
-    let white = Srgb::new(1.0, 1.0, 1.0);
     let dim_white = Srgb::new(0.1, 0.1, 0.1);
 
     RgbSequence::builder()
         .step(dim_white, HalDuration(2000), TransitionStyle::Linear)
         .unwrap()
-        .step(white, HalDuration(2000), TransitionStyle::Linear)
+        .step(WHITE, HalDuration(2000), TransitionStyle::Linear)
         .unwrap()
         .loop_count(LoopCount::Infinite)
         .build()
@@ -89,23 +88,11 @@ pub fn create_breathing_sequence_step_based() -> RgbSequence<HalDuration, 16> {
 /// creating a full spectrum color cycle. Loops infinitely.
 pub fn create_rainbow_sequence() -> RgbSequence<HalDuration, 16> {
     RgbSequence::builder()
-        .step(
-            Srgb::from_color(Hsv::new(0.0, 1.0, 1.0)), // Red
-            HalDuration(4000),
-            TransitionStyle::Linear,
-        )
+        .step(RED, HalDuration(4000), TransitionStyle::Linear)
         .unwrap()
-        .step(
-            Srgb::from_color(Hsv::new(120.0, 1.0, 1.0)), // Green
-            HalDuration(4000),
-            TransitionStyle::Linear,
-        )
+        .step(GREEN, HalDuration(4000), TransitionStyle::Linear)
         .unwrap()
-        .step(
-            Srgb::from_color(Hsv::new(240.0, 1.0, 1.0)), // Blue
-            HalDuration(4000),
-            TransitionStyle::Linear,
-        )
+        .step(BLUE, HalDuration(4000), TransitionStyle::Linear)
         .unwrap()
         .loop_count(LoopCount::Infinite)
         .build()
@@ -117,26 +104,22 @@ pub fn create_rainbow_sequence() -> RgbSequence<HalDuration, 16> {
 /// Alternates between red flashes and blue flashes with off periods,
 /// creating a police siren effect. Loops infinitely.
 pub fn create_police_sequence() -> RgbSequence<HalDuration, 16> {
-    let red = Srgb::new(1.0, 0.0, 0.0);
-    let blue = Srgb::new(0.0, 0.0, 1.0);
-    let off = Srgb::new(0.0, 0.0, 0.0);
-
     RgbSequence::builder()
-        .step(red, HalDuration(100), TransitionStyle::Step)
+        .step(RED, HalDuration(100), TransitionStyle::Step)
         .unwrap()
-        .step(off, HalDuration(100), TransitionStyle::Step)
+        .step(BLACK, HalDuration(100), TransitionStyle::Step)
         .unwrap()
-        .step(red, HalDuration(100), TransitionStyle::Step)
+        .step(RED, HalDuration(100), TransitionStyle::Step)
         .unwrap()
-        .step(off, HalDuration(100), TransitionStyle::Step)
+        .step(BLACK, HalDuration(100), TransitionStyle::Step)
         .unwrap()
-        .step(blue, HalDuration(100), TransitionStyle::Step)
+        .step(BLUE, HalDuration(100), TransitionStyle::Step)
         .unwrap()
-        .step(off, HalDuration(100), TransitionStyle::Step)
+        .step(BLACK, HalDuration(100), TransitionStyle::Step)
         .unwrap()
-        .step(blue, HalDuration(100), TransitionStyle::Step)
+        .step(BLUE, HalDuration(100), TransitionStyle::Step)
         .unwrap()
-        .step(off, HalDuration(100), TransitionStyle::Step)
+        .step(BLACK, HalDuration(100), TransitionStyle::Step)
         .unwrap()
         .loop_count(LoopCount::Infinite)
         .build()

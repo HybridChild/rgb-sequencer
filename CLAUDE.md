@@ -177,7 +177,7 @@ See README.md and examples for complete usage patterns.
 - **Color type**: Always `palette::Srgb` (f32 RGB in 0.0-1.0 range)
 - **Hardware conversion**: Convert in `RgbLed::set_color()` to native format
 - **Interpolation**: Linear RGB interpolation (perceptually incorrect but fast)
-- **Const colors**: Use `const COLOR_OFF: Srgb = Srgb::new(0.0, 0.0, 0.0)`
+- **Const colors**: Use `const BLACK: Srgb = Srgb::new(0.0, 0.0, 0.0)`
 
 ---
 

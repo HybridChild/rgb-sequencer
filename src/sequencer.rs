@@ -1,6 +1,6 @@
 //! RGB LED sequencer with state management.
 
-use crate::COLOR_OFF;
+use crate::BLACK;
 use crate::command::SequencerAction;
 use crate::sequence::RgbSequence;
 use crate::time::{TimeDuration, TimeInstant, TimeSource};
@@ -113,7 +113,7 @@ fn colors_approximately_equal(a: Srgb, b: Srgb, epsilon: f32) -> bool {
 impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequencer<'t, I, L, T, N> {
     /// Creates sequencer with LED off and default color epsilon.
     pub fn new(mut led: L, time_source: &'t T) -> Self {
-        led.set_color(COLOR_OFF);
+        led.set_color(BLACK);
 
         Self {
             led,
@@ -122,7 +122,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
             sequence: None,
             start_time: None,
             pause_start_time: None,
-            current_color: COLOR_OFF,
+            current_color: BLACK,
             color_epsilon: DEFAULT_COLOR_EPSILON,
             brightness: 1.0,
         }
@@ -130,7 +130,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
 
     /// Creates sequencer with custom color epsilon threshold.
     pub fn with_epsilon(mut led: L, time_source: &'t T, epsilon: f32) -> Self {
-        led.set_color(COLOR_OFF);
+        led.set_color(BLACK);
 
         Self {
             led,
@@ -139,7 +139,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
             sequence: None,
             start_time: None,
             pause_start_time: None,
-            current_color: COLOR_OFF,
+            current_color: BLACK,
             color_epsilon: epsilon,
             brightness: 1.0,
         }
@@ -308,8 +308,8 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
                 self.pause_start_time = None;
                 self.state = SequencerState::Loaded;
 
-                self.led.set_color(COLOR_OFF);
-                self.current_color = COLOR_OFF;
+                self.led.set_color(BLACK);
+                self.current_color = BLACK;
 
                 Ok(())
             }
@@ -369,8 +369,8 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
         self.pause_start_time = None;
         self.state = SequencerState::Idle;
 
-        self.led.set_color(COLOR_OFF);
-        self.current_color = COLOR_OFF;
+        self.led.set_color(BLACK);
+        self.current_color = BLACK;
     }
 
     /// Returns current state.

@@ -13,13 +13,11 @@ use rp_pico::hal::{
 };
 use rtt_target::{rprintln, rtt_init_print};
 
-use palette::{FromColor, Hsv, Srgb};
-
 use rp_pico_examples::rgb_led::PwmRgbLed;
 
 use rgb_sequencer::{
-    COLOR_OFF, LoopCount, RgbSequence8, RgbSequencer8, ServiceTiming, TimeDuration, TimeInstant,
-    TimeSource, TransitionStyle,
+    BLACK, LoopCount, RgbSequence8, RgbSequencer8, ServiceTiming, TimeDuration, TimeInstant,
+    TimeSource, TransitionStyle, colors::hue,
 };
 
 pub const FRAME_RATE_MS: u64 = 16;
@@ -182,29 +180,17 @@ fn main() -> ! {
 
     // Create a sequence
     let sequence = RgbSequence8::<BlinkyDuration>::builder()
-        .step(
-            Srgb::from_color(Hsv::new(60.0, 1.0, 1.0)),
-            BlinkyDuration(0),
-            TransitionStyle::Step,
-        )
+        .step(hue(60.0), BlinkyDuration(0), TransitionStyle::Step)
         .unwrap() // Yellow
-        .step(COLOR_OFF, BlinkyDuration(1000), TransitionStyle::Linear)
+        .step(BLACK, BlinkyDuration(1000), TransitionStyle::Linear)
         .unwrap() // Fade out
-        .step(
-            Srgb::from_color(Hsv::new(180.0, 1.0, 1.0)),
-            BlinkyDuration(0),
-            TransitionStyle::Step,
-        )
+        .step(hue(180.0), BlinkyDuration(0), TransitionStyle::Step)
         .unwrap() // Cyan
-        .step(COLOR_OFF, BlinkyDuration(1000), TransitionStyle::Linear)
+        .step(BLACK, BlinkyDuration(1000), TransitionStyle::Linear)
         .unwrap() // Fade out
-        .step(
-            Srgb::from_color(Hsv::new(300.0, 1.0, 1.0)),
-            BlinkyDuration(0),
-            TransitionStyle::Step,
-        )
+        .step(hue(300.0), BlinkyDuration(0), TransitionStyle::Step)
         .unwrap() // Purple
-        .step(COLOR_OFF, BlinkyDuration(1000), TransitionStyle::Linear)
+        .step(BLACK, BlinkyDuration(1000), TransitionStyle::Linear)
         .unwrap() // Fade out
         .loop_count(LoopCount::Infinite)
         .build()

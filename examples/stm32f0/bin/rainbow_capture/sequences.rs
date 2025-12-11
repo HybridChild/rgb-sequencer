@@ -1,5 +1,4 @@
-use palette::{FromColor, Hsv, Srgb};
-use rgb_sequencer::{LoopCount, RgbSequence8, TransitionStyle};
+use rgb_sequencer::{BLUE, GREEN, LoopCount, RED, RgbSequence8, TransitionStyle};
 use stm32f0::time_source::HalDuration;
 
 /// Create a rainbow sequence that cycles through the full color spectrum
@@ -8,23 +7,11 @@ use stm32f0::time_source::HalDuration;
 /// then loops infinitely.
 pub fn create_rainbow_sequence() -> RgbSequence8<HalDuration> {
     RgbSequence8::builder()
-        .step(
-            Srgb::from_color(Hsv::new(0.0, 1.0, 1.0)),
-            HalDuration(4000),
-            TransitionStyle::Linear,
-        )
+        .step(RED, HalDuration(4000), TransitionStyle::Linear)
         .unwrap()
-        .step(
-            Srgb::from_color(Hsv::new(120.0, 1.0, 1.0)),
-            HalDuration(4000),
-            TransitionStyle::Linear,
-        )
+        .step(GREEN, HalDuration(4000), TransitionStyle::Linear)
         .unwrap()
-        .step(
-            Srgb::from_color(Hsv::new(240.0, 1.0, 1.0)),
-            HalDuration(4000),
-            TransitionStyle::Linear,
-        )
+        .step(BLUE, HalDuration(4000), TransitionStyle::Linear)
         .unwrap()
         .loop_count(LoopCount::Infinite)
         .build()

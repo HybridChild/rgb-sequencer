@@ -57,7 +57,7 @@ palette = { version = "0.7.6", default-features = false, features = ["libm"] }
 ```rust
 use rgb_sequencer::{
     RgbSequencer8, RgbSequence8, RgbLed, TimeSource, TransitionStyle,
-    LoopCount, COLOR_WHITE, COLOR_OFF
+    LoopCount, WHITE, BLACK
 };
 use palette::Srgb;
 
@@ -83,9 +83,9 @@ impl TimeSource<MyInstant> for MyTimer {
 
 // 3. Create a blinking sequence (capacity of 8 steps)
 let sequence = RgbSequence8::<MyDuration>::builder()
-    .step(COLOR_WHITE, Duration::from_millis(500), TransitionStyle::Step).unwrap()  // White
-    .step(COLOR_OFF, Duration::from_millis(500), TransitionStyle::Step).unwrap()    // Off
-    .loop_count(LoopCount::Infinite)                                                // Loop indefinitely
+    .step(WHITE, Duration::from_millis(500), TransitionStyle::Step).unwrap()  // White
+    .step(BLACK, Duration::from_millis(500), TransitionStyle::Step).unwrap()  // Off
+    .loop_count(LoopCount::Infinite)                                          // Loop indefinitely
     .build()
     .unwrap();
 

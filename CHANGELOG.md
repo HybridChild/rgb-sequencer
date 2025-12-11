@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **BREAKING**: Color constants renamed from `COLOR_*` prefix to simple names (`RED`, `GREEN`, `BLUE`, `WHITE`, `YELLOW`, `CYAN`, `MAGENTA`). `COLOR_OFF` renamed to `BLACK`
 - **BREAKING**: `RgbSequencer::current_position()` now returns `Option<Position>` instead of `Option<(usize, u32)>`
 - **BREAKING**: Renamed `RgbSequencer::get_state()` to `state()` to follow Rust API naming conventions
 - **BREAKING**: `SequenceBuilder::step()` now returns `Result<Self, SequenceError>` instead of panicking when capacity is exceeded
@@ -34,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Size analysis script for tracking binary size impact
 - Compiler directives: `#![forbid(unsafe_code)]` and `#![warn(missing_docs)]`
 - Comprehensive documentation for all public API items
-- Common color constants: `COLOR_RED`, `COLOR_GREEN`, `COLOR_BLUE`, `COLOR_WHITE`, `COLOR_YELLOW`, `COLOR_CYAN`, `COLOR_MAGENTA`
+- Common color constants: `RED`, `GREEN`, `BLUE`, `WHITE`, `YELLOW`, `CYAN`, `MAGENTA`, `BLACK`
 - `load_and_start()` convenience method for `RgbSequencer`
 - Type aliases for common capacities: `RgbSequencer4/8/16` and `RgbSequence4/8/16`
 - `SequenceError::CapacityExceeded` variant for robust error handling
