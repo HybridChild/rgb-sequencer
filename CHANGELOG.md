@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Examples updated to use new convenience methods and type aliases
 
 ### Added
+- `#[inline]` attributes on all simple getter methods for better optimization
 - Introduce CHANGELOG.md (this file)
 - `CLAUDE.md` file for AI assistant guidance
 - Comprehensive CI workflow for automated testing

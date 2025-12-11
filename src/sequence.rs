@@ -303,36 +303,43 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
     }
 
     /// Returns loop duration.
+    #[inline]
     pub fn loop_duration(&self) -> D {
         self.loop_duration
     }
 
     /// Returns step count.
+    #[inline]
     pub fn step_count(&self) -> usize {
         self.steps.len()
     }
 
     /// Returns loop count.
+    #[inline]
     pub fn loop_count(&self) -> LoopCount {
         self.loop_count
     }
 
     /// Returns landing color.
+    #[inline]
     pub fn landing_color(&self) -> Option<Srgb> {
         self.landing_color
     }
 
     /// Returns start color.
+    #[inline]
     pub fn start_color(&self) -> Option<Srgb> {
         self.start_color
     }
 
     /// Returns step at index.
+    #[inline]
     pub fn get_step(&self, index: usize) -> Option<&SequenceStep<D>> {
         self.steps.get(index)
     }
 
     /// Returns true if function-based.
+    #[inline]
     pub fn is_function_based(&self) -> bool {
         self.color_fn.is_some()
     }
