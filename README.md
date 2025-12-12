@@ -94,7 +94,6 @@ loop {
 ## Documentation
 
 - **[FEATURES.md](docs/FEATURES.md)** - Complete feature guide with examples
-- **[IMPLEMENTATION.md](docs/IMPLEMENTATION.md)** - Technical implementation details for contributors
 
 ## Memory Impact
 

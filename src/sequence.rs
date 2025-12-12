@@ -7,15 +7,18 @@ use heapless::Vec;
 use palette::{Mix, Srgb};
 
 /// Applies easing curve to linear progress value (0.0 to 1.0).
+///
+/// Uses quadratic easing for balance between visual smoothness and computational
+/// efficiency on embedded targets. More complex curves (cubic, sinusoidal) can be
+/// implemented via function-based sequences if needed.
 #[inline]
 fn apply_easing(t: f32, transition: TransitionStyle) -> f32 {
     match transition {
         TransitionStyle::Step => t,
         TransitionStyle::Linear => t,
-        TransitionStyle::EaseIn => t * t, // Quadratic ease-in
-        TransitionStyle::EaseOut => t * (2.0 - t), // Quadratic ease-out
+        TransitionStyle::EaseIn => t * t,
+        TransitionStyle::EaseOut => t * (2.0 - t),
         TransitionStyle::EaseInOut => {
-            // Quadratic ease-in-out
             if t < 0.5 {
                 2.0 * t * t
             } else {
@@ -199,6 +202,11 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
     }
 
     /// Interpolates color at current position with easing applied.
+    ///
+    /// Uses linear sRGB interpolation for computational efficiency (3 multiplies + 3 adds).
+    /// While not perceptually uniform (e.g., red→green may appear darker at midpoint), this
+    /// avoids expensive gamma correction or LAB color space conversions, making it suitable
+    /// for embedded targets with FPU.
     #[inline]
     fn interpolate_color(&self, position: &StepPosition<D>, step: &SequenceStep<D>) -> Srgb {
         // Determine if this transition should use start_color for first step of first loop
@@ -256,6 +264,7 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
         }
 
         let elapsed_millis = elapsed.as_millis();
+        // Use modulo for O(1) loop position calculation without tracking iteration state
         let current_loop = (elapsed_millis / loop_millis) as u32;
         let time_in_loop = D::from_millis(elapsed_millis % loop_millis);
 
