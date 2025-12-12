@@ -23,6 +23,8 @@ pub enum SequencerAction<D: TimeDuration, const N: usize> {
     Restart,
     /// Clear sequence and turn off LED.
     Clear,
+    /// Set brightness multiplier (0.0-1.0, clamped).
+    SetBrightness(f32),
 }
 
 /// Command targeting a specific LED.

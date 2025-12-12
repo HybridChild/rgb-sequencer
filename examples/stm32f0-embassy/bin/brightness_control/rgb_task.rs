@@ -8,7 +8,7 @@ use rgb_sequencer::{
     LoopCount, RgbLed, RgbSequence8, RgbSequencer8, ServiceTiming, TransitionStyle,
 };
 
-use crate::types::{EmbassyDuration, EmbassyTimeSource, RGB_COMMAND_CHANNEL, RgbCommand};
+use crate::types::{EmbassyDuration, EmbassyTimeSource, RGB_COMMAND_CHANNEL};
 
 // ============================================================================
 // PWM-based RGB LED implementation for Embassy
@@ -133,12 +133,13 @@ pub async fn rgb_task(pwm: SimplePwm<'static, TIM3>, max_duty: u16) {
         .await
         {
             Either::First(command) => {
-                // Handle command
-                match command {
-                    RgbCommand::SetBrightness(level) => {
-                        let brightness_value = level.value();
-                        info!("Setting brightness to {}", brightness_value);
-                        sequencer.set_brightness(brightness_value);
+                // Handle command using built-in dispatcher
+                match sequencer.handle_action(command.action) {
+                    Ok(_) => {
+                        info!("Command handled successfully");
+                    }
+                    Err(e) => {
+                        info!("Command error: {:?}", e);
                     }
                 }
             }

@@ -1,7 +1,8 @@
 use defmt::info;
+use rgb_sequencer::{SequencerAction, SequencerCommand};
 
 use crate::blink_task::BLINK_COUNT_SIGNAL;
-use crate::types::{BUTTON_SIGNAL, BrightnessLevel, RGB_COMMAND_CHANNEL, RgbCommand};
+use crate::types::{BUTTON_SIGNAL, BrightnessLevel, RGB_COMMAND_CHANNEL};
 
 /// Get the blink count for the current brightness level
 /// - Full (100%): 0 blinks (solid ON)
@@ -28,7 +29,10 @@ pub async fn app_logic_task() {
     // Set initial brightness
     info!("Setting initial brightness: {:?}", current_brightness);
     RGB_COMMAND_CHANNEL
-        .send(RgbCommand::SetBrightness(current_brightness))
+        .send(SequencerCommand::new(
+            (),
+            SequencerAction::SetBrightness(current_brightness.value()),
+        ))
         .await;
 
     // Set initial blink pattern
@@ -52,7 +56,10 @@ pub async fn app_logic_task() {
 
         // Send brightness command to RGB task
         RGB_COMMAND_CHANNEL
-            .send(RgbCommand::SetBrightness(current_brightness))
+            .send(SequencerCommand::new(
+                (),
+                SequencerAction::SetBrightness(current_brightness.value()),
+            ))
             .await;
 
         info!("Brightness command sent to RGB task");
