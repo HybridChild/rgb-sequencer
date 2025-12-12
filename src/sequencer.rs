@@ -170,6 +170,10 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
                 self.clear();
                 Ok(ServiceTiming::Complete)
             }
+            SequencerAction::SetBrightness(brightness) => {
+                self.set_brightness(brightness);
+                Ok(ServiceTiming::Complete)
+            }
         }
     }
 
