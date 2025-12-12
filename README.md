@@ -1,6 +1,6 @@
 # rgb-sequencer
 
-A `no_std`-compatible Rust library for controlling RGB LEDs through timed color sequences on embedded systems.
+A `no_std`-compatible Rust library for controlling RGB LEDs in embedded systems through timed color sequences.
 
 [![Platform](https://img.shields.io/badge/platform-no__std-blue)](https://github.com/HybridChild/rgb-sequencer)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-green)](https://github.com/HybridChild/rgb-sequencer)
@@ -12,37 +12,13 @@ A `no_std`-compatible Rust library for controlling RGB LEDs through timed color 
 **rgb-sequencer** provides a lightweight framework for creating and executing RGB LED animations on resource-constrained embedded devices. Define high-level sequences and let the library handle timing, interpolation, and LED updates.
 
 **Key features:**
-- **Zero heap allocation** - Fixed-capacity collections, compile-time sizing
-- **Platform independent** - Trait abstractions for LEDs and timing
-- **Two animation approaches** - Step-based (waypoints) and function-based (algorithmic)
-- **Efficient timing** - Service hints enable power-efficient operation
-- **State machine** - Explicit states prevent errors (Idle, Loaded, Running, Paused, Complete)
+- **Platform independent** - Hardware is abstracted through traits for LEDs and time systems
+- **Smooth color transitions** - Linear interpolation and quadratic easing
+- **Brightness control** - Global brightness adjustment without recreating sequences
 - **Pause/resume** - With timing compensation for perfect continuity
 - **Multi-LED support** - Independent sequencers, command-based control
-
-The library supports two animation approaches:
-
-1. **Step-based sequences**: Define explicit color waypoints with durations and transition styles (instant, linear, or eased interpolation). Supports quadratic easing functions (ease-in, ease-out, ease-in-out) for more natural-looking transitions. Perfect for discrete animations like police lights, status indicators, or scripted color shows. Support finite or infinite looping with configurable landing colors, and smooth entry animations via start colors.
-
-2. **Function-based sequences**: Use custom functions to compute colors algorithmically based on elapsed time. Ideal for mathematical animations like sine wave breathing effects, HSV color wheels, or any procedurally generated pattern.
-
-Each `RgbSequencer` instance controls one LED independently through trait abstractions, allowing you to:
-- Run different animations on multiple LEDs simultaneously
-- Pause and resume individual sequences
-- Query the current color of individual LEDs
-
-The library is built for embedded systems with:
-- **Zero heap allocation**: All storage uses fixed-capacity collections with compile-time sizing
-- **Platform independence**: Abstracts LED control and timing system through traits
-- **Efficient timing**: Service timing hints enable power-efficient operation without unnecessary polling
-- **Type-safe colors**: Uses `palette::Srgb<f32>` for accurate color math and smooth transitions
-
-Whether you're building a status LED that breathes gently, a multi-LED notification system with synchronized animations, or an interactive light show that responds to user input, rgb-sequencer provides the building blocks and lets you focus on your application logic.
-
-## Documentation
-
-- **[FEATURES.md](docs/FEATURES.md)** - Complete feature guide with examples
-- **[IMPLEMENTATION.md](docs/IMPLEMENTATION.md)** - Technical implementation details for contributors
+- **Drift-free timing** - Time-based color calculation prevents drift and enables true synchronization
+- **Efficient timing** - Service hints enable power-efficient operation
 
 ## Quick Start
 
@@ -68,7 +44,7 @@ struct MyLed {
 
 impl RgbLed for MyLed {
     fn set_color(&mut self, color: Srgb) {
-        // Convert 0.0-1.0 range to your hardware format
+        // Convert Srgb color to your hardware format
         // e.g., PWM duty cycles, 8-bit RGB values
     }
 }
@@ -77,26 +53,26 @@ impl RgbLed for MyLed {
 struct MyTimer;
 impl TimeSource<MyInstant> for MyTimer {
     fn now(&self) -> MyInstant {
-        // Return current time from your timer
+        // Return current time
     }
 }
 
-// 3. Create a blinking sequence (capacity of 8 steps)
-let sequence = RgbSequence8::<MyDuration>::builder()
+// 3. Create a blinking sequence
+let sequence = RgbSequence8::builder()
     .step(WHITE, Duration::from_millis(500), TransitionStyle::Step).unwrap()  // White
     .step(BLACK, Duration::from_millis(500), TransitionStyle::Step).unwrap()  // Off
     .loop_count(LoopCount::Infinite)                                          // Loop indefinitely
     .build()
     .unwrap();
 
-// 4. Create sequencer and start (load_and_start convenience method)
+// 4. Create sequencer and start
 let led = MyLed::new();
 let timer = MyTimer::new();
 let mut sequencer = RgbSequencer8::new(led, &timer);
 
 sequencer.load_and_start(sequence).unwrap();
 
-// 5. Service in your main loop
+// 5. Service in your main loop and use timing hint for optimal sleep duration
 loop {
     match sequencer.service().unwrap() {
         ServiceTiming::Continuous => {
@@ -115,9 +91,14 @@ loop {
 }
 ```
 
+## Documentation
+
+- **[FEATURES.md](docs/FEATURES.md)** - Complete feature guide with examples
+- **[IMPLEMENTATION.md](docs/IMPLEMENTATION.md)** - Technical implementation details for contributors
+
 ## Memory Impact
 
-The library has minimal Flash overhead. Use the [size-analysis tool](size-analysis/README.md) to generate detailed reports showing baseline library cost across different ARM Cortex-M targets, with symbol-level analysis of what contributes to binary size.
+The library has minimal Flash overhead. Use the [size-analysis tool](size-analysis/README.md) to generate detailed reports showing baseline memory usage across different ARM Cortex-M targets, with symbol-level analysis of what contributes to binary size.
 
 ## Performance Considerations
 
@@ -133,11 +114,7 @@ Cortex-M0/M0+, M3 (e.g., STM32F0, STM32F1, RP2040) - Software-emulated f32 is **
 
 **Recommendations for non-FPU targets:**
 - Prefer Step transitions (no interpolation math)
-- Linear is acceptable for simple transitions
-- Avoid easing functions (EaseIn/EaseOut/EaseInOut - additional f32 operations)
 - Avoid math-heavy function-based sequences
-
-The library works on all targets but is optimized for microcontrollers with FPU.
 
 ## License
 

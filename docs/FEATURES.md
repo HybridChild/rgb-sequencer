@@ -15,9 +15,13 @@ let sequence = RgbSequence::builder()
 
 ### Transition Styles
 
-- **`TransitionStyle::Step`**: Instantly jumps to the target color and holds it for the duration. Perfect for discrete animations like blinking or status indicators.
+- `TransitionStyle::Step`: Instantly jumps to the target color and holds it for the duration. Perfect for discrete animations like blinking or status indicators.
+- `TransitionStyle::Linear`: Smoothly interpolates from the previous color to the target color over the step's duration using linear RGB interpolation. Ideal for smooth fades and color transitions.
+- `TransitionStyle::EaseIn`: Starts slowly and accelerates toward the target color using quadratic interpolation. Creates smooth, natural-looking entries into color transitions.
+- `TransitionStyle::EaseOut`: Starts quickly and decelerates toward the target color using quadratic interpolation. Creates smooth, natural-looking exits from color transitions.
+- `TransitionStyle::EaseInOut`: Starts slowly, accelerates in the middle, and decelerates at the end using quadratic interpolation. Creates the smoothest transitions with gentle starts and stops.
 
-- **`TransitionStyle::Linear`**: Smoothly interpolates from the previous color to the target color over the step's duration using linear RGB interpolation. Ideal for smooth fades and color transitions.
+**Performance Note:** Easing transitions (`EaseIn`, `EaseOut`, `EaseInOut`) use additional f32 math operations. On non-FPU targets (Cortex-M0/M0+/M3), prefer `Step` for better performance.
 
 ### Zero-Duration Steps
 
@@ -31,7 +35,9 @@ let sequence = RgbSequence::builder()
     .build()?;
 ```
 
-This creates a sequence that on each loop iteration, will jump to yellow and then smoothly transition to black (off). Zero-duration steps with `TransitionStyle::Linear` are invalid and will be rejected during sequence building.
+This creates a sequence that on each loop iteration, will jump to yellow and then smoothly transition to black (off).
+
+Zero-duration steps with `TransitionStyle != Step` are invalid and will be rejected during sequence building.
 
 ### Start Color for Smooth Entry
 
@@ -50,7 +56,9 @@ let sequence = RgbSequence::builder()
 - **First loop**: Uses `start_color` for interpolation to first step (black → red)
 - **Subsequent loops**: Uses last step's color for interpolation to first step (blue → red)
 
-This is particularly useful for creating smooth entry animations into looping sequences without affecting loop-to-loop transitions. The `start_color` only affects the first step if `TransitionStyle != Step`.
+Useful for creating smooth entry animations from current color into new looping sequence without affecting loop-to-loop transitions.
+
+The `start_color` is ignored for `TransitionStyle == Step`.
 
 ### Landing Color for Completion
 
@@ -58,25 +66,25 @@ For finite sequences, you can specify a `landing_color` to display after all loo
 
 ```rust
 let sequence = RgbSequence::builder()
-    .step(Srgb::new(1.0, 0.0, 0.0), Duration::from_millis(500), TransitionStyle::Step)?  // Red
-    .step(Srgb::new(0.0, 1.0, 0.0), Duration::from_millis(500), TransitionStyle::Step)?  // Green
+    .step(RED, Duration::from_millis(500), TransitionStyle::Step)?
+    .step(GREEN, Duration::from_millis(500), TransitionStyle::Step)?
     .loop_count(LoopCount::Finite(3))
-    .landing_color(Srgb::new(0.0, 0.0, 1.0))  // Turn blue when done
+    .landing_color(BLUE)  // Turn blue when done
     .build()?;
 ```
 
-**Behavior:**
-- The sequence blinks red/green 3 times
-- After completion, the LED turns blue and stays blue
+**Behavior:** The sequence blinks red/green 3 times then turns blue and stays blue.
 
-If no `landing_color` is specified, the LED holds the last step's color. The `landing_color` is ignored for infinite sequences.
+If no `landing_color` is specified, the LED holds the last step's color.
+
+The `landing_color` is ignored for infinite sequences.
 
 ### Loop Count
 
 Control how many times a sequence repeats:
 
 ```rust
-// Run once and stop
+// Run once and stop (default)
 .loop_count(LoopCount::Finite(1))
 
 // Run 5 times and stop
@@ -86,11 +94,11 @@ Control how many times a sequence repeats:
 .loop_count(LoopCount::Infinite)
 ```
 
-If no Loop Count is specified, the sequence will default to `LoopCount::Finite(1)`
-
 ## Choosing Sequence Capacity
 
-Sequences use a const generic parameter `N` to determine maximum step capacity at compile time. For convenience, the library provides type aliases for common sizes:
+Sequences use a const generic parameter `N` to determine maximum step capacity at compile time. `N = 0` is allowed for sequencers that can only hold function-based sequences.
+
+For convenience, the library provides type aliases for common sizes:
 
 **Type Aliases:**
 ```rust
@@ -124,7 +132,7 @@ SequencerCommand16<Id, D>    // Up to 16 steps
 **Examples:**
 ```rust
 // Using type alias for step-based sequence
-let sequence = RgbSequence8::builder()
+let sequence = RgbSequence8::<Duration>::builder()
     .step(red, ms(500), TransitionStyle::Linear)?
     .step(blue, ms(500), TransitionStyle::Linear)?
     .build()?;
@@ -138,7 +146,7 @@ let sequence = RgbSequence::<Duration, 0>::from_function(
 
 // Custom capacity for elaborate sequences
 let sequence = RgbSequence::<_, 32>::builder()
-    // ... 32 color waypoints
+    // ... 32 color steps
     .build()?;
 ```
 
@@ -149,9 +157,6 @@ Function-based sequences use custom functions to compute colors algorithmically 
 ### Creating a Function-Based Sequence
 
 ```rust
-// Define base color 
-let white = Srgb::new(1.0, 1.0, 1.0)
-
 // Define color function
 fn breathing_effect(base_color: Srgb, elapsed: Duration) -> Srgb {
     // Calculate breathing cycle (4 seconds)
@@ -172,6 +177,9 @@ fn breathing_effect(base_color: Srgb, elapsed: Duration) -> Srgb {
 fn continuous_timing(_elapsed: Duration) -> Option<Duration> {
     Some(Duration::ZERO)  // Update every frame
 }
+
+// Define base color 
+let white = Srgb::new(1.0, 1.0, 1.0)
 
 // Create sequence
 let sequence = RgbSequence::from_function(
@@ -217,7 +225,7 @@ let blue_pulse = RgbSequence::from_function(
 Tells the sequencer when it needs to be serviced again:
 - **Parameter**: Time elapsed since sequence started
 - **Returns**: The duration until next service at this time
-  - `Some(Duration::ZERO)` - Continuous animation, call service() at your desired frame rate
+  - `Some(Duration::ZERO)` - Continuous animation, call `service()` at your desired frame rate
   - `Some(duration)` - Static color period - the LED needs updating after this duration
   - `None` - Animation complete - Sequence is done - No further service is needed
 
@@ -235,7 +243,7 @@ fn timed_pulse(elapsed: Duration) -> Option<Duration> {
 
 ### Role of Base Color
 
-For function-based sequences, the "base color" passed to `from_function()` serves as the color that gets passed to your color function. It's not used for interpolation like in step-based sequences—instead, it's available for your function to modulate, blend, use as a reference or ignore.
+For function-based sequences, the "base color" passed to `from_function()` serves as the color that gets passed to your color function and is available for your function to modulate, blend, use as a reference or ignore.
 
 This allows for flexible color-agnostic functions:
 
@@ -259,8 +267,10 @@ fn fire_flicker(base: Srgb, elapsed: Duration) -> Srgb {
     )
 }
 
-let dim_red = RgbSequence::from_function(
-    Srgb::new(1.0, 0.0, 0.0),
+let red = Srgb::new(1.0, 0.0, 0.0)
+
+let red_flame = RgbSequence::from_function(
+    orange,
     fire_flicker,
     continuous_timing,
 );
@@ -270,15 +280,36 @@ let dim_red = RgbSequence::from_function(
 
 Use step-based sequences when:
 - Simple sequences like setting static colors or blinking
-- You only need instant color changes or linear transitions
 - You have a fixed set of color waypoints
 - Your animation fits naturally into discrete stages
 
 Use function-based sequences when:
-- You need smooth mathematical animations (sine waves, easing functions)
-- You want algorithmic patterns that don't fit into discrete steps
-- You want to reuse the same animation logic with different colors
+- Your color patterns don't fit into discrete steps
 - Your animation depends on complex calculations
+
+## Predefined Colors
+
+The library provides constants for common colors:
+
+```rust
+use rgb_sequencer::{RED, GREEN, BLUE};
+
+let sequence = RgbSequence::builder()
+    .step(RED, Duration::from_millis(500), TransitionStyle::Step)?
+    .step(GREEN, Duration::from_millis(500), TransitionStyle::Step)?
+    .step(BLUE, Duration::from_millis(500), TransitionStyle::Step)?
+    .build()?;
+```
+
+**Available Constants:**
+- `BLACK` - `Srgb::new(0.0, 0.0, 0.0)`
+- `RED` - `Srgb::new(1.0, 0.0, 0.0)`
+- `GREEN` - `Srgb::new(0.0, 1.0, 0.0)`
+- `BLUE` - `Srgb::new(0.0, 0.0, 1.0)`
+- `WHITE` - `Srgb::new(1.0, 1.0, 1.0)`
+- `YELLOW` - `Srgb::new(1.0, 1.0, 0.0)`
+- `CYAN` - `Srgb::new(0.0, 1.0, 1.0)`
+- `MAGENTA` - `Srgb::new(1.0, 0.0, 1.0)`
 
 ## State Machine
 
@@ -286,11 +317,11 @@ The sequencer implements a state machine that validates operation preconditions 
 
 ### States
 
-- **`Idle`**: No sequence loaded, LED is off
-- **`Loaded`**: Sequence loaded but not started, LED is off
-- **`Running`**: Sequence actively executing, LED displays animated colors
-- **`Paused`**: Sequence paused at current color
-- **`Complete`**: Finite sequence finished, LED displays landing color or last step color
+- `Idle`: No sequence loaded, LED is off
+- `Loaded`: Sequence loaded but not started, LED is off
+- `Running`: Sequence actively executing, LED displays animated colors
+- `Paused`: Sequence paused at current color
+- `Complete`: Finite sequence finished, LED displays landing color or last step color
 
 ### Sequencer operations and resulting State changes
 
@@ -342,9 +373,9 @@ The `service()` method is the heart of the sequencer. It calculates the appropri
 ```rust
 let led = MyLed::new();
 let timer = MyTimer::new();
-let mut sequencer = RgbSequencer::<_, _, _, 8>::new(led, &timer);
+let mut sequencer = RgbSequencer8::new(led, &timer);
 
-sequencer.load(sequence);
+sequencer.load(trafic_light_sequence());
 sequencer.start().unwrap();
 
 loop {
@@ -393,7 +424,7 @@ for sequencer in sequencers.iter_mut() {
         }
         Ok(ServiceTiming::Delay(delay)) => {
             all_complete = false;
-            min_delay = Some(match min_delay {
+            min_delay = Some(match min_delay {  // find shortest time to wait
                 None => delay,
                 Some(current) if delay < current => delay,
                 Some(current) => current,
@@ -409,7 +440,7 @@ for sequencer in sequencers.iter_mut() {
 }
 
 if has_continuous {
-    sleep_ms(16);  // Frame rate for any continuous animations
+    sleep_ms(16);  // Sleep for desired frame rate
 } else if let Some(delay) = min_delay {
     sleep_ms(delay.as_millis());  // Sleep until next step change
 } else if all_complete {
@@ -417,30 +448,44 @@ if has_continuous {
 }
 ```
 
+### Timing Accuracy and Drift Prevention
+
+Rather than accumulating delays or counting service calls, the sequencer calculates colors based on **absolute elapsed time** since `start()` was called. This means:
+
+- **No drift**: Even if `service()` is called late, the color will be correct for the current time
+- **Jitter resistant**: Variations in your main loop timing don't affect animation accuracy
+- **True synchronization**: Multiple sequencers started simultaneously will stay perfectly in sync
+
+This time-based approach also means [pause/resume](#pause-and-resume-with-timing-compensation) maintains perfect timing continuity by adjusting the start time to compensate for paused duration.
+
 ## Pause and Resume with Timing Compensation
 
 The pause/resume functionality maintains perfect timing continuity, as if the pause never occurred.
 
-### How It Works
+```rust
+sequencer.load(rainbow_sequence)?;
+sequencer.start()?;
 
-When you call `pause()`:
-1. The current time is recorded as `pause_start_time`
-2. The LED stays at the current color
-3. State transitions to `Paused`
+loop {
+    // Pause on button press
+    if button_pressed() && sequencer.state() == SequencerState::Running {
+        sequencer.pause()?;
+    }
 
-When you call `resume()`:
-1. The pause duration is calculated: `now - pause_start_time`
-2. The sequence's `start_time` is adjusted forward by the pause duration
-3. State transitions to `Running`
-4. The sequence continues from exactly where it left off
+    // Resume on button release
+    if button_released() && sequencer.state() == SequencerState::Paused {
+        sequencer.resume()?;  // Automatically compensates for paused duration
+    }
 
-### Use Cases
+    sequencer.service()?;
+}
+```
 
-- Interactive color capture (pause to "freeze" a color)
-- User-controlled animation playback
-- Event-driven synchronization across multiple LEDs
+Useful for interactive color UI.
 
 ## Multi-LED Control
+
+Each sequencer owns its LED but multiple sequencers can share the same time source.
 
 The library supports multiple patterns for controlling multiple LEDs independently.
 
@@ -482,8 +527,6 @@ loop {
 }
 ```
 
-Here's a more explanatory version:
-
 ### Pattern 2: Heterogeneous Collections (Advanced)
 
 When you have multiple LEDs connected to different hardware peripherals (e.g., one LED on TIM1, another on TIM3), you face a type system challenge: each LED has a different concrete type (`PwmRgbLed<TIM1>` vs `PwmRgbLed<TIM3>`), which means you can't store them in the same `Vec` or array.
@@ -507,7 +550,7 @@ impl<'d> RgbLed for AnyLed<'d> {
 }
 
 // Now all sequencers have the same type and can be stored together!
-let mut sequencers: Vec<RgbSequencer<_, AnyLed, _, 8>, 4> = Vec::new();
+let mut sequencers: Vec<RgbSequencer8<_, AnyLed, _>, 4> = Vec::new();
 
 sequencers.push(RgbSequencer::new(AnyLed::Tim1(led_1), &timer))?;
 sequencers.push(RgbSequencer::new(AnyLed::Tim3(led_2), &timer))?;
@@ -521,13 +564,11 @@ for (i, sequencer) in sequencers.iter_mut().enumerate() {
 
 See [Embassy Rainbow Capture example](../examples/stm32f0-embassy/README.md) for a complete implementation.
 
-### Pattern 3: Using Commands for Multi-LED Control
-
-For task-based systems, you can use the command-based control pattern to route commands to multiple sequencers. See the [Command-Based Control](#command-based-control) section below for details and examples.
-
 ## Command-Based Control
 
-For task-based systems (Embassy, RTOS, async runtimes), the command-based pattern decouples control logic from LED servicing by using message passing. This pattern works for both single and multi-LED scenarios.
+For task-based systems (Embassy, RTOS, async runtimes), you can use the command-based control pattern to route commands to sequencers. This decouples control logic from LED servicing by using message passing.
+
+Use `ID` in multi-LED scenarios. `ID` is a generic so you can use any identifier type like `u8`, `&'static str`, enums, etc.).
 
 ### Core Concept
 
@@ -538,127 +579,28 @@ pub struct SequencerCommand<ID, D, const N: usize> {
     pub led_id: ID,
     pub action: SequencerAction<D, N>,
 }
-```
 
-For convenience, use type aliases like `SequencerCommand8<ID, D>` and `SequencerAction8<D>` instead of specifying the capacity parameter explicitly.
-
-`SequencerAction` represents operations like `Load`, `Start`, `Pause`, `Resume`, `Stop`, etc.
-
-### Single LED Example
-
-Decouple button handling from LED servicing:
-
-```rust
-use rgb_sequencer::{SequencerCommand8, SequencerAction8};
-
-// Use () as the LED ID for single-LED scenarios
-static COMMAND_CHANNEL: Channel<SequencerCommand8<(), Duration>, 4> = Channel::new();
-
-// Button handler task
-#[embassy_executor::task]
-async fn button_task() {
-    loop {
-        button.wait_for_press().await;
-
-        // Send pause command
-        COMMAND_CHANNEL.send(SequencerCommand8::new(
-            (),  // Single LED, no ID needed
-            SequencerAction8::Pause,
-        )).await;
-    }
+pub enum SequencerAction<D: TimeDuration, const N: usize> {
+    Load(RgbSequence<D, N>),
+    Start,
+    Stop,
+    Pause,
+    Resume,
+    Restart,
+    Clear,
+    SetBrightness(f32),
 }
 
-// RGB servicing task
-#[embassy_executor::task]
-async fn rgb_task(led: MyLed, timer: &'static MyTimer) {
-    let mut sequencer = RgbSequencer8::new(led, timer);
-
-    loop {
-        select! {
-            command = COMMAND_CHANNEL.receive() => {
-                sequencer.handle_action(command.action)?;
-            }
-            _ = Timer::after(Duration::from_millis(16)) => {
-                if sequencer.is_running() {
-                    sequencer.service()?;
-                }
-            }
-        }
-    }
+// Receive command and dispatch action to sequencer
+let command = COMMAND_CHANNEL.receive().await;
+if let Err(e) = sequencer.handle_action(command.action) {
+    // Handle error
 }
 ```
 
-### Multi-LED Example
+For convenience use common capacity type aliases `SequencerCommand8<ID, D>`, `SequencerAction8<D>`.
 
-Route commands to different LEDs:
-
-```rust
-use rgb_sequencer::{SequencerCommand8, SequencerAction8};
-
-// Define LED identifiers
-enum LedId { Led1, Led2, Led3 }
-
-// Create command channel
-static COMMAND_CHANNEL: Channel<SequencerCommand8<LedId, Duration>, 4> = Channel::new();
-
-// Control task - sends commands
-#[embassy_executor::task]
-async fn control_task() {
-    // Load different sequences on different LEDs
-    COMMAND_CHANNEL.send(SequencerCommand8::new(
-        LedId::Led1,
-        SequencerAction8::Load(rainbow_sequence),
-    )).await;
-
-    COMMAND_CHANNEL.send(SequencerCommand8::new(
-        LedId::Led2,
-        SequencerAction8::Load(pulse_sequence),
-    )).await;
-
-    // Start all LEDs
-    for led_id in [LedId::Led1, LedId::Led2, LedId::Led3] {
-        COMMAND_CHANNEL.send(SequencerCommand8::new(
-            led_id,
-            SequencerAction8::Start,
-        )).await;
-    }
-}
-
-// RGB task - handles commands and services sequencers
-#[embassy_executor::task]
-async fn rgb_task(/* ... */) {
-    let mut sequencers = [sequencer1, sequencer2, sequencer3];
-
-    loop {
-        select! {
-            command = COMMAND_CHANNEL.receive() => {
-                let sequencer = match command.led_id {
-                    LedId::Led1 => &mut sequencers[0],
-                    LedId::Led2 => &mut sequencers[1],
-                    LedId::Led3 => &mut sequencers[2],
-                };
-                sequencer.handle_action(command.action)?;
-            }
-            _ = Timer::after(Duration::from_millis(16)) => {
-                for sequencer in &mut sequencers {
-                    if sequencer.is_running() {
-                        sequencer.service()?;
-                    }
-                }
-            }
-        }
-    }
-}
-```
-
-### Benefits
-
-- **Separation of concerns**: Control logic separate from LED servicing
-- **Task safety**: Commands cross task boundaries safely
-- **Flexibility**: Easy to add new control inputs (buttons, UART, network)
-- **Testability**: Control logic can be tested independently
-
-See [Embassy Mode Switcher example](../examples/stm32f0-embassy/README.md) for a complete implementation.
+See [Embassy examples](../examples/stm32f0-embassy/README.md) for complete implementations.
 
 ## Querying Sequencer State
 
@@ -723,18 +665,15 @@ if let Some(sequence) = sequencer.current_sequence() {
 }
 ```
 
-These methods are useful for:
+Use cases:
 - **Event detection**: Trigger actions when entering specific steps (play sounds, update UI, log events)
-- **Color capture**: Getting the current color to create derived sequences
-- **Synchronization**: Coordinating multiple LEDs based on elapsed time or step position
-- **Progress tracking**: Displaying sequence progress with precise timing information
 - **Debugging**: Inspecting sequence state during development
 
 Note: `current_position()` returns `None` for function-based sequences since they don't have discrete steps.
 
 ## Global Brightness Control
 
-The sequencer supports global brightness control, allowing you to dim or brighten all colors without modifying the sequence itself.
+A global `brightness` can be set for each individual sequencer, which allows you to dim or brighten all colors without modifying the sequence itself.
 
 ### Basic Usage
 
@@ -748,15 +687,12 @@ sequencer.set_brightness(0.5);
 sequencer.start()?;
 ```
 
-### Brightness Range
-
-- **`1.0`** (default): Full brightness
-- **`0.5`**: 50% brightness
-- **`0.0`**: LED off (black)
-- Values are automatically clamped to 0.0-1.0 range
+Brightness Range
+- `1.0` (default): Full brightness
+- `0.0`: LED off (black)
 
 ```rust
-// These are automatically clamped
+// Values are automatically clamped to 0.0-1.0 range
 sequencer.set_brightness(2.5);   // Becomes 1.0 (full)
 sequencer.set_brightness(-0.5);  // Becomes 0.0 (off)
 
@@ -764,26 +700,11 @@ sequencer.set_brightness(-0.5);  // Becomes 0.0 (off)
 let current = sequencer.brightness();  // Returns 0.0-1.0
 ```
 
-Brightness can be changed at any time, including during playback:
+Brightness can be changed at any time, including during playback.
 
-### How It Works
+Brightness affects all sequences uniformly both step-based and function-based and any `TransitionStyle`.
 
-Brightness is applied as a multiplier to all color channels after sequence evaluation:
-
-```rust
-// Evaluated sequence color: Srgb::new(1.0, 0.5, 0.0) (orange)
-// Brightness: 0.5
-// Actual LED color: Srgb::new(0.5, 0.25, 0.0) (dimmed orange)
-```
-
-This means:
-- Brightness affects all sequences uniformly (step-based and function-based)
-- Works with all transition styles
-- Timing is unaffected - only colors are scaled
-- Minimal performance overhead (single multiplication per channel)
-
-### Use Cases
-
+Use cases:
 - Night Mode
 - Battery Saving
 - Ambient Light Adaptation
