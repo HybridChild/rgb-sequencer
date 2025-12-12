@@ -97,7 +97,9 @@ loop {
 
 ## Memory Impact
 
-The library has minimal Flash overhead. Use the [size-analysis tool](size-analysis/README.md) to generate detailed reports showing baseline memory usage across different ARM Cortex-M targets, with symbol-level analysis of what contributes to binary size.
+**Planning tool**: Use the [memory calculator](tools/memory-calculator/README.md) to estimate RAM costs for different sequence capacities and duration types. Runs instantly on your host machine.
+
+**Binary analysis**: Use the [size-analysis tool](size-analysis/README.md) to measure Flash/RAM overhead on embedded ARM targets with symbol-level breakdowns.
 
 ## Performance Considerations
 
