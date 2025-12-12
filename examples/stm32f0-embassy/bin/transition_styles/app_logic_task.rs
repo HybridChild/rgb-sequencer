@@ -1,5 +1,5 @@
 use defmt::info;
-use rgb_sequencer::SequencerAction;
+use rgb_sequencer::{SequencerAction16, SequencerCommand16};
 
 use crate::blink_task::BLINK_COUNT_SIGNAL;
 use crate::sequences::create_transition_sequence;
@@ -13,9 +13,9 @@ pub async fn app_logic_task() {
 
     let initial_sequence = create_transition_sequence(current_mode.to_transition_style());
     RGB_COMMAND_CHANNEL
-        .send(rgb_sequencer::SequencerCommand::new(
+        .send(SequencerCommand16::new(
             (),
-            SequencerAction::Load(initial_sequence),
+            SequencerAction16::Load(initial_sequence),
         ))
         .await;
 
@@ -33,9 +33,9 @@ pub async fn app_logic_task() {
 
         let sequence = create_transition_sequence(current_mode.to_transition_style());
         RGB_COMMAND_CHANNEL
-            .send(rgb_sequencer::SequencerCommand::new(
+            .send(SequencerCommand16::new(
                 (),
-                SequencerAction::Load(sequence),
+                SequencerAction16::Load(sequence),
             ))
             .await;
     }

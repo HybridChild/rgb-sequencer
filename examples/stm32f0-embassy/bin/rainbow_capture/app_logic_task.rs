@@ -2,7 +2,7 @@ use defmt::info;
 use embassy_stm32::gpio::Output;
 use palette::Srgb;
 use rgb_sequencer::{
-    BLACK, BLUE, GREEN, LoopCount, RED, RgbSequence8, SequencerAction, SequencerCommand,
+    BLACK, BLUE, GREEN, LoopCount, RED, RgbSequence8, SequencerAction8, SequencerCommand8,
     TransitionStyle,
 };
 
@@ -80,32 +80,32 @@ pub async fn app_logic_task(mut onboard_led: Output<'static>) {
 
     // Load and start rainbow on LED 1
     RGB_COMMAND_CHANNEL
-        .send(ExtendedCommand::Sequencer(SequencerCommand::new(
+        .send(ExtendedCommand::Sequencer(SequencerCommand8::new(
             LedId::Led1,
-            SequencerAction::Load(rainbow_sequence),
+            SequencerAction8::Load(rainbow_sequence),
         )))
         .await;
 
     RGB_COMMAND_CHANNEL
-        .send(ExtendedCommand::Sequencer(SequencerCommand::new(
+        .send(ExtendedCommand::Sequencer(SequencerCommand8::new(
             LedId::Led1,
-            SequencerAction::Start,
+            SequencerAction8::Start,
         )))
         .await;
 
     // Load and start black (off) on LED 2
     let off_sequence = create_static_sequence(BLACK);
     RGB_COMMAND_CHANNEL
-        .send(ExtendedCommand::Sequencer(SequencerCommand::new(
+        .send(ExtendedCommand::Sequencer(SequencerCommand8::new(
             LedId::Led2,
-            SequencerAction::Load(off_sequence),
+            SequencerAction8::Load(off_sequence),
         )))
         .await;
 
     RGB_COMMAND_CHANNEL
-        .send(ExtendedCommand::Sequencer(SequencerCommand::new(
+        .send(ExtendedCommand::Sequencer(SequencerCommand8::new(
             LedId::Led2,
-            SequencerAction::Start,
+            SequencerAction8::Start,
         )))
         .await;
 
@@ -127,9 +127,9 @@ pub async fn app_logic_task(mut onboard_led: Output<'static>) {
             info!("Button pressed - resuming LED 1");
 
             RGB_COMMAND_CHANNEL
-                .send(ExtendedCommand::Sequencer(SequencerCommand::new(
+                .send(ExtendedCommand::Sequencer(SequencerCommand8::new(
                     LedId::Led1,
-                    SequencerAction::Resume,
+                    SequencerAction8::Resume,
                 )))
                 .await;
 
@@ -141,9 +141,9 @@ pub async fn app_logic_task(mut onboard_led: Output<'static>) {
 
             // Pause LED 1
             RGB_COMMAND_CHANNEL
-                .send(ExtendedCommand::Sequencer(SequencerCommand::new(
+                .send(ExtendedCommand::Sequencer(SequencerCommand8::new(
                     LedId::Led1,
-                    SequencerAction::Pause,
+                    SequencerAction8::Pause,
                 )))
                 .await;
 
@@ -181,16 +181,16 @@ pub async fn app_logic_task(mut onboard_led: Output<'static>) {
 
             // Load and start the transition on LED 2
             RGB_COMMAND_CHANNEL
-                .send(ExtendedCommand::Sequencer(SequencerCommand::new(
+                .send(ExtendedCommand::Sequencer(SequencerCommand8::new(
                     LedId::Led2,
-                    SequencerAction::Load(transition_sequence),
+                    SequencerAction8::Load(transition_sequence),
                 )))
                 .await;
 
             RGB_COMMAND_CHANNEL
-                .send(ExtendedCommand::Sequencer(SequencerCommand::new(
+                .send(ExtendedCommand::Sequencer(SequencerCommand8::new(
                     LedId::Led2,
-                    SequencerAction::Start,
+                    SequencerAction8::Start,
                 )))
                 .await;
 

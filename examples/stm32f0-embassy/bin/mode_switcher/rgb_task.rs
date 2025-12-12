@@ -88,7 +88,7 @@ pub async fn rgb_task(pwm_tim3: SimplePwm<'static, TIM3>, max_duty_tim3: u16) {
                 // Use the library's handle_action method!
                 // The Load action will load and start the sequence
                 match command.action {
-                    rgb_sequencer::SequencerAction::Load(seq) => {
+                    rgb_sequencer::SequencerAction8::Load(seq) => {
                         if let Err(e) = sequencer.load_and_start(seq) {
                             info!("Load and start error: {:?}", e);
                         }
