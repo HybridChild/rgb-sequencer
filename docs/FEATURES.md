@@ -103,6 +103,15 @@ RgbSequence16<D>  // Up to 16 steps
 RgbSequencer4<'t, I, L, T>   // Up to 4 steps
 RgbSequencer8<'t, I, L, T>   // Up to 8 steps
 RgbSequencer16<'t, I, L, T>  // Up to 16 steps
+
+// Commands (for command-based control)
+SequencerAction4<D>          // Up to 4 steps
+SequencerAction8<D>          // Up to 8 steps
+SequencerAction16<D>         // Up to 16 steps
+
+SequencerCommand4<Id, D>     // Up to 4 steps
+SequencerCommand8<Id, D>     // Up to 8 steps
+SequencerCommand16<Id, D>    // Up to 16 steps
 ```
 
 **Guidelines:**
@@ -531,6 +540,8 @@ pub struct SequencerCommand<ID, D, const N: usize> {
 }
 ```
 
+For convenience, use type aliases like `SequencerCommand8<ID, D>` and `SequencerAction8<D>` instead of specifying the capacity parameter explicitly.
+
 `SequencerAction` represents operations like `Load`, `Start`, `Pause`, `Resume`, `Stop`, etc.
 
 ### Single LED Example
@@ -538,10 +549,10 @@ pub struct SequencerCommand<ID, D, const N: usize> {
 Decouple button handling from LED servicing:
 
 ```rust
-use rgb_sequencer::{SequencerCommand, SequencerAction};
+use rgb_sequencer::{SequencerCommand8, SequencerAction8};
 
 // Use () as the LED ID for single-LED scenarios
-static COMMAND_CHANNEL: Channel<SequencerCommand<(), Duration, 8>, 4> = Channel::new();
+static COMMAND_CHANNEL: Channel<SequencerCommand8<(), Duration>, 4> = Channel::new();
 
 // Button handler task
 #[embassy_executor::task]
@@ -550,9 +561,9 @@ async fn button_task() {
         button.wait_for_press().await;
 
         // Send pause command
-        COMMAND_CHANNEL.send(SequencerCommand::new(
+        COMMAND_CHANNEL.send(SequencerCommand8::new(
             (),  // Single LED, no ID needed
-            SequencerAction::Pause,
+            SequencerAction8::Pause,
         )).await;
     }
 }
@@ -582,33 +593,33 @@ async fn rgb_task(led: MyLed, timer: &'static MyTimer) {
 Route commands to different LEDs:
 
 ```rust
-use rgb_sequencer::{SequencerCommand, SequencerAction};
+use rgb_sequencer::{SequencerCommand8, SequencerAction8};
 
 // Define LED identifiers
 enum LedId { Led1, Led2, Led3 }
 
 // Create command channel
-static COMMAND_CHANNEL: Channel<SequencerCommand<LedId, Duration, 8>, 4> = Channel::new();
+static COMMAND_CHANNEL: Channel<SequencerCommand8<LedId, Duration>, 4> = Channel::new();
 
 // Control task - sends commands
 #[embassy_executor::task]
 async fn control_task() {
     // Load different sequences on different LEDs
-    COMMAND_CHANNEL.send(SequencerCommand::new(
+    COMMAND_CHANNEL.send(SequencerCommand8::new(
         LedId::Led1,
-        SequencerAction::Load(rainbow_sequence),
+        SequencerAction8::Load(rainbow_sequence),
     )).await;
 
-    COMMAND_CHANNEL.send(SequencerCommand::new(
+    COMMAND_CHANNEL.send(SequencerCommand8::new(
         LedId::Led2,
-        SequencerAction::Load(pulse_sequence),
+        SequencerAction8::Load(pulse_sequence),
     )).await;
 
     // Start all LEDs
     for led_id in [LedId::Led1, LedId::Led2, LedId::Led3] {
-        COMMAND_CHANNEL.send(SequencerCommand::new(
+        COMMAND_CHANNEL.send(SequencerCommand8::new(
             led_id,
-            SequencerAction::Start,
+            SequencerAction8::Start,
         )).await;
     }
 }

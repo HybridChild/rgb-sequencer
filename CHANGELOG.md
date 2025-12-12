@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Examples updated to use new convenience methods and type aliases
 
 ### Added
-- Global brightness control via `RgbSequencer::brightness()` and `set_brightness()`
+- Global brightness control via `RgbSequencer::brightness()`, `set_brightness()` and `SequencerAction::SetBrightness`
 - Configurable color epsilon via `RgbSequencer::with_epsilon()`, `color_epsilon()`, and `set_color_epsilon()` for customizable color change detection sensitivity
 - `DEFAULT_COLOR_EPSILON` constant for the default threshold value
 - `Position` struct for representing playback position with named fields (`step_index`, `loop_number`)
@@ -37,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive documentation for all public API items
 - Common color constants: `RED`, `GREEN`, `BLUE`, `WHITE`, `YELLOW`, `CYAN`, `MAGENTA`, `BLACK`
 - `load_and_start()` convenience method for `RgbSequencer`
-- Type aliases for common capacities: `RgbSequencer4/8/16` and `RgbSequence4/8/16`
+- Type aliases for common capacities: `RgbSequencer4/8/16`, `RgbSequence4/8/16`, `SequencerCommand4,8,16` and `SequencerAction4,8,16`
 - `SequenceError::CapacityExceeded` variant for robust error handling
 - Easing functions: `TransitionStyle::EaseIn`, `EaseOut`, and `EaseInOut` for smoother, more natural transitions using quadratic interpolation
 - Example project demonstrating new transition styles

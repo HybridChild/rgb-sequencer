@@ -1,7 +1,7 @@
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_sync::signal::Signal;
-use rgb_sequencer::{SequencerCommand, TransitionStyle};
+use rgb_sequencer::{SequencerCommand16, TransitionStyle};
 use stm32f0_embassy::time_wrapper::EmbassyDuration;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, defmt::Format)]
@@ -51,6 +51,6 @@ pub static BUTTON_SIGNAL: Signal<ThreadModeRawMutex, ()> = Signal::new();
 
 pub static RGB_COMMAND_CHANNEL: Channel<
     ThreadModeRawMutex,
-    SequencerCommand<LedId, EmbassyDuration, 16>,
+    SequencerCommand16<LedId, EmbassyDuration>,
     2,
 > = Channel::new();

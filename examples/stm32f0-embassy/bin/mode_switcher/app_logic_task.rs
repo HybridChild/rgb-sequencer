@@ -2,7 +2,7 @@ use defmt::info;
 use embassy_time::Duration;
 use palette::Srgb;
 use rgb_sequencer::{
-    BLACK, BLUE, GREEN, LoopCount, RED, RgbSequence8, SequencerAction, SequencerCommand,
+    BLACK, BLUE, GREEN, LoopCount, RED, RgbSequence8, SequencerAction8, SequencerCommand8,
     TimeDuration, TransitionStyle, WHITE,
 };
 
@@ -247,9 +247,9 @@ pub async fn app_logic_task() {
     info!("Loading initial mode: {:?}", current_mode);
     let initial_sequence = get_sequence_for_mode(current_mode);
     RGB_COMMAND_CHANNEL
-        .send(SequencerCommand::new(
+        .send(SequencerCommand8::new(
             (), // Unit LED ID since we only have one LED
-            SequencerAction::Load(initial_sequence),
+            SequencerAction8::Load(initial_sequence),
         ))
         .await;
 
@@ -271,9 +271,9 @@ pub async fn app_logic_task() {
         // Create and send new sequence using library's SequencerCommand
         let new_sequence = get_sequence_for_mode(current_mode);
         RGB_COMMAND_CHANNEL
-            .send(SequencerCommand::new(
+            .send(SequencerCommand8::new(
                 (),
-                SequencerAction::Load(new_sequence),
+                SequencerAction8::Load(new_sequence),
             ))
             .await;
 

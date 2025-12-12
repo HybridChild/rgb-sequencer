@@ -1,7 +1,7 @@
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_sync::signal::Signal;
-use rgb_sequencer::SequencerCommand;
+use rgb_sequencer::SequencerCommand8;
 
 // Re-export the time types from the library
 pub use stm32f0_embassy::time_wrapper::{EmbassyDuration, EmbassyTimeSource};
@@ -52,6 +52,6 @@ pub static BUTTON_SIGNAL: Signal<ThreadModeRawMutex, ()> = Signal::new();
 /// Uses () as LED ID for single-LED scenario
 pub static RGB_COMMAND_CHANNEL: Channel<
     ThreadModeRawMutex,
-    SequencerCommand<(), EmbassyDuration, 8>,
+    SequencerCommand8<(), EmbassyDuration>,
     2,
 > = Channel::new();

@@ -83,3 +83,21 @@ pub type RgbSequence8<D> = RgbSequence<D, 8>;
 
 /// RGB sequence with capacity for 16 steps.
 pub type RgbSequence16<D> = RgbSequence<D, 16>;
+
+/// Sequencer action with capacity for 4 steps.
+pub type SequencerAction4<D> = SequencerAction<D, 4>;
+
+/// Sequencer action with capacity for 8 steps.
+pub type SequencerAction8<D> = SequencerAction<D, 8>;
+
+/// Sequencer action with capacity for 16 steps.
+pub type SequencerAction16<D> = SequencerAction<D, 16>;
+
+/// Sequencer command with capacity for 4 steps.
+pub type SequencerCommand4<Id, D> = SequencerCommand<Id, D, 4>;
+
+/// Sequencer command with capacity for 8 steps.
+pub type SequencerCommand8<Id, D> = SequencerCommand<Id, D, 8>;
+
+/// Sequencer command with capacity for 16 steps.
+pub type SequencerCommand16<Id, D> = SequencerCommand<Id, D, 16>;
