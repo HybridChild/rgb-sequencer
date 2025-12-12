@@ -15,7 +15,7 @@ pub trait RgbLed {
     fn set_color(&mut self, color: Srgb);
 }
 
-/// The current state of an RGB sequencer.
+/// RGB sequencer state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SequencerState {
@@ -259,7 +259,10 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
             new_color.blue * self.brightness,
         );
 
-        // Update LED only if color changed (using approximate equality for f32)
+        // Update LED only if color changed (using epsilon for f32 comparison).
+        // This avoids unnecessary hardware writes during static holds and prevents
+        // spurious updates from floating-point rounding (<0.1% difference).
+        // Particularly valuable for slow I2C/SPI LED drivers.
         if !colors_approximately_equal(dimmed_color, self.current_color, self.color_epsilon) {
             self.led.set_color(dimmed_color);
             self.current_color = dimmed_color;

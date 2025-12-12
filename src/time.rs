@@ -6,7 +6,7 @@ pub trait TimeSource<I: TimeInstant> {
     fn now(&self) -> I;
 }
 
-/// Abstracts over duration types.
+/// Trait abstraction for duration types.
 pub trait TimeDuration: Copy + PartialEq {
     /// Zero duration constant.
     const ZERO: Self;
@@ -21,7 +21,7 @@ pub trait TimeDuration: Copy + PartialEq {
     fn saturating_sub(self, other: Self) -> Self;
 }
 
-/// Abstracts over instant types.
+/// Trait abstraction for instant types.
 pub trait TimeInstant: Copy {
     /// Duration type for this instant.
     type Duration: TimeDuration;
