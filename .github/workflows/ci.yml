@@ -97,8 +97,8 @@ jobs:
           cd ../stm32f0 && cargo fmt -- --check
           cd ../stm32f0-embassy && cargo fmt -- --check
 
-      - name: Check formatting (size-analysis/minimal)
-        run: cd size-analysis/minimal && cargo fmt -- --check
+      - name: Check formatting (binary-analyzer/minimal)
+        run: cd tools/binary-analyzer/minimal && cargo fmt -- --check
 
   no_std:
     name: no_std Compatibility
