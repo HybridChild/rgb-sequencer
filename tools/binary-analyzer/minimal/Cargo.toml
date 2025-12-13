@@ -1,5 +1,5 @@
 [package]
-name = "rgb-sequencer-size-analysis"
+name = "rgb-sequencer-binary-analyzer"
 version = "0.1.0"
 edition = "2024"
 

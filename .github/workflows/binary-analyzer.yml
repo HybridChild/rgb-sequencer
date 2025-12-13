@@ -1,4 +1,4 @@
-name: Size Analysis
+name: Binary Analyzer
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
       - 'src/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
-      - 'tools/size-analysis/**'
+      - 'tools/binary-analyzer/**'
   push:
     branches:
       - main
@@ -17,8 +17,8 @@ permissions:
   pull-requests: write
 
 jobs:
-  size-analysis:
-    name: Memory Footprint Analysis
+  binary-analyzer:
+    name: Binary Footprint Analysis
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -65,14 +65,14 @@ jobs:
             cargo install cargo-binutils
           fi
 
-      - name: Run size analysis
-        run: cd tools/size-analysis && ./analyze.sh
+      - name: Run binary analyzer
+        run: cd tools/binary-analyzer && ./analyze.sh
 
       - name: Upload report
         uses: actions/upload-artifact@v4
         with:
-          name: size-analysis-report
-          path: tools/size-analysis/report.md
+          name: binary-analyzer-report
+          path: tools/binary-analyzer/report.md
           retention-days: 90
 
       - name: Post PR comment
@@ -81,7 +81,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const reportPath = 'tools/size-analysis/report.md';
+            const reportPath = 'tools/binary-analyzer/report.md';
             const report = fs.readFileSync(reportPath, 'utf8');
 
             // Extract the summary (header + Target Comparison table, before individual target sections)

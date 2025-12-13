@@ -1,9 +1,9 @@
-# Memory Calculator
+# Sizeof Calculator
 
-Calculates RAM usage for `RgbSequence<D, N>` and `RgbSequencer` instances.
+Calculates RAM usage for `RgbSequence<D, N>` and `RgbSequencer` instances using `sizeof`.
 
 ```bash
-cd tools/memory-calculator
+cd tools/sizeof-calculator
 cargo run --release
 cat report.md
 ```
@@ -33,4 +33,4 @@ cat report.md
 
 ## Complementary Tool
 
-Use [size-analysis](../size-analysis/) for Flash/RAM binary measurements on embedded targets.
+Use [binary-analyzer](../binary-analyzer/) for Flash/RAM binary measurements on embedded targets.
