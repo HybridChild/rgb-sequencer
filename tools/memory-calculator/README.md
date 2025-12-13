@@ -33,4 +33,4 @@ cat report.md
 
 ## Complementary Tool
 
-Use [size-analysis](../../size-analysis/) for Flash/RAM binary measurements on embedded targets.
+Use [size-analysis](../size-analysis/) for Flash/RAM binary measurements on embedded targets.

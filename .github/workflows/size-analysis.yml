@@ -6,7 +6,7 @@ on:
       - 'src/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
-      - 'size-analysis/**'
+      - 'tools/size-analysis/**'
   push:
     branches:
       - main
@@ -66,13 +66,13 @@ jobs:
           fi
 
       - name: Run size analysis
-        run: cd size-analysis && ./analyze.sh
+        run: cd tools/size-analysis && ./analyze.sh
 
       - name: Upload report
         uses: actions/upload-artifact@v4
         with:
           name: size-analysis-report
-          path: size-analysis/report.md
+          path: tools/size-analysis/report.md
           retention-days: 90
 
       - name: Post PR comment
@@ -81,7 +81,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const reportPath = 'size-analysis/report.md';
+            const reportPath = 'tools/size-analysis/report.md';
             const report = fs.readFileSync(reportPath, 'utf8');
 
             // Extract the summary (header + Target Comparison table, before individual target sections)

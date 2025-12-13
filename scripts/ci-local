@@ -67,9 +67,9 @@ else
 fi
 
 # Check size-analysis/minimal formatting
-if [ -d "size-analysis/minimal" ]; then
+if [ -d "tools/size-analysis/minimal" ]; then
     print_step "  Checking size-analysis/minimal formatting..."
-    (cd size-analysis/minimal && cargo fmt -- --check)
+    (cd tools/size-analysis/minimal && cargo fmt -- --check)
     print_success "  size-analysis/minimal formatting OK"
 else
     print_warning "  size-analysis/minimal not found, skipping"
@@ -165,8 +165,8 @@ echo ""
 
 # 8. Size analysis
 print_step "Running size analysis..."
-if [ -f "size-analysis/analyze.sh" ]; then
-    (cd size-analysis && ./analyze.sh)
+if [ -f "tools/size-analysis/analyze.sh" ]; then
+    (cd tools/size-analysis && ./analyze.sh)
     print_success "Size analysis completed"
 else
     print_warning "Size analysis script not found, skipping"

@@ -99,7 +99,7 @@ loop {
 
 **Planning tool**: Use the [memory calculator](tools/memory-calculator/README.md) to estimate RAM costs for different sequence capacities and duration types. Runs instantly on your host machine.
 
-**Binary analysis**: Use the [size-analysis tool](size-analysis/README.md) to measure Flash/RAM overhead on embedded ARM targets with symbol-level breakdowns.
+**Binary analysis**: Use the [size-analysis tool](tools/size-analysis/README.md) to measure Flash/RAM overhead on embedded ARM targets with symbol-level breakdowns.
 
 ## Performance Considerations
 
