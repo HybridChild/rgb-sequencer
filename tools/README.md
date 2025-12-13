@@ -24,6 +24,17 @@ cat report.md
 
 **Use for:** Binary footprint measurement, FPU impact analysis, release optimization.
 
+## [benchmark](benchmark/)
+
+On-device performance benchmarking tool measuring absolute CPU cycles for `service()` method. Tests different transition styles (Step, Linear, EaseIn/Out/InOut) and capacities (N=4 to N=64) on real ARM Cortex-M hardware using DWT cycle counter.
+
+```bash
+cd tools/benchmark
+cargo run --release  # Requires connected RP2040 (or configured target)
+```
+
+**Use for:** Performance measurement, transition style comparison, FPU vs non-FPU impact analysis.
+
 ---
 
 ## Tool Comparison
@@ -32,3 +43,4 @@ cat report.md
 |------|---------|-------|--------|
 | **sizeof-calculator** | RAM planning (host, sizeof) | Instant | Component/sequence sizes |
 | **binary-analyzer** | Flash/RAM measurement (target, compiled) | Slow (cross-compile) | Binary sections, symbols |
+| **benchmark** | Performance measurement (on-device, cycles) | Moderate (requires hardware) | Cycle counts, statistics |
