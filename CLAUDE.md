@@ -444,7 +444,7 @@ cd examples/stm32f0-embassy && cargo build --release
 cd examples/rp-pico && cargo build --release
 
 # Memory analysis tools
-cd size-analysis && ./analyze.sh                # Binary size analysis (Flash/RAM)
+cd tools/size-analysis && ./analyze.sh             # Binary size analysis (Flash/RAM)
 cd tools/memory-calculator && cargo run --release  # Memory calculator (planning tool)
 ```
 
@@ -483,9 +483,8 @@ examples/
 └── rp-pico/            # Raspberry Pi Pico examples
 
 tools/
-└── memory-calculator/  # Memory calculator for planning capacity/types
-
-size-analysis/          # Binary size analysis on embedded targets
+├── memory-calculator/  # Memory calculator for planning capacity/types
+└── size-analysis/      # Binary size analysis on embedded targets
 ```
 
 ---
