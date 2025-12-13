@@ -66,13 +66,13 @@ else
     print_warning "  stm32f0-embassy example not found, skipping"
 fi
 
-# Check size-analysis/minimal formatting
-if [ -d "tools/size-analysis/minimal" ]; then
-    print_step "  Checking size-analysis/minimal formatting..."
-    (cd tools/size-analysis/minimal && cargo fmt -- --check)
-    print_success "  size-analysis/minimal formatting OK"
+# Check binary-analyzer/minimal formatting
+if [ -d "tools/binary-analyzer/minimal" ]; then
+    print_step "  Checking binary-analyzer/minimal formatting..."
+    (cd tools/binary-analyzer/minimal && cargo fmt -- --check)
+    print_success "  binary-analyzer/minimal formatting OK"
 else
-    print_warning "  size-analysis/minimal not found, skipping"
+    print_warning "  binary-analyzer/minimal not found, skipping"
 fi
 echo ""
 
@@ -163,13 +163,13 @@ else
 fi
 echo ""
 
-# 8. Size analysis
-print_step "Running size analysis..."
-if [ -f "tools/size-analysis/analyze.sh" ]; then
-    (cd tools/size-analysis && ./analyze.sh)
-    print_success "Size analysis completed"
+# 8. Binary analyzer
+print_step "Running binary analyzer..."
+if [ -f "tools/binary-analyzer/analyze.sh" ]; then
+    (cd tools/binary-analyzer && ./analyze.sh)
+    print_success "Binary analyzer completed"
 else
-    print_warning "Size analysis script not found, skipping"
+    print_warning "Binary analyzer script not found, skipping"
 fi
 echo ""
 
