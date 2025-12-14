@@ -1,0 +1,16 @@
+[package]
+name = "benchmark-rp2350"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rgb-sequencer = { path = "../../..", default-features = false }
+palette = { version = "0.7", default-features = false, features = ["libm"] }
+cortex-m = "0.7"
+rtt-target = "0.6.2"
+panic-halt = "1.0.0"
+panic-rtt-target = "0.2"
+
+# RP2350 specific
+rp235x-hal = { version = "0.3", features = ["rt", "critical-section-impl"] }
+cortex-m-rt = "0.7"
