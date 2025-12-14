@@ -1,0 +1,16 @@
+[package]
+name = "benchmark-rp2040"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rgb-sequencer = { path = "../../..", default-features = false }
+palette = { version = "0.7", default-features = false, features = ["libm"] }
+cortex-m = "0.7"
+rtt-target = "0.6.2"
+panic-halt = "1.0.0"
+
+# RP2040 specific
+rp-pico = "0.9"
+rp2040-boot2 = "0.3.0"
+cortex-m-rt = "0.7"
