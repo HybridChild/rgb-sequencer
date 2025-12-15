@@ -5,7 +5,7 @@ use cortex_m::delay::Delay;
 use panic_halt as _;
 use rp_pico::entry;
 use rp_pico::hal::{
-    Clock, Sio,
+    Clock, Sio, Timer,
     clocks::init_clocks_and_plls,
     pac,
     pwm::{A, B, Channel, FreeRunning, Pwm1, Pwm2, Slice},
@@ -14,81 +14,14 @@ use rp_pico::hal::{
 use rtt_target::{rprintln, rtt_init_print};
 
 use rp_pico_examples::rgb_led::PwmRgbLed;
+use rp_pico_examples::time::{Duration, HardwareTimer, Instant};
 
 use rgb_sequencer::{
-    BLACK, LoopCount, RgbSequence8, RgbSequencer8, ServiceTiming, TimeDuration, TimeInstant,
-    TimeSource, TransitionStyle, colors::hue,
+    BLACK, LoopCount, RgbSequence8, RgbSequencer8, ServiceTiming, TimeDuration, TransitionStyle,
+    colors::hue,
 };
 
 pub const FRAME_RATE_MS: u64 = 16;
-
-/// Duration type using milliseconds
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct BlinkyDuration(pub u64);
-
-impl TimeDuration for BlinkyDuration {
-    const ZERO: Self = BlinkyDuration(0);
-
-    fn as_millis(&self) -> u64 {
-        self.0
-    }
-
-    fn from_millis(millis: u64) -> Self {
-        BlinkyDuration(millis)
-    }
-
-    fn saturating_sub(self, other: Self) -> Self {
-        BlinkyDuration(self.0.saturating_sub(other.0))
-    }
-}
-
-/// Instant type representing a point in time (in milliseconds)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct BlinkyInstant(u64);
-
-impl TimeInstant for BlinkyInstant {
-    type Duration = BlinkyDuration;
-
-    fn duration_since(&self, earlier: Self) -> Self::Duration {
-        BlinkyDuration(self.0.saturating_sub(earlier.0))
-    }
-
-    fn checked_add(self, duration: Self::Duration) -> Option<Self> {
-        Some(BlinkyInstant(self.0.saturating_add(duration.0)))
-    }
-
-    fn checked_sub(self, duration: Self::Duration) -> Option<Self> {
-        self.0.checked_sub(duration.0).map(BlinkyInstant)
-    }
-}
-
-/// Simple time source that increments on each call
-///
-/// This works because we call `now()` only after each service/delay cycle,
-/// so the time advances naturally with the delays.
-pub struct BlinkyTimeSource {
-    current_time: core::cell::Cell<u64>,
-}
-
-impl BlinkyTimeSource {
-    pub fn new() -> Self {
-        Self {
-            current_time: core::cell::Cell::new(0),
-        }
-    }
-
-    /// Advance time by the given duration
-    pub fn advance(&self, duration: BlinkyDuration) {
-        let current = self.current_time.get();
-        self.current_time.set(current + duration.as_millis());
-    }
-}
-
-impl TimeSource<BlinkyInstant> for BlinkyTimeSource {
-    fn now(&self) -> BlinkyInstant {
-        BlinkyInstant(self.current_time.get())
-    }
-}
 
 /// Type alias for the RGB LED using PWM channels
 pub type Led1 = PwmRgbLed<
@@ -166,31 +99,32 @@ fn main() -> ! {
 
     rprintln!("RGB LED configured on GPIO2 (R), GPIO3 (G), GPIO4 (B)");
 
-    // Create RGB LED (common cathode = false)
+    // Create RGB LED (common anode = true)
     let led_1 = PwmRgbLed::new(red_channel, green_channel, blue_channel, true);
 
-    // Create time source
-    let time_source = BlinkyTimeSource::new();
+    // Create hardware timer
+    let timer = Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
+    let time_source = HardwareTimer::new(timer);
 
     rprintln!("=== Hardware Ready ===");
 
     // Create sequencer
-    let mut sequencer: RgbSequencer8<BlinkyInstant, Led1, BlinkyTimeSource> =
+    let mut sequencer: RgbSequencer8<Instant, Led1, HardwareTimer> =
         RgbSequencer8::new(led_1, &time_source);
 
     // Create a sequence
-    let sequence = RgbSequence8::<BlinkyDuration>::builder()
-        .step(hue(60.0), BlinkyDuration(0), TransitionStyle::Step)
+    let sequence = RgbSequence8::<Duration>::builder()
+        .step(hue(60.0), Duration::from_millis(0), TransitionStyle::Step)
         .unwrap() // Yellow
-        .step(BLACK, BlinkyDuration(1000), TransitionStyle::Linear)
+        .step(BLACK, Duration::from_millis(1000), TransitionStyle::Linear)
         .unwrap() // Fade out
-        .step(hue(180.0), BlinkyDuration(0), TransitionStyle::Step)
+        .step(hue(180.0), Duration::from_millis(0), TransitionStyle::Step)
         .unwrap() // Cyan
-        .step(BLACK, BlinkyDuration(1000), TransitionStyle::Linear)
+        .step(BLACK, Duration::from_millis(1000), TransitionStyle::Linear)
         .unwrap() // Fade out
-        .step(hue(300.0), BlinkyDuration(0), TransitionStyle::Step)
+        .step(hue(300.0), Duration::from_millis(0), TransitionStyle::Step)
         .unwrap() // Purple
-        .step(BLACK, BlinkyDuration(1000), TransitionStyle::Linear)
+        .step(BLACK, Duration::from_millis(1000), TransitionStyle::Linear)
         .unwrap() // Fade out
         .loop_count(LoopCount::Infinite)
         .build()
@@ -208,12 +142,10 @@ fn main() -> ! {
             ServiceTiming::Continuous => {
                 // Linear transition - maintain frame rate
                 delay.delay_ms(FRAME_RATE_MS as u32);
-                time_source.advance(BlinkyDuration(FRAME_RATE_MS));
             }
             ServiceTiming::Delay(delay_duration) => {
                 // Step transition - delay for the specified time
                 delay.delay_ms(delay_duration.as_millis() as u32);
-                time_source.advance(delay_duration);
             }
             ServiceTiming::Complete => {
                 // Sequence complete

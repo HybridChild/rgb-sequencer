@@ -46,7 +46,7 @@ Simple LED sequencing with blocking delays. Perfect starting point for learning 
 - Single RGB LED with colorful sequence (yellow, cyan, purple) using PWM
 - Infinite loop with Step and Linear transitions
 - Blocking approach using Cortex-M `Delay`
-- Manual time source (counter-based, no interrupts)
+- Hardware timer (RP2040 Timer peripheral at 1 MHz)
 - Zero-duration steps for instant color changes
 - RTT logging for debugging
 - PWM configuration: 1 kHz with phase-correct mode
