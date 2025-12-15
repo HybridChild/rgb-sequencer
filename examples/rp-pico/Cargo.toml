@@ -32,6 +32,10 @@ path = "src/lib.rs"
 name = "blinky"
 path = "bin/blinky/main.rs"
 
+[[bin]]
+name = "breathing"
+path = "bin/breathing/main.rs"
+
 [profile.release]
 debug = true
 lto = true
