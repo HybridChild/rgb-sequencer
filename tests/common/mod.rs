@@ -120,6 +120,7 @@ impl TimeSource<TestInstant> for MockTimeSource {
 // Re-export color constants from library for test convenience
 // ============================================================================
 
+#[allow(unused_imports)]
 pub use rgb_sequencer::{BLACK, BLUE, GREEN, RED};
 
 // ============================================================================
