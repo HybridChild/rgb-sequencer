@@ -1,5 +1,19 @@
 # Features
 
+## Table of Contents
+
+- [Step-Based Sequences](#step-based-sequences)
+- [Choosing Sequence Capacity](#choosing-sequence-capacity)
+- [Function-Based Sequences](#function-based-sequences)
+- [Predefined Colors](#predefined-colors)
+- [State Machine](#state-machine)
+- [Servicing the Sequencer](#servicing-the-sequencer)
+- [Pause and Resume with Timing Compensation](#pause-and-resume-with-timing-compensation)
+- [Global Brightness Control](#global-brightness-control)
+- [Multi-LED Control](#multi-led-control)
+- [Command-Based Control](#command-based-control)
+- [Querying Sequencer State](#querying-sequencer-state)
+
 ## Step-Based Sequences
 
 Step-based sequences define animations as a series of color waypoints with explicit durations and transition styles.
@@ -483,6 +497,45 @@ loop {
 
 Useful for interactive color UI.
 
+## Global Brightness Control
+
+A global `brightness` can be set for each individual sequencer, which allows you to dim or brighten all colors without modifying the sequence itself.
+
+### Basic Usage
+
+```rust
+let mut sequencer = RgbSequencer8::new(led, &timer);
+sequencer.load(sequence);
+
+// Set brightness to 50%
+sequencer.set_brightness(0.5);
+
+sequencer.start()?;
+```
+
+Brightness Range
+- `1.0` (default): Full brightness
+- `0.0`: LED off (black)
+
+```rust
+// Values are automatically clamped to 0.0-1.0 range
+sequencer.set_brightness(2.5);   // Becomes 1.0 (full)
+sequencer.set_brightness(-0.5);  // Becomes 0.0 (off)
+
+// Query current brightness
+let current = sequencer.brightness();  // Returns 0.0-1.0
+```
+
+Brightness can be changed at any time, including during playback.
+
+Brightness affects all sequences uniformly both step-based and function-based and any `TransitionStyle`.
+
+Use cases:
+- Night Mode
+- Battery Saving
+- Ambient Light Adaptation
+- Fade In/Out Effects
+
 ## Multi-LED Control
 
 Each sequencer owns its LED but multiple sequencers can share the same time source.
@@ -670,42 +723,3 @@ Use cases:
 - **Debugging**: Inspecting sequence state during development
 
 Note: `current_position()` returns `None` for function-based sequences since they don't have discrete steps.
-
-## Global Brightness Control
-
-A global `brightness` can be set for each individual sequencer, which allows you to dim or brighten all colors without modifying the sequence itself.
-
-### Basic Usage
-
-```rust
-let mut sequencer = RgbSequencer8::new(led, &timer);
-sequencer.load(sequence);
-
-// Set brightness to 50%
-sequencer.set_brightness(0.5);
-
-sequencer.start()?;
-```
-
-Brightness Range
-- `1.0` (default): Full brightness
-- `0.0`: LED off (black)
-
-```rust
-// Values are automatically clamped to 0.0-1.0 range
-sequencer.set_brightness(2.5);   // Becomes 1.0 (full)
-sequencer.set_brightness(-0.5);  // Becomes 0.0 (off)
-
-// Query current brightness
-let current = sequencer.brightness();  // Returns 0.0-1.0
-```
-
-Brightness can be changed at any time, including during playback.
-
-Brightness affects all sequences uniformly both step-based and function-based and any `TransitionStyle`.
-
-Use cases:
-- Night Mode
-- Battery Saving
-- Ambient Light Adaptation
-- Fade In/Out Effects
