@@ -10,8 +10,8 @@ use rp_pico::hal::{Clock, clocks::init_clocks_and_plls, pac, watchdog::Watchdog}
 use rtt_target::{rprintln, rtt_init_print};
 
 use bench::{
-    cycles_to_micros, BENCH_ITERATIONS, BenchLed, BenchTimeSource, HardwareTimer, Instant,
-    Microseconds, RpTimer, WARMUP_ITERATIONS,
+    BENCH_ITERATIONS, BenchLed, BenchTimeSource, HardwareTimer, Instant, Microseconds, RpTimer,
+    WARMUP_ITERATIONS, cycles_to_micros,
 };
 
 use rgb_sequencer::{LoopCount, RgbSequence, RgbSequencer, TransitionStyle};
@@ -128,10 +128,30 @@ fn main() -> ! {
     }
 
     bench_row("Step", TransitionStyle::Step, timer_freq_hz, cpu_freq_hz);
-    bench_row("Linear", TransitionStyle::Linear, timer_freq_hz, cpu_freq_hz);
-    bench_row("EaseIn", TransitionStyle::EaseIn, timer_freq_hz, cpu_freq_hz);
-    bench_row("EaseOut", TransitionStyle::EaseOut, timer_freq_hz, cpu_freq_hz);
-    bench_row("EaseInOut", TransitionStyle::EaseInOut, timer_freq_hz, cpu_freq_hz);
+    bench_row(
+        "Linear",
+        TransitionStyle::Linear,
+        timer_freq_hz,
+        cpu_freq_hz,
+    );
+    bench_row(
+        "EaseIn",
+        TransitionStyle::EaseIn,
+        timer_freq_hz,
+        cpu_freq_hz,
+    );
+    bench_row(
+        "EaseOut",
+        TransitionStyle::EaseOut,
+        timer_freq_hz,
+        cpu_freq_hz,
+    );
+    bench_row(
+        "EaseInOut",
+        TransitionStyle::EaseInOut,
+        timer_freq_hz,
+        cpu_freq_hz,
+    );
 
     rprintln!("");
     rprintln!("Benchmark complete.");

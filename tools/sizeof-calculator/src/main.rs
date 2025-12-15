@@ -244,8 +244,16 @@ impl TimeSource<EmbassyInstant> for EmbassyTimeSource {
 fn write_header(f: &mut File) -> std::io::Result<()> {
     writeln!(f, "# RGB Sequencer Memory Footprint Analysis")?;
     writeln!(f)?;
-    writeln!(f, "**Generated:** {}  "  , chrono::Local::now().format("%Y-%m-%d %H:%M:%S"))?;
-    writeln!(f, "**Architecture:** {}-bit host", std::mem::size_of::<usize>() * 8)?;
+    writeln!(
+        f,
+        "**Generated:** {}  ",
+        chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
+    )?;
+    writeln!(
+        f,
+        "**Architecture:** {}-bit host",
+        std::mem::size_of::<usize>() * 8
+    )?;
     writeln!(f)?;
     Ok(())
 }
@@ -257,10 +265,22 @@ fn write_component_sizes(f: &mut File) -> std::io::Result<()> {
     writeln!(f, "|-----------|------|")?;
     writeln!(f, "| `Srgb` | {} B |", size_of::<Srgb>())?;
     writeln!(f, "| `Option<Srgb>` | {} B |", size_of::<Option<Srgb>>())?;
-    writeln!(f, "| `TransitionStyle` | {} B |", size_of::<TransitionStyle>())?;
+    writeln!(
+        f,
+        "| `TransitionStyle` | {} B |",
+        size_of::<TransitionStyle>()
+    )?;
     writeln!(f, "| `LoopCount` | {} B |", size_of::<LoopCount>())?;
-    writeln!(f, "| Color function pointer | {} B |", size_of::<Option<fn(Srgb, Duration64) -> Srgb>>())?;
-    writeln!(f, "| Timing function pointer | {} B |", size_of::<Option<fn(Duration64) -> Option<Duration64>>>())?;
+    writeln!(
+        f,
+        "| Color function pointer | {} B |",
+        size_of::<Option<fn(Srgb, Duration64) -> Srgb>>()
+    )?;
+    writeln!(
+        f,
+        "| Timing function pointer | {} B |",
+        size_of::<Option<fn(Duration64) -> Option<Duration64>>>()
+    )?;
     writeln!(f)?;
     Ok(())
 }
@@ -270,9 +290,21 @@ fn write_duration_sizes(f: &mut File) -> std::io::Result<()> {
     writeln!(f)?;
     writeln!(f, "| Type | Size |")?;
     writeln!(f, "|------|------|")?;
-    writeln!(f, "| `u32` (milliseconds) | {} B |", size_of::<Duration32>())?;
-    writeln!(f, "| `u64` (milliseconds) | {} B |", size_of::<Duration64>())?;
-    writeln!(f, "| Embassy `Duration` | {} B |", size_of::<EmbassyDuration>())?;
+    writeln!(
+        f,
+        "| `u32` (milliseconds) | {} B |",
+        size_of::<Duration32>()
+    )?;
+    writeln!(
+        f,
+        "| `u64` (milliseconds) | {} B |",
+        size_of::<Duration64>()
+    )?;
+    writeln!(
+        f,
+        "| Embassy `Duration` | {} B |",
+        size_of::<EmbassyDuration>()
+    )?;
     writeln!(f)?;
     Ok(())
 }
@@ -284,7 +316,11 @@ fn write_instant_sizes(f: &mut File) -> std::io::Result<()> {
     writeln!(f, "|------|------|")?;
     writeln!(f, "| `u32` (milliseconds) | {} B |", size_of::<Instant32>())?;
     writeln!(f, "| `u64` (milliseconds) | {} B |", size_of::<Instant64>())?;
-    writeln!(f, "| Embassy `Instant` | {} B |", size_of::<EmbassyInstant>())?;
+    writeln!(
+        f,
+        "| Embassy `Instant` | {} B |",
+        size_of::<EmbassyInstant>()
+    )?;
     writeln!(f)?;
     Ok(())
 }
@@ -294,9 +330,21 @@ fn write_led_sizes(f: &mut File) -> std::io::Result<()> {
     writeln!(f)?;
     writeln!(f, "| Implementation | Size | Description |")?;
     writeln!(f, "|----------------|------|-------------|")?;
-    writeln!(f, "| Small | {} B | Minimal GPIO (3× u8 pins) |", size_of::<SmallLed>())?;
-    writeln!(f, "| Medium | {} B | PWM (3× u32 channels + u16 duty) |", size_of::<MediumLed>())?;
-    writeln!(f, "| Large | {} B | Complex (PWM + gamma table + calibration) |", size_of::<LargeLed>())?;
+    writeln!(
+        f,
+        "| Small | {} B | Minimal GPIO (3× u8 pins) |",
+        size_of::<SmallLed>()
+    )?;
+    writeln!(
+        f,
+        "| Medium | {} B | PWM (3× u32 channels + u16 duty) |",
+        size_of::<MediumLed>()
+    )?;
+    writeln!(
+        f,
+        "| Large | {} B | Complex (PWM + gamma table + calibration) |",
+        size_of::<LargeLed>()
+    )?;
     writeln!(f)?;
     Ok(())
 }
@@ -308,7 +356,11 @@ fn write_step_sizes(f: &mut File) -> std::io::Result<()> {
     writeln!(f, "|---------------|-----------|")?;
     writeln!(f, "| `u32` | {} B |", size_of::<SequenceStep<Duration32>>())?;
     writeln!(f, "| `u64` | {} B |", size_of::<SequenceStep<Duration64>>())?;
-    writeln!(f, "| Embassy | {} B |", size_of::<SequenceStep<EmbassyDuration>>())?;
+    writeln!(
+        f,
+        "| Embassy | {} B |",
+        size_of::<SequenceStep<EmbassyDuration>>()
+    )?;
     writeln!(f)?;
     Ok(())
 }
@@ -375,8 +427,14 @@ where
 {
     writeln!(f, "### `RgbSequencer<{}, {}, N>`", instant_name, led_name)?;
     writeln!(f)?;
-    writeln!(f, "| Capacity | Total Size | Sequence Size | Sequencer OH |")?;
-    writeln!(f, "|----------|------------|---------------|--------------|")?;
+    writeln!(
+        f,
+        "| Capacity | Total Size | Sequence Size | Sequencer OH |"
+    )?;
+    writeln!(
+        f,
+        "|----------|------------|---------------|--------------|"
+    )?;
 
     for &capacity in capacities {
         let total_size = match capacity {
@@ -442,31 +500,77 @@ fn main() -> std::io::Result<()> {
     // Sequencer tables
     writeln!(&mut file, "## Sequencer Memory Usage")?;
     writeln!(&mut file)?;
-    writeln!(&mut file, "Sequencer overhead includes LED, state, time tracking, and the owned sequence.")?;
+    writeln!(
+        &mut file,
+        "Sequencer overhead includes LED, state, time tracking, and the owned sequence."
+    )?;
     writeln!(&mut file)?;
 
     writeln!(&mut file, "#### With u64 Instant/Duration")?;
     writeln!(&mut file)?;
-    write_sequencer_table::<Instant64, SmallLed, TimeSource64>(&mut file, "u64", "Small", &capacities)?;
-    write_sequencer_table::<Instant64, MediumLed, TimeSource64>(&mut file, "u64", "Medium", &capacities)?;
-    write_sequencer_table::<Instant64, LargeLed, TimeSource64>(&mut file, "u64", "Large", &capacities)?;
+    write_sequencer_table::<Instant64, SmallLed, TimeSource64>(
+        &mut file,
+        "u64",
+        "Small",
+        &capacities,
+    )?;
+    write_sequencer_table::<Instant64, MediumLed, TimeSource64>(
+        &mut file,
+        "u64",
+        "Medium",
+        &capacities,
+    )?;
+    write_sequencer_table::<Instant64, LargeLed, TimeSource64>(
+        &mut file,
+        "u64",
+        "Large",
+        &capacities,
+    )?;
 
     writeln!(&mut file, "#### With Embassy Instant/Duration")?;
     writeln!(&mut file)?;
-    write_sequencer_table::<EmbassyInstant, SmallLed, EmbassyTimeSource>(&mut file, "Embassy", "Small", &capacities)?;
-    write_sequencer_table::<EmbassyInstant, MediumLed, EmbassyTimeSource>(&mut file, "Embassy", "Medium", &capacities)?;
-    write_sequencer_table::<EmbassyInstant, LargeLed, EmbassyTimeSource>(&mut file, "Embassy", "Large", &capacities)?;
+    write_sequencer_table::<EmbassyInstant, SmallLed, EmbassyTimeSource>(
+        &mut file,
+        "Embassy",
+        "Small",
+        &capacities,
+    )?;
+    write_sequencer_table::<EmbassyInstant, MediumLed, EmbassyTimeSource>(
+        &mut file,
+        "Embassy",
+        "Medium",
+        &capacities,
+    )?;
+    write_sequencer_table::<EmbassyInstant, LargeLed, EmbassyTimeSource>(
+        &mut file,
+        "Embassy",
+        "Large",
+        &capacities,
+    )?;
 
     // Key insights
     writeln!(&mut file, "## Key Insights")?;
     writeln!(&mut file)?;
-    writeln!(&mut file, "- Sequence overhead is constant regardless of capacity")?;
-    writeln!(&mut file, "- Sequencer adds fixed overhead for LED + state tracking")?;
-    writeln!(&mut file, "- LED implementation size directly affects total sequencer size")?;
+    writeln!(
+        &mut file,
+        "- Sequence overhead is constant regardless of capacity"
+    )?;
+    writeln!(
+        &mut file,
+        "- Sequencer adds fixed overhead for LED + state tracking"
+    )?;
+    writeln!(
+        &mut file,
+        "- LED implementation size directly affects total sequencer size"
+    )?;
     writeln!(&mut file)?;
     writeln!(&mut file, "## Architecture Note")?;
     writeln!(&mut file)?;
-    writeln!(&mut file, "Analysis performed on {}-bit host architecture. Embedded 32-bit targets will have slightly smaller sizes due to pointer differences (4B vs 8B). Step storage costs remain identical across architectures.", std::mem::size_of::<usize>() * 8)?;
+    writeln!(
+        &mut file,
+        "Analysis performed on {}-bit host architecture. Embedded 32-bit targets will have slightly smaller sizes due to pointer differences (4B vs 8B). Step storage costs remain identical across architectures.",
+        std::mem::size_of::<usize>() * 8
+    )?;
 
     println!("✓ Report generated: {}", report_path);
     println!("  View with: cat {}", report_path);
