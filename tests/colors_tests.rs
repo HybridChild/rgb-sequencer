@@ -1,14 +1,10 @@
 //! Integration tests for colors module
 
+mod common;
+
+use common::colors_equal;
 use palette::Srgb;
 use rgb_sequencer::colors;
-
-fn colors_equal(a: Srgb, b: Srgb) -> bool {
-    const EPSILON: f32 = 0.01;
-    (a.red - b.red).abs() < EPSILON
-        && (a.green - b.green).abs() < EPSILON
-        && (a.blue - b.blue).abs() < EPSILON
-}
 
 #[test]
 fn hsv_creates_primary_colors() {
