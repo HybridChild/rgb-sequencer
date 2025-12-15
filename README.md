@@ -103,19 +103,31 @@ loop {
 
 ## Performance Considerations
 
+### Benchmark Results
+
+Performance measured on embedded targets:
+
+**RP2040 (Cortex-M0+, 125 MHz, no FPU)**
+- Step transitions: ~50 µs per `service()` call
+- Linear/Easing: ~75 µs per `service()` call
+
+**RP2350 (Cortex-M33F, 150 MHz, with FPU)**
+- Step transitions: ~19 µs per `service()` call
+- Linear/Easing: ~22 µs per `service()` call
+
+See [benchmark results](tools/benchmark/) for detailed cycle counts and test configurations.
+
 ### Floating Point Math Requirements
 
-**IMPORTANT**: This library uses `f32` extensively for color math and interpolation. Performance varies by target:
+This library uses `f32` for color math and interpolation, so performance will vary by target as the benchmarks demonstrate:
 
 #### Hardware FPU (Fast) ✅
-Cortex-M4F, M7, M33 (e.g., STM32F4, STM32H7, nRF52) - Hardware-accelerated f32 operations, excellent performance.
+Cortex-M4F, M7, M33F - Hardware-accelerated `f32` operations. Minimal overhead for easing functions.
 
-#### No Hardware FPU (Slow) ⚠️
-Cortex-M0/M0+, M3 (e.g., STM32F0, STM32F1, RP2040) - Software-emulated f32 is **10-100x slower**.
+#### No Hardware FPU (Slower) ⚠️
+Cortex-M0/M0+, M3 - Software-emulated `f32` operations. Linear/easing adds ~50% overhead vs Step transitions.
 
-**Recommendations for non-FPU targets:**
-- Prefer Step transitions (no interpolation math)
-- Avoid math-heavy function-based sequences
+**Recommendation:** For low-power scenarios on non-FPU targets, prefer Step transitions exclusively.
 
 ## License
 

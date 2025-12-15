@@ -143,27 +143,18 @@ See README.md and examples for complete usage patterns.
 - **Core dependencies only** - Check `default-features = false` for dependencies
 - **Tests are also `no_std`** - Maintain consistency across library and tests
 
-### Performance on Non-FPU Targets
+### Performance Characteristics
 
-**WARNING**: This library uses `f32` extensively for color math. Performance varies dramatically:
+This library uses `f32` for color math and interpolation. Benchmarked performance (see tools/benchmark/):
 
-- **Cortex-M4F/M7/M33** (with FPU): Excellent performance, hardware-accelerated f32
-- **Cortex-M0/M0+/M3** (no FPU): Software-emulated f32 is 10-100x slower
-- **RP2040** (Cortex-M0+): No FPU, software emulation
+- **Non-FPU targets (RP2040)**: Linear/easing adds ~50% overhead vs Step transitions, but all transitions remain efficient for typical LED control (~50-75 µs per service call)
+- **FPU targets (RP2350)**: Minimal overhead difference between transition types (~19-22 µs per service call)
 
-**For non-FPU targets:**
-- Prefer `TransitionStyle::Step` (no interpolation math)
-- `Linear` is acceptable for simple transitions (single multiply/divide)
-- Avoid `EaseIn/EaseOut/EaseInOut` (additional f32 operations)
-- Avoid complex function-based sequences
-- Use simple color patterns
-- Profile your specific target
-
-**For FPU targets:**
-- Full flexibility with all transition types
-- Easing functions add minimal overhead
-- Mathematical function-based sequences work well
-- HSV color wheels, sine wave breathing, etc.
+**When providing guidance:**
+- Don't over-warn about performance - benchmarks show all transition types are practical
+- For ultra-low-power scenarios on non-FPU targets, suggest Step transitions
+- Refer users to benchmark tool (tools/benchmark/) for profiling their specific hardware
+- Avoid speculative performance claims - we have real data now
 
 ### Static Allocation & Zero-Copy
 
