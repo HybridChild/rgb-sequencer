@@ -137,7 +137,6 @@ impl RpTimer {
             }
         }
     }
-
 }
 
 impl HardwareTimer for RpTimer {
