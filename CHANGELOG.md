@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **BREAKING**: Color constants renamed from `COLOR_*` prefix to simple names (`RED`, `GREEN`, `BLUE`, `WHITE`, `YELLOW`, `CYAN`, `MAGENTA`). `COLOR_OFF` renamed to `BLACK`
 - **BREAKING**: `RgbSequencer::current_position()` now returns `Option<Position>` instead of `Option<(usize, u32)>`
+- `RgbSequencer::current_position()` now returns the frozen position when paused (previously returned `None`)
 - **BREAKING**: Renamed `RgbSequencer::get_state()` to `state()` to follow Rust API naming conventions
 - **BREAKING**: `SequenceBuilder::step()` now returns `Result<Self, SequenceError>` instead of panicking when capacity is exceeded
 - **BREAKING**: `RgbSequence::solid()` signature changed to remove duration parameter (holds indefinitely)
