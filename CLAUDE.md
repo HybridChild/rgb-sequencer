@@ -191,12 +191,14 @@ pub enum SequencerState {
 
 **Valid Transitions:**
 - `Idle` → `Loaded` (via `load()`)
-- `Loaded` → `Running` (via `start()`)
+- `Loaded` → `Running` (via `start()` - call `service()` to update LED)
 - `Running` → `Paused` (via `pause()`)
-- `Paused` → `Running` (via `resume()` - with timing compensation)
+- `Paused` → `Running` (via `resume()` - call `service()` to update LED)
 - `Running` → `Complete` (finite sequence finishes)
 - Any state → `Idle` (via `clear()`)
-- `Loaded/Running/Paused/Complete` → `Running` (via `restart()`)
+- `Loaded/Running/Paused/Complete` → `Running` (via `restart()` - call `service()` to update LED)
+
+**Important:** State transition methods (`start()`, `resume()`, `restart()`) only change sequencer state. The LED updates when you call `service()`.
 
 **Invalid operations return `SequencerError::InvalidState`**
 

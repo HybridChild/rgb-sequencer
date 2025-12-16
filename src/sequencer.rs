@@ -149,30 +149,24 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
     pub fn handle_action(
         &mut self,
         action: SequencerAction<I::Duration, N>,
-    ) -> Result<ServiceTiming<I::Duration>, SequencerError> {
+    ) -> Result<(), SequencerError> {
         match action {
             SequencerAction::Load(sequence) => {
                 self.load(sequence);
-                Ok(ServiceTiming::Complete)
+                Ok(())
             }
             SequencerAction::Start => self.start(),
-            SequencerAction::Stop => {
-                self.stop()?;
-                Ok(ServiceTiming::Complete)
-            }
-            SequencerAction::Pause => {
-                self.pause()?;
-                Ok(ServiceTiming::Complete)
-            }
+            SequencerAction::Stop => self.stop(),
+            SequencerAction::Pause => self.pause(),
             SequencerAction::Resume => self.resume(),
             SequencerAction::Restart => self.restart(),
             SequencerAction::Clear => {
                 self.clear();
-                Ok(ServiceTiming::Complete)
+                Ok(())
             }
             SequencerAction::SetBrightness(brightness) => {
                 self.set_brightness(brightness);
-                Ok(ServiceTiming::Complete)
+                Ok(())
             }
         }
     }
@@ -185,8 +179,10 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
         self.state = SequencerState::Loaded;
     }
 
-    /// Starts sequence.
-    pub fn start(&mut self) -> Result<ServiceTiming<I::Duration>, SequencerError> {
+    /// Starts sequence playback.
+    ///
+    /// Transitions from `Loaded` to `Running` state.
+    pub fn start(&mut self) -> Result<(), SequencerError> {
         if self.state != SequencerState::Loaded {
             return Err(SequencerError::InvalidState {
                 expected: "Loaded",
@@ -200,20 +196,24 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
 
         self.start_time = Some(self.time_source.now());
         self.state = SequencerState::Running;
-        self.service()
+        Ok(())
     }
 
     /// Loads and immediately starts a sequence.
+    ///
+    /// Convenience method that combines `load()` and `start()`.
     pub fn load_and_start(
         &mut self,
         sequence: RgbSequence<I::Duration, N>,
-    ) -> Result<ServiceTiming<I::Duration>, SequencerError> {
+    ) -> Result<(), SequencerError> {
         self.load(sequence);
         self.start()
     }
 
-    /// Restarts sequence.
-    pub fn restart(&mut self) -> Result<ServiceTiming<I::Duration>, SequencerError> {
+    /// Restarts sequence from beginning.
+    ///
+    /// Resets the start time and transitions to `Running` state.
+    pub fn restart(&mut self) -> Result<(), SequencerError> {
         match self.state {
             SequencerState::Running | SequencerState::Paused | SequencerState::Complete => {
                 if self.sequence.is_none() {
@@ -223,7 +223,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
                 self.start_time = Some(self.time_source.now());
                 self.pause_start_time = None;
                 self.state = SequencerState::Running;
-                self.service()
+                Ok(())
             }
             _ => Err(SequencerError::InvalidState {
                 expected: "Running, Paused, or Complete",
@@ -344,7 +344,9 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
     }
 
     /// Resumes paused sequence.
-    pub fn resume(&mut self) -> Result<ServiceTiming<I::Duration>, SequencerError> {
+    ///
+    /// Automatically compensates for the paused duration to maintain timing continuity.
+    pub fn resume(&mut self) -> Result<(), SequencerError> {
         if self.state != SequencerState::Paused {
             return Err(SequencerError::InvalidState {
                 expected: "Paused",
@@ -366,7 +368,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
 
         self.pause_start_time = None;
         self.state = SequencerState::Running;
-        self.service()
+        Ok(())
     }
 
     /// Clears sequence and turns LED off.
