@@ -20,25 +20,37 @@ fn builder_rejects_zero_duration_with_non_step() {
         .step(RED, TestDuration(0), TransitionStyle::Linear)
         .unwrap()
         .build();
-    assert!(matches!(result, Err(SequenceError::ZeroDurationWithLinear)));
+    assert!(matches!(
+        result,
+        Err(SequenceError::ZeroDurationWithInterpolation)
+    ));
 
     let result = RgbSequence::<TestDuration, 8>::builder()
         .step(RED, TestDuration(0), TransitionStyle::EaseIn)
         .unwrap()
         .build();
-    assert!(matches!(result, Err(SequenceError::ZeroDurationWithLinear)));
+    assert!(matches!(
+        result,
+        Err(SequenceError::ZeroDurationWithInterpolation)
+    ));
 
     let result = RgbSequence::<TestDuration, 8>::builder()
         .step(RED, TestDuration(0), TransitionStyle::EaseOut)
         .unwrap()
         .build();
-    assert!(matches!(result, Err(SequenceError::ZeroDurationWithLinear)));
+    assert!(matches!(
+        result,
+        Err(SequenceError::ZeroDurationWithInterpolation)
+    ));
 
     let result = RgbSequence::<TestDuration, 8>::builder()
         .step(RED, TestDuration(0), TransitionStyle::EaseInOut)
         .unwrap()
         .build();
-    assert!(matches!(result, Err(SequenceError::ZeroDurationWithLinear)));
+    assert!(matches!(
+        result,
+        Err(SequenceError::ZeroDurationWithInterpolation)
+    ));
 }
 
 #[test]
@@ -836,6 +848,7 @@ fn ease_out_in_transition_inverted_curve() {
 #[test]
 fn easing_transitions_return_continuous_timing() {
     let test_cases = [
+        TransitionStyle::Linear,
         TransitionStyle::EaseIn,
         TransitionStyle::EaseOut,
         TransitionStyle::EaseInOut,
@@ -853,7 +866,7 @@ fn easing_transitions_return_continuous_timing() {
         assert_eq!(
             timing,
             Some(TestDuration::ZERO),
-            "Easing transitions should return continuous timing"
+            "Interpolating transitions should return continuous timing"
         );
     }
 }
@@ -861,9 +874,11 @@ fn easing_transitions_return_continuous_timing() {
 #[test]
 fn zero_duration_with_easing_is_rejected() {
     let test_cases = [
+        TransitionStyle::Linear,
         TransitionStyle::EaseIn,
         TransitionStyle::EaseOut,
         TransitionStyle::EaseInOut,
+        TransitionStyle::EaseOutIn,
     ];
 
     for transition in test_cases {
@@ -873,7 +888,7 @@ fn zero_duration_with_easing_is_rejected() {
             .build();
 
         assert!(
-            matches!(result, Err(SequenceError::ZeroDurationWithLinear)),
+            matches!(result, Err(SequenceError::ZeroDurationWithInterpolation)),
             "Zero-duration with {:?} should be rejected",
             transition
         );
