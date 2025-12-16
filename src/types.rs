@@ -20,6 +20,9 @@ pub enum TransitionStyle {
 
     /// Quadratic ease-in-out: slow start and end, fast middle. Requires non-zero duration.
     EaseInOut,
+
+    /// Quadratic ease-out-in: fast start and end, slow middle. Requires non-zero duration.
+    EaseOutIn,
 }
 
 /// How many times a sequence should repeat.

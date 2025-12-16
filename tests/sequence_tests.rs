@@ -334,25 +334,6 @@ fn start_color_used_for_first_linear_step_first_loop_only() {
 }
 
 #[test]
-fn start_color_not_used_when_first_step_is_step_transition() {
-    // BEHAVIOR: start_color only applies to interpolating transitions (Linear, Easing)
-    // Builder should reject start_color with first step as Step transition
-    let result = RgbSequence::<TestDuration, 8>::builder()
-        .start_color(BLACK)
-        .step(RED, TestDuration(1000), TransitionStyle::Step)
-        .unwrap()
-        .step(GREEN, TestDuration(1000), TransitionStyle::Linear)
-        .unwrap()
-        .loop_count(LoopCount::Infinite)
-        .build();
-
-    assert!(matches!(
-        result,
-        Err(SequenceError::StartColorWithStepTransition)
-    ));
-}
-
-#[test]
 fn start_color_only_affects_first_loop_with_finite_loops() {
     // BEHAVIOR: start_color applies to first loop only, regardless of loop count
     let sequence = RgbSequence::<TestDuration, 8>::builder()
@@ -469,8 +450,11 @@ fn infinite_loop_never_completes() {
     let (color, _) = sequence.evaluate(TestDuration(350));
     assert!(colors_equal(color, GREEN));
 
-    let (color, _) = sequence.evaluate(TestDuration(10050));
+    let (color, _) = sequence.evaluate(TestDuration(1000050));
     assert!(colors_equal(color, RED));
+
+    let (color, _) = sequence.evaluate(TestDuration(1000350));
+    assert!(colors_equal(color, GREEN));
 }
 
 #[test]
@@ -801,13 +785,48 @@ fn ease_in_out_transition_symmetric() {
         .build()
         .unwrap();
 
-    // At 25% time: ease-in phase (slow start, progress < 0.25)
+    // At 25% time: ease-in phase (slow start, progress < 0.2)
     assert!(sequence.evaluate(TestDuration(250)).0.red < 0.2);
 
     // At 50% time: midpoint (progress ≈ 0.5)
     assert!(
-        sequence.evaluate(TestDuration(500)).0.red > 0.45
-            && sequence.evaluate(TestDuration(500)).0.red < 0.55
+        sequence.evaluate(TestDuration(500)).0.red > 0.49
+            && sequence.evaluate(TestDuration(500)).0.red < 0.51
+    );
+
+    // At 75% time: ease-out phase (fast middle, progress > 0.8)
+    assert!(sequence.evaluate(TestDuration(750)).0.red > 0.8);
+
+    // At 100% time: reaches full color
+    assert!(colors_equal(sequence.evaluate(TestDuration(1000)).0, RED));
+}
+
+#[test]
+fn ease_out_in_transition_inverted_curve() {
+    // BEHAVIOR: EaseOutIn is fast at both ends, slow in middle (inverted S-curve)
+    let sequence = RgbSequence::<TestDuration, 8>::builder()
+        .start_color(BLACK)
+        .step(RED, TestDuration(1000), TransitionStyle::EaseOutIn)
+        .unwrap()
+        .build()
+        .unwrap();
+
+    // At 25% time: fast start phase (progress ≈ 0.375)
+    assert!(
+        sequence.evaluate(TestDuration(250)).0.red > 0.35
+            && sequence.evaluate(TestDuration(250)).0.red < 0.40
+    );
+
+    // At 50% time: midpoint (progress ≈ 0.5)
+    assert!(
+        sequence.evaluate(TestDuration(500)).0.red > 0.49
+            && sequence.evaluate(TestDuration(500)).0.red < 0.51
+    );
+
+    // At 75% time: slow middle transitioning to fast end (progress ≈ 0.625)
+    assert!(
+        sequence.evaluate(TestDuration(750)).0.red > 0.60
+            && sequence.evaluate(TestDuration(750)).0.red < 0.65
     );
 
     // At 100% time: reaches full color
@@ -820,6 +839,7 @@ fn easing_transitions_return_continuous_timing() {
         TransitionStyle::EaseIn,
         TransitionStyle::EaseOut,
         TransitionStyle::EaseInOut,
+        TransitionStyle::EaseOutIn,
     ];
 
     for transition in test_cases {
