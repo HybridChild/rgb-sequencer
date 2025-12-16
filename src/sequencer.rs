@@ -448,23 +448,34 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
 
     /// Returns current playback position.
     ///
-    /// Returns `None` if not running or sequence is function-based.
+    /// When running, returns the current position. When paused, returns the frozen position
+    /// where the sequence will resume from. Returns `None` if not running/paused or sequence
+    /// is function-based.
     #[inline]
     pub fn current_position(&self) -> Option<Position> {
-        if self.state != SequencerState::Running {
-            return None;
+        match self.state {
+            SequencerState::Running | SequencerState::Paused => {
+                let sequence = self.sequence.as_ref()?;
+                let start_time = self.start_time?;
+
+                // Use pause_start_time for paused state to get frozen position,
+                // otherwise use current time for running state
+                let reference_time = if self.state == SequencerState::Paused {
+                    self.pause_start_time?
+                } else {
+                    self.time_source.now()
+                };
+
+                let elapsed = reference_time.duration_since(start_time);
+
+                let step_position = sequence.find_step_position(elapsed)?;
+                Some(Position {
+                    step_index: step_position.step_index,
+                    loop_number: step_position.current_loop,
+                })
+            }
+            _ => None,
         }
-
-        let sequence = self.sequence.as_ref()?;
-        let start_time = self.start_time?;
-        let current_time = self.time_source.now();
-        let elapsed = current_time.duration_since(start_time);
-
-        let step_position = sequence.find_step_position(elapsed)?;
-        Some(Position {
-            step_index: step_position.step_index,
-            loop_number: step_position.current_loop,
-        })
     }
 
     /// Consumes the sequencer and returns the LED.

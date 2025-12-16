@@ -419,7 +419,7 @@ fn restart_from_paused_state() {
 
     sequencer.load(sequence);
     sequencer.start().unwrap();
-    timer.advance(TestDuration(500));
+    timer.advance(TestDuration(1500));
     sequencer.service().unwrap();
     sequencer.pause().unwrap();
 
@@ -569,20 +569,48 @@ fn led_only_updates_when_color_changes() {
 
     sequencer.load(sequence);
     sequencer.start().unwrap();
+    sequencer.service().unwrap();
 
-    // After start, LED should be set to RED (plus initial BLACK from new())
-    // Color history should have: [BLACK (from new), RED (from start)]
+    // After start + first service, LED should be set to RED (plus initial BLACK from new())
+    // Color history should have: [BLACK (from new), RED (from first service)]
 
-    // Service multiple times without time advancing - color shouldn't change
+    // Service multiple times without time advancing - color history shouldn't change
     timer.advance(TestDuration(100));
     sequencer.service().unwrap();
     sequencer.service().unwrap();
     sequencer.service().unwrap();
 
-    // The LED's color_history should not grow since color didn't change
-    // We can't directly test this without exposing the mock, but we can verify
-    // the current color remains RED
-    assert!(colors_equal(sequencer.current_color(), RED));
+    // Extract LED to check write count
+    let (led, _) = sequencer.into_parts();
+    let history = led.color_history();
+
+    // Should have exactly 2 writes: BLACK (from new) and RED (from first service)
+    assert_eq!(history.len(), 2, "LED should only be written to when color changes");
+    assert!(colors_equal(history[0], BLACK));
+    assert!(colors_equal(history[1], RED));
+}
+
+#[test]
+fn multiple_service_calls_without_time_advancement_are_safe() {
+    let led = MockLed::new();
+    let timer = MockTimeSource::new();
+    let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+
+    let sequence = RgbSequence::<TestDuration, 8>::builder()
+        .step(RED, TestDuration(1000), TransitionStyle::Step)
+        .unwrap()
+        .build()
+        .unwrap();
+
+    sequencer.load(sequence);
+    sequencer.start().unwrap();
+
+    // Multiple service calls without time advancement should be safe
+    for _ in 0..10 {
+        let result = sequencer.service();
+        assert!(result.is_ok());
+        assert!(colors_equal(sequencer.current_color(), RED));
+    }
 }
 
 #[test]
@@ -617,29 +645,6 @@ fn loading_new_sequence_replaces_existing_and_resets_state() {
     sequencer.start().unwrap();
     sequencer.service().unwrap();
     assert!(colors_equal(sequencer.current_color(), GREEN));
-}
-
-#[test]
-fn multiple_service_calls_without_time_advancement_are_safe() {
-    let led = MockLed::new();
-    let timer = MockTimeSource::new();
-    let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
-
-    let sequence = RgbSequence::<TestDuration, 8>::builder()
-        .step(RED, TestDuration(1000), TransitionStyle::Step)
-        .unwrap()
-        .build()
-        .unwrap();
-
-    sequencer.load(sequence);
-    sequencer.start().unwrap();
-
-    // Multiple service calls without time advancement should be safe
-    for _ in 0..10 {
-        let result = sequencer.service();
-        assert!(result.is_ok());
-        assert!(colors_equal(sequencer.current_color(), RED));
-    }
 }
 
 #[test]
@@ -681,7 +686,7 @@ fn sequence_with_mixed_zero_and_nonzero_durations_works_correctly() {
         .unwrap()
         .step(BLUE, TestDuration(0), TransitionStyle::Step)
         .unwrap()
-        .loop_count(LoopCount::Finite(1))
+        .loop_count(LoopCount::Finite(2))
         .build()
         .unwrap();
 
@@ -697,8 +702,13 @@ fn sequence_with_mixed_zero_and_nonzero_durations_works_correctly() {
     sequencer.service().unwrap();
     assert!(colors_equal(sequencer.current_color(), GREEN));
 
-    // After 100ms total, should be BLUE (third step, also zero duration)
+    // At 100ms, loop wraps around - back to GREEN (RED is skipped)
     timer.advance(TestDuration(50));
+    sequencer.service().unwrap();
+    assert!(colors_equal(sequencer.current_color(), GREEN));
+
+    // At 200ms, sequence completes and shows BLUE (last step fallback)
+    timer.advance(TestDuration(100));
     sequencer.service().unwrap();
     assert!(colors_equal(sequencer.current_color(), BLUE));
 }
@@ -715,6 +725,8 @@ fn current_position_returns_none_when_not_running() {
     let sequence = RgbSequence::<TestDuration, 8>::builder()
         .step(RED, TestDuration(1000), TransitionStyle::Step)
         .unwrap()
+        .step(GREEN, TestDuration(1000), TransitionStyle::Step)
+        .unwrap()
         .build()
         .unwrap();
 
@@ -724,11 +736,16 @@ fn current_position_returns_none_when_not_running() {
 
     // Running state - should have position
     sequencer.start().unwrap();
-    assert!(sequencer.current_position().is_some());
+    timer.advance(TestDuration(500));
+    let running_position = sequencer.current_position();
+    assert!(running_position.is_some());
 
-    // Paused state - no position
+    // Paused state - should return frozen position
     sequencer.pause().unwrap();
-    assert_eq!(sequencer.current_position(), None);
+    timer.advance(TestDuration(1000));
+    let paused_position = sequencer.current_position();
+    assert!(paused_position.is_some());
+    assert_eq!(paused_position, running_position);
 }
 
 #[test]
@@ -771,6 +788,8 @@ fn current_position_tracks_loop_changes() {
     let sequence = RgbSequence::<TestDuration, 8>::builder()
         .step(RED, TestDuration(100), TransitionStyle::Step)
         .unwrap()
+        .step(GREEN, TestDuration(100), TransitionStyle::Step)
+        .unwrap()
         .loop_count(LoopCount::Finite(3))
         .build()
         .unwrap();
@@ -780,13 +799,59 @@ fn current_position_tracks_loop_changes() {
 
     assert_eq!(sequencer.current_position().unwrap().loop_number, 0);
 
-    timer.advance(TestDuration(100));
+    timer.advance(TestDuration(200));
     sequencer.service().unwrap();
     assert_eq!(sequencer.current_position().unwrap().loop_number, 1);
 
-    timer.advance(TestDuration(100));
+    timer.advance(TestDuration(200));
     sequencer.service().unwrap();
     assert_eq!(sequencer.current_position().unwrap().loop_number, 2);
+}
+
+#[test]
+fn current_position_returns_frozen_position_when_paused() {
+    // BEHAVIOR: current_position() returns frozen position during pause
+    let led = MockLed::new();
+    let timer = MockTimeSource::new();
+    let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+
+    let sequence = RgbSequence::<TestDuration, 8>::builder()
+        .step(RED, TestDuration(100), TransitionStyle::Step)
+        .unwrap()
+        .step(GREEN, TestDuration(100), TransitionStyle::Step)
+        .unwrap()
+        .step(BLUE, TestDuration(100), TransitionStyle::Step)
+        .unwrap()
+        .loop_count(LoopCount::Finite(2))
+        .build()
+        .unwrap();
+
+    sequencer.load(sequence);
+    sequencer.start().unwrap();
+
+    // Advance to middle of second step
+    timer.advance(TestDuration(150));
+    sequencer.service().unwrap();
+
+    let position_before_pause = sequencer.current_position().unwrap();
+    assert_eq!(position_before_pause.step_index, 1);
+    assert_eq!(position_before_pause.loop_number, 0);
+
+    // Pause and verify position is frozen
+    sequencer.pause().unwrap();
+    let position_while_paused = sequencer.current_position().unwrap();
+    assert_eq!(position_while_paused, position_before_pause);
+
+    // Advance time while paused - position should remain frozen
+    timer.advance(TestDuration(5000));
+    let position_still_paused = sequencer.current_position().unwrap();
+    assert_eq!(position_still_paused, position_before_pause);
+
+    // Resume and verify we continue from the frozen position
+    sequencer.resume().unwrap();
+    sequencer.service().unwrap();
+    let position_after_resume = sequencer.current_position().unwrap();
+    assert_eq!(position_after_resume, position_before_pause);
 }
 
 #[test]
