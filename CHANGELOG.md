@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2025-12-16
+
 ### Changed
 - **BREAKING**: Color constants renamed from `COLOR_*` prefix to simple names (`RED`, `GREEN`, `BLUE`, `WHITE`, `YELLOW`, `CYAN`, `MAGENTA`). `COLOR_OFF` renamed to `BLACK`
 - **BREAKING**: `RgbSequencer::current_position()` now returns `Option<Position>` instead of `Option<(usize, u32)>`
@@ -75,6 +77,7 @@ Initial release of rgb-sequencer, a `no_std` embedded RGB LED animation library.
 - Optional `defmt` logging support
 - Example projects for STM32F0 and RP Pico
 
-[Unreleased]: https://github.com/HybridChild/rgb-sequencer/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/HybridChild/rgb-sequencer/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/HybridChild/rgb-sequencer/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/HybridChild/rgb-sequencer/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/HybridChild/rgb-sequencer/releases/tag/v0.1.0
