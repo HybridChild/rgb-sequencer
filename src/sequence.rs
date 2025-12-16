@@ -418,7 +418,11 @@ impl<D: TimeDuration, const N: usize> SequenceBuilder<D, N> {
 
     /// Builds and validates sequence.
     ///
-    /// Returns error if sequence is empty or has zero-duration steps with interpolating transitions.
+    /// Returns error if:
+    /// - Sequence is empty
+    /// - Has zero-duration steps with TransitionStyle != Step
+    /// - Has start_color and first step is Step transition
+    /// - Has landing_color with infinite loop
     pub fn build(self) -> Result<RgbSequence<D, N>, SequenceError> {
         if self.steps.is_empty() {
             return Err(SequenceError::EmptySequence);
@@ -436,6 +440,19 @@ impl<D: TimeDuration, const N: usize> SequenceBuilder<D, N> {
             {
                 return Err(SequenceError::ZeroDurationWithLinear);
             }
+        }
+
+        // Validate start_color is only set when first sequence step has TransitionStyle != Step
+        if self.start_color.is_some()
+            && let Some(first_step) = self.steps.first()
+            && matches!(first_step.transition, TransitionStyle::Step)
+        {
+            return Err(SequenceError::StartColorWithStepTransition);
+        }
+
+        // Validate landing_color is only set with finite loop count
+        if self.landing_color.is_some() && matches!(self.loop_count, LoopCount::Infinite) {
+            return Err(SequenceError::LandingColorWithInfiniteLoop);
         }
 
         // Calculate and cache loop duration here to avoid repeated calculation during operation

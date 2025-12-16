@@ -75,6 +75,12 @@ pub enum SequenceError {
 
     /// Sequence capacity exceeded.
     CapacityExceeded,
+
+    /// Start color set with first step using Step transition.
+    StartColorWithStepTransition,
+
+    /// Landing color set with infinite loop count.
+    LandingColorWithInfiniteLoop,
 }
 
 impl core::fmt::Display for SequenceError {
@@ -92,6 +98,18 @@ impl core::fmt::Display for SequenceError {
             }
             SequenceError::CapacityExceeded => {
                 write!(f, "sequence capacity exceeded")
+            }
+            SequenceError::StartColorWithStepTransition => {
+                write!(
+                    f,
+                    "start_color only applies when first sequence step has TransitionStyle != Step"
+                )
+            }
+            SequenceError::LandingColorWithInfiniteLoop => {
+                write!(
+                    f,
+                    "landing_color only applies to finite sequences (infinite loops never complete)"
+                )
             }
         }
     }

@@ -42,6 +42,73 @@ fn builder_rejects_zero_duration_with_non_step() {
 }
 
 #[test]
+fn builder_rejects_start_color_with_step_transition() {
+    // start_color only applies to interpolating transitions
+    let result = RgbSequence::<TestDuration, 8>::builder()
+        .start_color(BLACK)
+        .step(RED, TestDuration(1000), TransitionStyle::Step)
+        .unwrap()
+        .build();
+    assert!(matches!(
+        result,
+        Err(SequenceError::StartColorWithStepTransition)
+    ));
+
+    // But should accept with interpolating first step
+    let result = RgbSequence::<TestDuration, 8>::builder()
+        .start_color(BLACK)
+        .step(RED, TestDuration(1000), TransitionStyle::Linear)
+        .unwrap()
+        .build();
+    assert!(result.is_ok());
+
+    let result = RgbSequence::<TestDuration, 8>::builder()
+        .start_color(BLACK)
+        .step(RED, TestDuration(1000), TransitionStyle::EaseIn)
+        .unwrap()
+        .build();
+    assert!(result.is_ok());
+
+    let result = RgbSequence::<TestDuration, 8>::builder()
+        .start_color(BLACK)
+        .step(RED, TestDuration(1000), TransitionStyle::EaseOut)
+        .unwrap()
+        .build();
+    assert!(result.is_ok());
+
+    let result = RgbSequence::<TestDuration, 8>::builder()
+        .start_color(BLACK)
+        .step(RED, TestDuration(1000), TransitionStyle::EaseInOut)
+        .unwrap()
+        .build();
+    assert!(result.is_ok());
+}
+
+#[test]
+fn builder_rejects_landing_color_with_infinite_loop() {
+    // landing_color only applies to finite sequences
+    let result = RgbSequence::<TestDuration, 8>::builder()
+        .step(RED, TestDuration(1000), TransitionStyle::Step)
+        .unwrap()
+        .loop_count(LoopCount::Infinite)
+        .landing_color(BLACK)
+        .build();
+    assert!(matches!(
+        result,
+        Err(SequenceError::LandingColorWithInfiniteLoop)
+    ));
+
+    // Should accept with finite loop
+    let result = RgbSequence::<TestDuration, 8>::builder()
+        .step(RED, TestDuration(1000), TransitionStyle::Step)
+        .unwrap()
+        .loop_count(LoopCount::Finite(1))
+        .landing_color(BLACK)
+        .build();
+    assert!(result.is_ok());
+}
+
+#[test]
 fn builder_accepts_valid_sequence() {
     let result = RgbSequence::<TestDuration, 8>::builder()
         .step(RED, TestDuration(100), TransitionStyle::Step)
@@ -204,7 +271,7 @@ fn linear_transition_interpolates_correctly() {
 
 #[test]
 fn first_step_with_linear_transition_interpolates_from_last_step() {
-    // BEHAVIOR: When first step uses Linear, infinite loops interpolate from last step (seamless looping)
+    // BEHAVIOR: When first step uses Linear and no start color set, loops interpolate from last step (seamless looping)
     let sequence = RgbSequence::<TestDuration, 8>::builder()
         .step(RED, TestDuration(1000), TransitionStyle::Linear)
         .unwrap()
@@ -269,22 +336,20 @@ fn start_color_used_for_first_linear_step_first_loop_only() {
 #[test]
 fn start_color_not_used_when_first_step_is_step_transition() {
     // BEHAVIOR: start_color only applies to interpolating transitions (Linear, Easing)
-    let sequence = RgbSequence::<TestDuration, 8>::builder()
+    // Builder should reject start_color with first step as Step transition
+    let result = RgbSequence::<TestDuration, 8>::builder()
         .start_color(BLACK)
         .step(RED, TestDuration(1000), TransitionStyle::Step)
         .unwrap()
         .step(GREEN, TestDuration(1000), TransitionStyle::Linear)
         .unwrap()
         .loop_count(LoopCount::Infinite)
-        .build()
-        .unwrap();
+        .build();
 
-    // First step is Step transition, so it should just show RED immediately
-    let (color, _) = sequence.evaluate(TestDuration(0));
-    assert!(colors_equal(color, RED));
-
-    let (color, _) = sequence.evaluate(TestDuration(500));
-    assert!(colors_equal(color, RED));
+    assert!(matches!(
+        result,
+        Err(SequenceError::StartColorWithStepTransition)
+    ));
 }
 
 #[test]
@@ -395,7 +460,6 @@ fn infinite_loop_never_completes() {
         .step(GREEN, TestDuration(100), TransitionStyle::Step)
         .unwrap()
         .loop_count(LoopCount::Infinite)
-        .landing_color(BLACK)
         .build()
         .unwrap();
 
@@ -434,7 +498,7 @@ fn sequence_with_all_zero_duration_steps_completes_immediately() {
 #[test]
 fn query_methods_return_correct_sequence_properties() {
     let sequence = RgbSequence::<TestDuration, 8>::builder()
-        .step(RED, TestDuration(100), TransitionStyle::Step)
+        .step(RED, TestDuration(100), TransitionStyle::Linear)
         .unwrap()
         .step(GREEN, TestDuration(200), TransitionStyle::Linear)
         .unwrap()
@@ -462,7 +526,7 @@ fn query_methods_return_correct_sequence_properties() {
     let step0 = sequence.get_step(0).unwrap();
     assert!(colors_equal(step0.color, RED));
     assert_eq!(step0.duration, TestDuration(100));
-    assert_eq!(step0.transition, TransitionStyle::Step);
+    assert_eq!(step0.transition, TransitionStyle::Linear);
 }
 
 #[test]
