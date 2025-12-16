@@ -12,11 +12,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **BREAKING**: `RgbSequencer::current_position()` now returns `Option<Position>` instead of `Option<(usize, u32)>`
 - **BREAKING**: Renamed `RgbSequencer::get_state()` to `state()` to follow Rust API naming conventions
 - **BREAKING**: `SequenceBuilder::step()` now returns `Result<Self, SequenceError>` instead of panicking when capacity is exceeded
+- **BREAKING**: `RgbSequence::solid()` signature changed to remove duration parameter (holds indefinitely)
+- **BREAKING**: State transition methods (`start()`, `resume()`, `restart()`) no longer call `service()` internally - applications must explicitly call `service()` to update LED after state changes
+- **BREAKING**: `SequenceError::ZeroDurationWithLinear` renamed to `ZeroDurationWithInterpolation` to reflect all interpolating transition styles
 - License changed from MIT to dual MIT/Apache-2.0
 - README updates for clarity and structure
-- Removed Memory calculator tool in favor of size-analysis script
-- `.gitignore` updated to track `.cargo/config.toml` for examples
+- Test suite reorganized into dedicated `tests/` directory with integration tests
+- Memory analysis tools consolidated and moved to `tools/` directory
+- `.gitignore` updated to track `.cargo/config.toml` for examples and ignore `tmp/` directory
 - Examples updated to use new convenience methods and type aliases
+- Documentation streamlined and consolidated (removed IMPLEMENTATION.md in favor of inline code comments)
 
 ### Added
 - Global brightness control via `RgbSequencer::brightness()`, `set_brightness()` and `SequencerAction::SetBrightness`
@@ -33,20 +38,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive CI workflow for automated testing
 - ci-local script for verifying CI workflow locally
 - Size analysis script for tracking binary size impact
+- Benchmark tool (`tools/benchmark/`) for profiling performance on embedded targets (RP2040, RP2350)
 - Compiler directives: `#![forbid(unsafe_code)]` and `#![warn(missing_docs)]`
 - Comprehensive documentation for all public API items
 - Common color constants: `RED`, `GREEN`, `BLUE`, `WHITE`, `YELLOW`, `CYAN`, `MAGENTA`, `BLACK`
 - `load_and_start()` convenience method for `RgbSequencer`
-- Type aliases for common capacities: `RgbSequencer4/8/16`, `RgbSequence4/8/16`, `SequencerCommand4,8,16` and `SequencerAction4,8,16`
+- Type aliases for common capacities: `RgbSequencer4/8/16`, `RgbSequence4/8/16`, `SequencerCommand4/8/16` and `SequencerAction4/8/16`
 - `SequenceError::CapacityExceeded` variant for robust error handling
-- Easing functions: `TransitionStyle::EaseIn`, `EaseOut`, and `EaseInOut` for smoother, more natural transitions using quadratic interpolation
-- Example project demonstrating new transition styles
+- Easing functions: `TransitionStyle::EaseIn`, `EaseOut`, `EaseInOut`, and `EaseOutIn` for smoother, more natural transitions using quadratic interpolation
+- Example projects demonstrating transition styles and breathing effects
 - `RgbSequencer::current_position()` method for event detection - enables tracking step and loop changes without callbacks
 - `RgbSequence::find_step_position()` is now public for advanced use cases
+- Builder validation: `start_color` is rejected with `TransitionStyle::Step`, `landing_color` is rejected with infinite loops
+- Development helper scripts: `format.sh` and `cleanup.sh`
 
 ### Fixed
 - Removed unintended `std` dependency to maintain full `no_std` compatibility
 - Color updates now use epsilon-based f32 comparison to prevent spurious LED updates from floating-point rounding errors
+- Flame flicker sequences in mode_switcher examples corrected
 
 ## [0.1.1] - 2025-11-20
 
