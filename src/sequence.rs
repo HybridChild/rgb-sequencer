@@ -83,12 +83,12 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
         }
     }
 
-    /// Creates a simple solid color sequence.
+    /// Creates a simple solid color sequence with zero duration.
     ///
     /// Returns `SequenceError::CapacityExceeded` if `N < 1`.
-    pub fn solid(color: Srgb, duration: D) -> Result<Self, SequenceError> {
+    pub fn solid(color: Srgb) -> Result<Self, SequenceError> {
         Self::builder()
-            .step(color, duration, TransitionStyle::Step)?
+            .step(color, D::ZERO, TransitionStyle::Step)?
             .build()
     }
 

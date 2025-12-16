@@ -15,9 +15,27 @@ fn builder_rejects_empty_sequence() {
 }
 
 #[test]
-fn builder_rejects_zero_duration_with_linear() {
+fn builder_rejects_zero_duration_with_non_step() {
     let result = RgbSequence::<TestDuration, 8>::builder()
         .step(RED, TestDuration(0), TransitionStyle::Linear)
+        .unwrap()
+        .build();
+    assert!(matches!(result, Err(SequenceError::ZeroDurationWithLinear)));
+
+    let result = RgbSequence::<TestDuration, 8>::builder()
+        .step(RED, TestDuration(0), TransitionStyle::EaseIn)
+        .unwrap()
+        .build();
+    assert!(matches!(result, Err(SequenceError::ZeroDurationWithLinear)));
+
+    let result = RgbSequence::<TestDuration, 8>::builder()
+        .step(RED, TestDuration(0), TransitionStyle::EaseOut)
+        .unwrap()
+        .build();
+    assert!(matches!(result, Err(SequenceError::ZeroDurationWithLinear)));
+
+    let result = RgbSequence::<TestDuration, 8>::builder()
+        .step(RED, TestDuration(0), TransitionStyle::EaseInOut)
         .unwrap()
         .build();
     assert!(matches!(result, Err(SequenceError::ZeroDurationWithLinear)));
@@ -36,19 +54,19 @@ fn builder_accepts_valid_sequence() {
 
 #[test]
 fn solid_creates_single_step_sequence() {
-    // BEHAVIOR: solid() creates a single-step sequence that holds one color
-    let seq = RgbSequence::<TestDuration, 1>::solid(RED, TestDuration(1000)).unwrap();
+    // BEHAVIOR: solid() creates a single-step sequence that holds one color with zero duration
+    let seq = RgbSequence::<TestDuration, 1>::solid(RED).unwrap();
 
     assert_eq!(seq.step_count(), 1);
     let step = seq.get_step(0).unwrap();
     assert!(colors_equal(step.color, RED));
-    assert_eq!(step.duration, TestDuration(1000));
+    assert_eq!(step.duration, TestDuration::ZERO);
     assert_eq!(step.transition, TransitionStyle::Step);
 }
 
 #[test]
 fn solid_requires_capacity_of_at_least_one() {
-    let result = RgbSequence::<TestDuration, 0>::solid(RED, TestDuration(1000));
+    let result = RgbSequence::<TestDuration, 0>::solid(RED);
     assert!(result.is_err());
     assert!(matches!(
         result.unwrap_err(),
