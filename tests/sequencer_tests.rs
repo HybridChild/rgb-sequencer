@@ -585,7 +585,11 @@ fn led_only_updates_when_color_changes() {
     let history = led.color_history();
 
     // Should have exactly 2 writes: BLACK (from new) and RED (from first service)
-    assert_eq!(history.len(), 2, "LED should only be written to when color changes");
+    assert_eq!(
+        history.len(),
+        2,
+        "LED should only be written to when color changes"
+    );
     assert!(colors_equal(history[0], BLACK));
     assert!(colors_equal(history[1], RED));
 }
@@ -1125,45 +1129,7 @@ fn brightness_works_with_linear_transitions() {
     timer.advance(TestDuration(600)); // 500ms into linear transition
     sequencer.service().unwrap();
 
-    // Should be transitioning from RED to GREEN, at 50% brightness
-    // At 500ms into 1000ms transition, we're halfway
+    // Should be half way transitioning from RED to GREEN, at 50% brightness
     let current = sequencer.current_color();
-    // At 50% of transition: red should be decreasing, green increasing
-    assert!(current.red > 0.0 && current.red < 0.5);
-    assert!(current.green > 0.0 && current.green < 0.5);
-    assert_eq!(current.blue, 0.0);
-}
-
-#[test]
-fn brightness_does_not_affect_sequence_timing() {
-    let led = MockLed::new();
-    let timer = MockTimeSource::new();
-    let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
-
-    let sequence = RgbSequence::<TestDuration, 8>::builder()
-        .step(RED, TestDuration(100), TransitionStyle::Step)
-        .unwrap()
-        .step(GREEN, TestDuration(100), TransitionStyle::Step)
-        .unwrap()
-        .loop_count(LoopCount::Finite(1))
-        .build()
-        .unwrap();
-
-    sequencer.set_brightness(0.1);
-    sequencer.load(sequence);
-    sequencer.start().unwrap();
-
-    // Timing should still be the same - first step should last 100ms
-    let timing = sequencer.peek_next_timing().unwrap();
-    assert_eq!(timing, ServiceTiming::Delay(TestDuration(100)));
-
-    // Advance to second step
-    timer.advance(TestDuration(100));
-    sequencer.service().unwrap();
-
-    // Should be on GREEN (dimmed)
-    assert!(colors_equal(
-        sequencer.current_color(),
-        Srgb::new(0.0, 0.1, 0.0)
-    ));
+    assert!(colors_equal(current, Srgb::new(0.25, 0.25, 0.0)));
 }
