@@ -72,7 +72,7 @@ let sequence = RgbSequence::builder()
 
 Useful for creating smooth entry animations from current color into new looping sequence without affecting loop-to-loop transitions.
 
-The `start_color` is ignored for `TransitionStyle == Step`.
+**Validation:** The builder rejects sequences where `start_color` is set but the first step uses `TransitionStyle::Step`, since start_color only applies to interpolating transitions (Linear, EaseIn, EaseOut, EaseInOut).
 
 ### Landing Color for Completion
 
@@ -91,7 +91,7 @@ let sequence = RgbSequence::builder()
 
 If no `landing_color` is specified, the LED holds the last step's color.
 
-The `landing_color` is ignored for infinite sequences.
+**Validation:** The builder rejects sequences where `landing_color` is set with `LoopCount::Infinite`, since infinite sequences never complete and thus never reach the landing color.
 
 ### Loop Count
 
