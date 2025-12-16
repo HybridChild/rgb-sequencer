@@ -11,6 +11,7 @@ pub enum TransitionMode {
     EaseIn,
     EaseOut,
     EaseInOut,
+    EaseOutIn,
 }
 
 impl TransitionMode {
@@ -20,7 +21,8 @@ impl TransitionMode {
             TransitionMode::Linear => TransitionMode::EaseIn,
             TransitionMode::EaseIn => TransitionMode::EaseOut,
             TransitionMode::EaseOut => TransitionMode::EaseInOut,
-            TransitionMode::EaseInOut => TransitionMode::Step,
+            TransitionMode::EaseInOut => TransitionMode::EaseOutIn,
+            TransitionMode::EaseOutIn => TransitionMode::Step,
         }
     }
 
@@ -31,6 +33,7 @@ impl TransitionMode {
             TransitionMode::EaseIn => TransitionStyle::EaseIn,
             TransitionMode::EaseOut => TransitionStyle::EaseOut,
             TransitionMode::EaseInOut => TransitionStyle::EaseInOut,
+            TransitionMode::EaseOutIn => TransitionStyle::EaseOutIn,
         }
     }
 
@@ -41,6 +44,7 @@ impl TransitionMode {
             TransitionMode::EaseIn => 2,
             TransitionMode::EaseOut => 3,
             TransitionMode::EaseInOut => 4,
+            TransitionMode::EaseOutIn => 5,
         }
     }
 }

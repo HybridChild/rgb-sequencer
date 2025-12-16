@@ -96,9 +96,9 @@ cargo run --release --bin rainbow_capture
 Demonstrates all five TransitionStyle variants using a single RGB LED with visual mode indication.
 
 **Features:**
-- All 5 TransitionStyle variants: Step, Linear, EaseIn, EaseOut, EaseInOut
+- All 6 TransitionStyle variants: Step, Linear, EaseIn, EaseOut, EaseInOut, EaseOutIn
 - Same color sequence (red, green, blue, white, yellow, cyan, magenta) with different transitions
-- Onboard LED blink pattern indicates current mode (solid/1/2/3/4 blinks)
+- Onboard LED blink pattern indicates current mode (solid/1/2/3/4/5 blinks)
 - Button-controlled mode cycling
 - Four async tasks: button, blink pattern, app logic, RGB control
 - Embassy time driver for precise async timing
@@ -108,8 +108,9 @@ Demonstrates all five TransitionStyle variants using a single RGB LED with visua
 2. Press button → switches to Linear transitions (constant-speed), onboard LED blinks once per cycle
 3. Press again → switches to EaseIn transitions (slow start), onboard LED blinks twice per cycle
 4. Press again → switches to EaseOut transitions (slow end), onboard LED blinks three times per cycle
-5. Press again → switches to EaseInOut transitions (slow both ends), onboard LED blinks four times per cycle
-6. Press again → back to Step mode (cycle repeats)
+5. Press again → switches to EaseInOut transitions (slow ends, fast middle), onboard LED blinks four times per cycle
+6. Press again → switches to EaseOutIn transitions (fast ends, slow middle), onboard LED blinks five times per cycle
+7. Press again → back to Step mode (cycle repeats)
 
 **Run:**
 ```bash
