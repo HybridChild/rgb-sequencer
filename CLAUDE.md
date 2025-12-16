@@ -74,6 +74,7 @@ let sequence = RgbSequence::<_, 3>::builder()
 - `TransitionStyle::EaseIn` - Slow start, accelerating (quadratic)
 - `TransitionStyle::EaseOut` - Fast start, decelerating (quadratic)
 - `TransitionStyle::EaseInOut` - Slow start and end, fast middle (quadratic)
+- `TransitionStyle::EaseOutIn` - Fast start and end, slow middle (quadratic)
 
 **Key points:**
 - All easing functions use quadratic interpolation (computationally efficient)
@@ -295,9 +296,12 @@ let sequence = RgbSequence::<_, 4>::builder()  // Capacity matches steps
 
 ### ❌ Zero-Duration with Interpolating Transitions
 ```rust
-// WRONG - Validation error
+// WRONG - Validation error (all interpolating transitions require non-zero duration)
 .step(color, Duration::zero(), TransitionStyle::Linear)    // Invalid!
 .step(color, Duration::zero(), TransitionStyle::EaseIn)    // Invalid!
+.step(color, Duration::zero(), TransitionStyle::EaseOut)   // Invalid!
+.step(color, Duration::zero(), TransitionStyle::EaseInOut) // Invalid!
+.step(color, Duration::zero(), TransitionStyle::EaseOutIn) // Invalid!
 
 // RIGHT
 .step(color, Duration::zero(), TransitionStyle::Step)  // OK - only Step allows zero duration

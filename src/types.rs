@@ -73,8 +73,8 @@ pub enum SequenceError {
     /// No steps provided.
     EmptySequence,
 
-    /// Zero duration with Linear transition.
-    ZeroDurationWithLinear,
+    /// Zero duration with interpolating transition.
+    ZeroDurationWithInterpolation,
 
     /// Sequence capacity exceeded.
     CapacityExceeded,
@@ -93,7 +93,7 @@ impl core::fmt::Display for SequenceError {
             SequenceError::EmptySequence => {
                 write!(f, "sequence must have at least one step")
             }
-            SequenceError::ZeroDurationWithLinear => {
+            SequenceError::ZeroDurationWithInterpolation => {
                 write!(
                     f,
                     "zero-duration steps must use Step transition (interpolating transitions require non-zero duration)"

@@ -453,7 +453,7 @@ impl<D: TimeDuration, const N: usize> SequenceBuilder<D, N> {
                         | TransitionStyle::EaseOutIn
                 )
             {
-                return Err(SequenceError::ZeroDurationWithLinear);
+                return Err(SequenceError::ZeroDurationWithInterpolation);
             }
         }
 
