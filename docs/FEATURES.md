@@ -339,18 +339,33 @@ The sequencer implements a state machine that validates operation preconditions 
 
 ### Sequencer operations and resulting State changes
 
-| Method      | Required State                     | Result State            |
-|-------------|------------------------------------|-------------------------|
-| `load()`    | Any                                | `Loaded`                |
-| `start()`   | `Loaded`                           | `Running`               |
-| `service()` | `Running`                          | `Running` or `Complete` |
-| `pause()`   | `Running`                          | `Paused`                |
-| `resume()`  | `Paused`                           | `Running`               |
-| `restart()` | `Running`, `Paused`, or `Complete` | `Running`               |
-| `stop()`    | `Running`, `Paused`, or `Complete` | `Loaded`                |
-| `clear()`   | Any                                | `Idle`                  |
+| Method      | Required State                     | Result State            | Updates LED? |
+|-------------|------------------------------------|-------------------------|--------------|
+| `load()`    | Any                                | `Loaded`                | No           |
+| `start()`   | `Loaded`                           | `Running`               | No*          |
+| `service()` | `Running`                          | `Running` or `Complete` | Yes          |
+| `pause()`   | `Running`                          | `Paused`                | No           |
+| `resume()`  | `Paused`                           | `Running`               | No*          |
+| `restart()` | `Running`, `Paused`, or `Complete` | `Running`               | No*          |
+| `stop()`    | `Running`, `Paused`, or `Complete` | `Loaded`                | Yes (BLACK)  |
+| `clear()`   | Any                                | `Idle`                  | Yes (BLACK)  |
+
+*Call `service()` to update LED after state transition
 
 Calling a method from an invalid state returns `Err(SequencerError::InvalidState)`.
+
+### State Transitions vs. LED Updates
+
+State transition methods (`start()`, `resume()`, `restart()`) only change internal state. They do **not** update LED hardware. This separation provides:
+
+1. **Consistency** - All state transitions work the same way
+2. **Flexibility** - Start multiple sequencers, then service them together
+3. **Control** - You decide when hardware I/O occurs
+
+LED updates happen through:
+- `service()` - Updates LED based on sequence and elapsed time
+- `stop()` - Turns LED off (BLACK)
+- `clear()` - Turns LED off (BLACK)
 
 ### Checking State
 

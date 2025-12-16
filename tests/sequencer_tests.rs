@@ -58,6 +58,11 @@ fn resume_requires_paused_state() {
     // Try to resume from Loaded state
     let result = sequencer.resume();
     assert!(matches!(result, Err(SequencerError::InvalidState { .. })));
+
+    // Try to resume from Running state
+    sequencer.start().unwrap();
+    let result = sequencer.resume();
+    assert!(matches!(result, Err(SequencerError::InvalidState { .. })));
 }
 
 #[test]
@@ -97,6 +102,7 @@ fn loading_and_starting_sequence_updates_led_color() {
     sequencer.start().unwrap();
     assert_eq!(sequencer.state(), SequencerState::Running);
 
+    sequencer.service().unwrap();
     // LED should now be RED
     assert!(colors_equal(sequencer.current_color(), RED));
 }
@@ -120,6 +126,7 @@ fn service_correctly_progresses_through_multiple_steps() {
 
     sequencer.load(sequence);
     sequencer.start().unwrap();
+    sequencer.service().unwrap();
 
     // At start - RED
     assert!(colors_equal(sequencer.current_color(), RED));
@@ -163,6 +170,7 @@ fn function_based_sequence_computes_colors_correctly() {
 
     sequencer.load(sequence);
     sequencer.start().unwrap();
+    sequencer.service().unwrap();
 
     // At start - 50% brightness
     assert!(colors_equal(
@@ -232,6 +240,7 @@ fn stop_turns_off_led_and_returns_to_loaded() {
 
     sequencer.load(sequence);
     sequencer.start().unwrap();
+    sequencer.service().unwrap();
     assert!(colors_equal(sequencer.current_color(), RED));
 
     sequencer.stop().unwrap();
@@ -253,33 +262,12 @@ fn clear_removes_sequence_and_returns_to_idle() {
 
     sequencer.load(sequence);
     sequencer.start().unwrap();
+    sequencer.service().unwrap();
     assert!(colors_equal(sequencer.current_color(), RED));
 
     sequencer.clear();
     assert_eq!(sequencer.state(), SequencerState::Idle);
     assert!(colors_equal(sequencer.current_color(), BLACK));
-}
-
-#[test]
-fn service_returns_correct_delay_for_step_transition() {
-    let led = MockLed::new();
-    let timer = MockTimeSource::new();
-    let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
-
-    let sequence = RgbSequence::<TestDuration, 8>::builder()
-        .step(RED, TestDuration(1000), TransitionStyle::Step)
-        .unwrap()
-        .step(GREEN, TestDuration(500), TransitionStyle::Step)
-        .unwrap()
-        .loop_count(LoopCount::Finite(1))
-        .build()
-        .unwrap();
-
-    sequencer.load(sequence);
-    let timing = sequencer.start().unwrap();
-
-    // Should return the remaining time in the first step (1000ms)
-    assert_eq!(timing, ServiceTiming::Delay(TestDuration(1000)));
 }
 
 #[test]
@@ -411,6 +399,7 @@ fn restart_from_running_state() {
     let restart_result = sequencer.restart();
     assert!(restart_result.is_ok());
     assert_eq!(sequencer.state(), SequencerState::Running);
+    sequencer.service().unwrap();
     assert!(colors_equal(sequencer.current_color(), RED));
 }
 
@@ -437,6 +426,7 @@ fn restart_from_paused_state() {
     // Restart from paused should reset and run
     sequencer.restart().unwrap();
     assert_eq!(sequencer.state(), SequencerState::Running);
+    sequencer.service().unwrap();
     assert!(colors_equal(sequencer.current_color(), RED));
 }
 
@@ -463,6 +453,7 @@ fn restart_from_complete_state() {
     // Restart should reset and run from beginning
     sequencer.restart().unwrap();
     assert_eq!(sequencer.state(), SequencerState::Running);
+    sequencer.service().unwrap();
     assert!(colors_equal(sequencer.current_color(), RED));
 }
 
@@ -615,6 +606,7 @@ fn loading_new_sequence_replaces_existing_and_resets_state() {
     // Load first sequence and start
     sequencer.load(sequence1);
     sequencer.start().unwrap();
+    sequencer.service().unwrap();
     assert!(colors_equal(sequencer.current_color(), RED));
 
     // Load second sequence should stop the first and transition to Loaded
@@ -623,6 +615,7 @@ fn loading_new_sequence_replaces_existing_and_resets_state() {
 
     // Start second sequence
     sequencer.start().unwrap();
+    sequencer.service().unwrap();
     assert!(colors_equal(sequencer.current_color(), GREEN));
 }
 
@@ -664,10 +657,10 @@ fn load_and_start_convenience_method_works() {
         .unwrap();
 
     // Should go from Idle -> Loaded -> Running in one call
-    let timing = sequencer.load_and_start(sequence).unwrap();
+    sequencer.load_and_start(sequence).unwrap();
     assert_eq!(sequencer.state(), SequencerState::Running);
+    sequencer.service().unwrap();
     assert!(colors_equal(sequencer.current_color(), RED));
-    assert_eq!(timing, ServiceTiming::Delay(TestDuration(1000)));
 
     // Advance and verify it progresses through sequence
     timer.advance(TestDuration(1100));
@@ -694,6 +687,7 @@ fn sequence_with_mixed_zero_and_nonzero_durations_works_correctly() {
 
     sequencer.load(sequence);
     sequencer.start().unwrap();
+    sequencer.service().unwrap();
 
     // At time 0, zero-duration steps are skipped, so we're at GREEN (second step)
     assert!(colors_equal(sequencer.current_color(), GREEN));
@@ -936,6 +930,7 @@ fn set_brightness_applies_to_led_output() {
 
     sequencer.load(sequence);
     sequencer.start().unwrap();
+    sequencer.service().unwrap();
 
     // LED should be at 50% brightness (RED at 50%)
     let expected = Srgb::new(0.5, 0.0, 0.0);
@@ -975,6 +970,7 @@ fn brightness_can_be_changed_during_playback() {
 
     sequencer.load(sequence);
     sequencer.start().unwrap();
+    sequencer.service().unwrap();
 
     // Initially at full brightness
     assert!(colors_equal(sequencer.current_color(), RED));
@@ -1027,6 +1023,7 @@ fn brightness_applies_to_all_color_channels() {
     sequencer.set_brightness(0.3);
     sequencer.load(sequence);
     sequencer.start().unwrap();
+    sequencer.service().unwrap();
 
     // All channels should be at 30%
     let expected = Srgb::new(0.3, 0.3, 0.3);
@@ -1051,6 +1048,7 @@ fn brightness_works_with_linear_transitions() {
     sequencer.set_brightness(0.5);
     sequencer.load(sequence);
     sequencer.start().unwrap();
+    sequencer.service().unwrap();
 
     // Start at RED at 50%
     assert!(colors_equal(
