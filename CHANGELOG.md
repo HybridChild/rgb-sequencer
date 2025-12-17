@@ -24,7 +24,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Memory analysis tools consolidated and moved to `tools/` directory
 - `.gitignore` updated to track `.cargo/config.toml` for examples and ignore `tmp/` directory
 - Examples updated to use new convenience methods and type aliases
-- Documentation streamlined and consolidated (removed IMPLEMENTATION.md in favor of inline code comments)
 
 ### Added
 - Global brightness control via `RgbSequencer::brightness()`, `set_brightness()` and `SequencerAction::SetBrightness`
@@ -42,8 +41,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ci-local script for verifying CI workflow locally
 - Size analysis script for tracking binary size impact
 - Benchmark tool (`tools/benchmark/`) for profiling performance on embedded targets (RP2040, RP2350)
-- Compiler directives: `#![forbid(unsafe_code)]` and `#![warn(missing_docs)]`
-- Comprehensive documentation for all public API items
 - Common color constants: `RED`, `GREEN`, `BLUE`, `WHITE`, `YELLOW`, `CYAN`, `MAGENTA`, `BLACK`
 - `load_and_start()` convenience method for `RgbSequencer`
 - Type aliases for common capacities: `RgbSequencer4/8/16`, `RgbSequence4/8/16`, `SequencerCommand4/8/16` and `SequencerAction4/8/16`
