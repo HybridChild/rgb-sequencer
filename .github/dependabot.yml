@@ -1,0 +1,68 @@
+version: 2
+updates:
+  # Main library
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+
+  # Examples
+  - package-ecosystem: "cargo"
+    directory: "/examples/stm32f0"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "examples"
+
+  - package-ecosystem: "cargo"
+    directory: "/examples/stm32f0-embassy"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "examples"
+
+  - package-ecosystem: "cargo"
+    directory: "/examples/rp-pico"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "examples"
+
+  # Tools
+  - package-ecosystem: "cargo"
+    directory: "/tools/sizeof-calculator"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "tools"
+
+  - package-ecosystem: "cargo"
+    directory: "/tools/binary-analyzer/minimal"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "tools"
+
+  - package-ecosystem: "cargo"
+    directory: "/tools/benchmark/rp2040"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "tools"
+
+  - package-ecosystem: "cargo"
+    directory: "/tools/benchmark/rp2350"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "tools"
