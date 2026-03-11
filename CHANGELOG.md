@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-03-11
+
+### Changed
+- Updated dependencies in `stm32f0` and `rp-pico` examples
+- Updated `stm32f0-embassy` examples for `embassy-stm32` 0.5.0 breaking API changes
+
+### Added
+- Dependabot configuration for automated dependency updates
+- `documentation` and `readme` fields in `Cargo.toml` for crates.io metadata
+
 ## [0.2.0] - 2025-12-16
 
 ### Changed
@@ -74,7 +84,8 @@ Initial release of rgb-sequencer, a `no_std` embedded RGB LED animation library.
 - Optional `defmt` logging support
 - Example projects for STM32F0 and RP Pico
 
-[Unreleased]: https://github.com/HybridChild/rgb-sequencer/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/HybridChild/rgb-sequencer/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/HybridChild/rgb-sequencer/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/HybridChild/rgb-sequencer/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/HybridChild/rgb-sequencer/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/HybridChild/rgb-sequencer/releases/tag/v0.1.0
