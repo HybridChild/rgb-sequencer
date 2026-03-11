@@ -25,7 +25,7 @@ A `no_std`-compatible Rust library for controlling RGB LEDs in embedded systems 
 ### Add Dependency
 ```toml
 [dependencies]
-rgb-sequencer = "0.1"
+rgb-sequencer = "0.2"
 palette = { version = "0.7.6", default-features = false, features = ["libm"] }
 ```
 
