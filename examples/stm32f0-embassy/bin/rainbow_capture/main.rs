@@ -23,7 +23,9 @@ use rgb_task::rgb_task;
 
 // Bind interrupts for Embassy's time driver
 bind_interrupts!(
-    struct Irqs {}
+    struct Irqs {
+        EXTI4_15 => embassy_stm32::exti::InterruptHandler<embassy_stm32::interrupt::typelevel::EXTI4_15>;
+    }
 );
 
 /// Configure system clock with HSE and PLL
@@ -48,7 +50,7 @@ fn configure_clock() -> Config {
 }
 
 /// Initialize PWM for TIM3 (LED 1: PA6, PA7, PB0)
-fn setup_pwm_tim3(p: &mut Peripherals) -> (SimplePwm<'static, TIM3>, u16) {
+fn setup_pwm_tim3(p: &mut Peripherals) -> (SimplePwm<'static, TIM3>, u32) {
     let tim3 = unsafe { p.TIM3.clone_unchecked() };
     let pa6 = unsafe { p.PA6.clone_unchecked() };
     let pa7 = unsafe { p.PA7.clone_unchecked() };
@@ -81,7 +83,7 @@ fn setup_pwm_tim3(p: &mut Peripherals) -> (SimplePwm<'static, TIM3>, u16) {
 }
 
 /// Initialize PWM for TIM1 (LED 2: PA8, PA9, PA10)
-fn setup_pwm_tim1(p: &mut Peripherals) -> (SimplePwm<'static, TIM1>, u16) {
+fn setup_pwm_tim1(p: &mut Peripherals) -> (SimplePwm<'static, TIM1>, u32) {
     let tim1 = unsafe { p.TIM1.clone_unchecked() };
     let pa8 = unsafe { p.PA8.clone_unchecked() };
     let pa9 = unsafe { p.PA9.clone_unchecked() };
@@ -118,7 +120,7 @@ fn setup_button(p: &mut Peripherals) -> ExtiInput<'static> {
     let pc13 = unsafe { p.PC13.clone_unchecked() };
     let exti13 = unsafe { p.EXTI13.clone_unchecked() };
 
-    let button = ExtiInput::new(pc13, exti13, Pull::Up);
+    let button = ExtiInput::new(pc13, exti13, Pull::Up, Irqs);
     info!("User button configured on PC13");
 
     button

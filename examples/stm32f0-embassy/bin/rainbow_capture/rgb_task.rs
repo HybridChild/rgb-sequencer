@@ -17,12 +17,12 @@ use crate::types::{
 
 pub struct EmbassyPwmRgbLed<'d, T: embassy_stm32::timer::GeneralInstance4Channel> {
     pwm: SimplePwm<'d, T>,
-    max_duty: u16,
+    max_duty: u32,
     common_anode: bool,
 }
 
 impl<'d, T: embassy_stm32::timer::GeneralInstance4Channel> EmbassyPwmRgbLed<'d, T> {
-    pub fn new(pwm: SimplePwm<'d, T>, max_duty: u16, common_anode: bool) -> Self {
+    pub fn new(pwm: SimplePwm<'d, T>, max_duty: u32, common_anode: bool) -> Self {
         Self {
             pwm,
             max_duty,
@@ -31,9 +31,9 @@ impl<'d, T: embassy_stm32::timer::GeneralInstance4Channel> EmbassyPwmRgbLed<'d, 
     }
 
     /// Convert float (0.0-1.0) to PWM duty cycle
-    fn float_to_duty(&self, value: f32) -> u16 {
+    fn float_to_duty(&self, value: f32) -> u32 {
         let value_clamped = value.clamp(0.0, 1.0);
-        let duty = (value_clamped * self.max_duty as f32) as u16;
+        let duty = (value_clamped * self.max_duty as f32) as u32;
 
         if self.common_anode {
             self.max_duty - duty
@@ -191,9 +191,9 @@ impl<'t, const CAPACITY: usize> SequencerCollection<'t, CAPACITY> {
 #[embassy_executor::task]
 pub async fn rgb_task(
     pwm_tim3: SimplePwm<'static, TIM3>,
-    max_duty_tim3: u16,
+    max_duty_tim3: u32,
     pwm_tim1: SimplePwm<'static, TIM1>,
-    max_duty_tim1: u16,
+    max_duty_tim1: u32,
 ) {
     info!("RGB task started");
 
