@@ -69,7 +69,7 @@ jobs:
         run: cd tools/binary-analyzer && ./analyze.sh
 
       - name: Upload report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: binary-analyzer-report
           path: tools/binary-analyzer/report.md
