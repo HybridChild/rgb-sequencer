@@ -6,63 +6,183 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    reviewers:
+      - "HybridChild"
     labels:
       - "dependencies"
+      - "rust"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      # Group minor and patch updates together
+      dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   # Examples
   - package-ecosystem: "cargo"
     directory: "/examples/stm32f0"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "HybridChild"
     labels:
       - "dependencies"
       - "examples"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "cargo"
     directory: "/examples/stm32f0-embassy"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "HybridChild"
     labels:
       - "dependencies"
       - "examples"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "cargo"
     directory: "/examples/rp-pico"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "HybridChild"
     labels:
       - "dependencies"
       - "examples"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   # Tools
   - package-ecosystem: "cargo"
     directory: "/tools/sizeof-calculator"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "HybridChild"
     labels:
       - "dependencies"
       - "tools"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "cargo"
     directory: "/tools/binary-analyzer/minimal"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "HybridChild"
     labels:
       - "dependencies"
       - "tools"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "cargo"
     directory: "/tools/benchmark/rp2040"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "HybridChild"
     labels:
       - "dependencies"
       - "tools"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "cargo"
     directory: "/tools/benchmark/rp2350"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "HybridChild"
     labels:
       - "dependencies"
       - "tools"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "HybridChild"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
