@@ -11,9 +11,8 @@
 
 use embassy_time::Duration as EmbassyDurationInner;
 use embassy_time::Instant as EmbassyInstantInner;
-use palette::Srgb;
 use rgb_sequencer::{
-    LoopCount, RgbLed, RgbSequence, RgbSequencer, SequenceStep, TimeDuration, TimeInstant,
+    LoopCount, Rgb, RgbLed, RgbSequence, RgbSequencer, SequenceStep, TimeDuration, TimeInstant,
     TimeSource, TransitionStyle,
 };
 use std::fs::File;
@@ -169,7 +168,7 @@ struct SmallLed {
 }
 
 impl RgbLed for SmallLed {
-    fn set_color(&mut self, _color: Srgb) {
+    fn set_color(&mut self, _color: Rgb) {
         // Mock implementation
     }
 }
@@ -184,7 +183,7 @@ struct MediumLed {
 }
 
 impl RgbLed for MediumLed {
-    fn set_color(&mut self, _color: Srgb) {
+    fn set_color(&mut self, _color: Rgb) {
         // Mock implementation
     }
 }
@@ -201,7 +200,7 @@ struct LargeLed {
 }
 
 impl RgbLed for LargeLed {
-    fn set_color(&mut self, _color: Srgb) {
+    fn set_color(&mut self, _color: Rgb) {
         // Mock implementation
     }
 }
@@ -263,8 +262,8 @@ fn write_component_sizes(f: &mut File) -> std::io::Result<()> {
     writeln!(f)?;
     writeln!(f, "| Component | Size |")?;
     writeln!(f, "|-----------|------|")?;
-    writeln!(f, "| `Srgb` | {} B |", size_of::<Srgb>())?;
-    writeln!(f, "| `Option<Srgb>` | {} B |", size_of::<Option<Srgb>>())?;
+    writeln!(f, "| `Rgb` | {} B |", size_of::<Rgb>())?;
+    writeln!(f, "| `Option<Rgb>` | {} B |", size_of::<Option<Rgb>>())?;
     writeln!(
         f,
         "| `TransitionStyle` | {} B |",
@@ -274,7 +273,7 @@ fn write_component_sizes(f: &mut File) -> std::io::Result<()> {
     writeln!(
         f,
         "| Color function pointer | {} B |",
-        size_of::<Option<fn(Srgb, Duration64) -> Srgb>>()
+        size_of::<Option<fn(Rgb, Duration64) -> Rgb>>()
     )?;
     writeln!(
         f,

@@ -20,11 +20,6 @@ embassy-sync = { version = "0.7.2", features = ["defmt"] }
 
 embedded-hal = "1.0.0"
 
-[dependencies.palette]
-version = "0.7.6"
-default-features = false
-features = ["libm"]
-
 [dependencies.rgb-sequencer]
 path = "../.."
 default-features = false

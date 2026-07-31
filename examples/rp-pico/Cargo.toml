@@ -15,11 +15,6 @@ rtt-target = "0.6.2"
 libm = "0.2.16"
 fugit = "0.3.9"
 
-[dependencies.palette]
-version = "0.7.6"
-default-features = false
-features = ["libm"]
-
 [dependencies.rgb-sequencer]
 path = "../.."
 default-features = false

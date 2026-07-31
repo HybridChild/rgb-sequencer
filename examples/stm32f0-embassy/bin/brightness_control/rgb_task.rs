@@ -3,9 +3,8 @@ use embassy_futures::select::{Either, select};
 use embassy_stm32::peripherals::TIM3;
 use embassy_stm32::timer::simple_pwm::SimplePwm;
 use embassy_time::{Duration, Timer};
-use palette::Srgb;
 use rgb_sequencer::{
-    LoopCount, RgbLed, RgbSequence8, RgbSequencer8, ServiceTiming, TransitionStyle,
+    LoopCount, Rgb, RgbLed, RgbSequence8, RgbSequencer8, ServiceTiming, TransitionStyle,
 };
 
 use crate::types::{EmbassyDuration, EmbassyTimeSource, RGB_COMMAND_CHANNEL};
@@ -29,10 +28,12 @@ impl<'d, T: embassy_stm32::timer::GeneralInstance4Channel> EmbassyPwmRgbLed<'d, 
         }
     }
 
-    /// Convert float (0.0-1.0) to PWM duty cycle
-    fn float_to_duty(&self, value: f32) -> u32 {
-        let value_clamped = value.clamp(0.0, 1.0);
-        let duty = (value_clamped * self.max_duty as f32) as u32;
+    /// Convert a 0..=65535 channel value to a PWM duty cycle.
+    ///
+    /// Integer math only: the product fits a u64 for any max_duty, so this
+    /// costs a multiply and a divide rather than pulling in soft-float.
+    fn channel_to_duty(&self, value: u16) -> u32 {
+        let duty = (value as u64 * self.max_duty as u64 / 65535) as u32;
 
         if self.common_anode {
             self.max_duty - duty
@@ -43,10 +44,10 @@ impl<'d, T: embassy_stm32::timer::GeneralInstance4Channel> EmbassyPwmRgbLed<'d, 
 }
 
 impl<'d, T: embassy_stm32::timer::GeneralInstance4Channel> RgbLed for EmbassyPwmRgbLed<'d, T> {
-    fn set_color(&mut self, color: Srgb) {
-        let red_duty = self.float_to_duty(color.red);
-        let green_duty = self.float_to_duty(color.green);
-        let blue_duty = self.float_to_duty(color.blue);
+    fn set_color(&mut self, color: Rgb) {
+        let red_duty = self.channel_to_duty(color.r);
+        let green_duty = self.channel_to_duty(color.g);
+        let blue_duty = self.channel_to_duty(color.b);
 
         self.pwm.ch1().set_duty_cycle(red_duty);
         self.pwm.ch2().set_duty_cycle(green_duty);
@@ -60,41 +61,41 @@ impl<'d, T: embassy_stm32::timer::GeneralInstance4Channel> RgbLed for EmbassyPwm
 
 /// Create a colorful rainbow sequence that cycles through hues
 fn create_rainbow_sequence() -> RgbSequence8<EmbassyDuration> {
-    use rgb_sequencer::colors::hue;
+    use rgb_sequencer::colors::{degrees, hue};
 
     RgbSequence8::builder()
         .step(
-            hue(0.0), // Red
+            hue(degrees(0)), // Red
             EmbassyDuration(Duration::from_millis(2000)),
             TransitionStyle::Linear,
         )
         .unwrap()
         .step(
-            hue(60.0), // Yellow
+            hue(degrees(60)), // Yellow
             EmbassyDuration(Duration::from_millis(2000)),
             TransitionStyle::Linear,
         )
         .unwrap()
         .step(
-            hue(120.0), // Green
+            hue(degrees(120)), // Green
             EmbassyDuration(Duration::from_millis(2000)),
             TransitionStyle::Linear,
         )
         .unwrap()
         .step(
-            hue(180.0), // Cyan
+            hue(degrees(180)), // Cyan
             EmbassyDuration(Duration::from_millis(2000)),
             TransitionStyle::Linear,
         )
         .unwrap()
         .step(
-            hue(240.0), // Blue
+            hue(degrees(240)), // Blue
             EmbassyDuration(Duration::from_millis(2000)),
             TransitionStyle::Linear,
         )
         .unwrap()
         .step(
-            hue(300.0), // Magenta
+            hue(degrees(300)), // Magenta
             EmbassyDuration(Duration::from_millis(2000)),
             TransitionStyle::Linear,
         )

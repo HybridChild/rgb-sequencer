@@ -3,8 +3,7 @@ use embassy_futures::select::{Either, select};
 use embassy_stm32::peripherals::TIM3;
 use embassy_stm32::timer::simple_pwm::SimplePwm;
 use embassy_time::{Duration, Timer};
-use palette::Srgb;
-use rgb_sequencer::{RgbLed, RgbSequencer8, ServiceTiming};
+use rgb_sequencer::{Rgb, RgbLed, RgbSequencer8, ServiceTiming};
 
 use crate::types::{EmbassyInstant, EmbassyTimeSource, RGB_COMMAND_CHANNEL};
 
@@ -27,10 +26,12 @@ impl<'d, T: embassy_stm32::timer::GeneralInstance4Channel> EmbassyPwmRgbLed<'d, 
         }
     }
 
-    /// Convert float (0.0-1.0) to PWM duty cycle
-    fn float_to_duty(&self, value: f32) -> u32 {
-        let value_clamped = value.clamp(0.0, 1.0);
-        let duty = (value_clamped * self.max_duty as f32) as u32;
+    /// Convert a 0..=65535 channel value to a PWM duty cycle.
+    ///
+    /// Integer math only: the product fits a u64 for any max_duty, so this
+    /// costs a multiply and a divide rather than pulling in soft-float.
+    fn channel_to_duty(&self, value: u16) -> u32 {
+        let duty = (value as u64 * self.max_duty as u64 / 65535) as u32;
 
         if self.common_anode {
             self.max_duty - duty
@@ -41,10 +42,10 @@ impl<'d, T: embassy_stm32::timer::GeneralInstance4Channel> EmbassyPwmRgbLed<'d, 
 }
 
 impl<'d, T: embassy_stm32::timer::GeneralInstance4Channel> RgbLed for EmbassyPwmRgbLed<'d, T> {
-    fn set_color(&mut self, color: Srgb) {
-        let red_duty = self.float_to_duty(color.red);
-        let green_duty = self.float_to_duty(color.green);
-        let blue_duty = self.float_to_duty(color.blue);
+    fn set_color(&mut self, color: Rgb) {
+        let red_duty = self.channel_to_duty(color.r);
+        let green_duty = self.channel_to_duty(color.g);
+        let blue_duty = self.channel_to_duty(color.b);
 
         self.pwm.ch1().set_duty_cycle(red_duty);
         self.pwm.ch2().set_duty_cycle(green_duty);

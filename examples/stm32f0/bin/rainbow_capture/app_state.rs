@@ -71,12 +71,8 @@ impl<'a> AppState<'a> {
                 let old_color = self.sequencer_2.current_color();
                 let captured_color = self.sequencer_1.current_color();
 
-                rprintln!(
-                    "Captured: R={:.2} G={:.2} B={:.2}",
-                    captured_color.red,
-                    captured_color.green,
-                    captured_color.blue
-                );
+                let (r, g, b) = captured_color.to_u8();
+                rprintln!("Captured: R={} G={} B={}", r, g, b);
 
                 let transition_sequence = RgbSequence8::builder()
                     .start_color(old_color)

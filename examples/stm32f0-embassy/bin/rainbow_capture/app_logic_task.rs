@@ -1,8 +1,7 @@
 use defmt::info;
 use embassy_stm32::gpio::Output;
-use palette::Srgb;
 use rgb_sequencer::{
-    BLACK, BLUE, GREEN, LoopCount, RED, RgbSequence8, SequencerAction8, SequencerCommand8,
+    BLACK, BLUE, GREEN, LoopCount, RED, Rgb, RgbSequence8, SequencerAction8, SequencerCommand8,
     TransitionStyle,
 };
 
@@ -38,7 +37,7 @@ fn create_rainbow_sequence() -> RgbSequence8<EmbassyDuration> {
 }
 
 /// Create a static color sequence that holds a single color
-fn create_static_sequence(color: Srgb) -> RgbSequence8<EmbassyDuration> {
+fn create_static_sequence(color: Rgb) -> RgbSequence8<EmbassyDuration> {
     RgbSequence8::builder()
         .step(
             color,
@@ -52,8 +51,8 @@ fn create_static_sequence(color: Srgb) -> RgbSequence8<EmbassyDuration> {
 
 /// Create a smooth transition sequence from one color to another
 fn create_transition_sequence(
-    from: Srgb,
-    to: Srgb,
+    from: Rgb,
+    to: Rgb,
     duration_ms: u64,
 ) -> RgbSequence8<EmbassyDuration> {
     RgbSequence8::builder()
@@ -157,10 +156,8 @@ pub async fn app_logic_task(mut onboard_led: Output<'static>) {
 
             // Wait for the response
             let captured_color = COLOR_RESPONSE_SIGNAL.wait().await;
-            info!(
-                "Captured color: R={} G={} B={}",
-                captured_color.red, captured_color.green, captured_color.blue
-            );
+            let (r, g, b) = captured_color.to_u8();
+            info!("Captured color: R={} G={} B={}", r, g, b);
 
             // Get LED 2's current color for smooth transition
             RGB_COMMAND_CHANNEL

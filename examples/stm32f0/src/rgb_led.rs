@@ -1,6 +1,5 @@
 use embedded_hal::PwmPin;
-use palette::Srgb;
-use rgb_sequencer::RgbLed;
+use rgb_sequencer::{Rgb, RgbLed};
 
 /// RGB LED implementation for PWM-controlled LEDs
 ///
@@ -49,11 +48,13 @@ where
         }
     }
 
-    /// Convert float (0.0-1.0) to PWM duty cycle
-    /// Handles common anode inversion automatically
-    fn float_to_duty(&self, value: f32) -> u16 {
-        let value_clamped = value.clamp(0.0, 1.0);
-        let duty = (value_clamped * self.max_duty as f32) as u16;
+    /// Convert a 0..=65535 channel value to a PWM duty cycle.
+    /// Handles common anode inversion automatically.
+    ///
+    /// Integer math only: the product fits a u32 for any max_duty, so this
+    /// costs a multiply and a divide rather than pulling in soft-float.
+    fn channel_to_duty(&self, value: u16) -> u16 {
+        let duty = (value as u32 * self.max_duty as u32 / 65535) as u16;
 
         if self.common_anode {
             self.max_duty - duty
@@ -70,10 +71,10 @@ where
     G: PwmPin<Duty = u16>,
     B: PwmPin<Duty = u16>,
 {
-    fn set_color(&mut self, color: Srgb) {
-        // Convert 0.0-1.0 float values to duty cycles
-        self.red.set_duty(self.float_to_duty(color.red));
-        self.green.set_duty(self.float_to_duty(color.green));
-        self.blue.set_duty(self.float_to_duty(color.blue));
+    fn set_color(&mut self, color: Rgb) {
+        // Convert 0..=65535 channel values to duty cycles
+        self.red.set_duty(self.channel_to_duty(color.r));
+        self.green.set_duty(self.channel_to_duty(color.g));
+        self.blue.set_duty(self.channel_to_duty(color.b));
     }
 }

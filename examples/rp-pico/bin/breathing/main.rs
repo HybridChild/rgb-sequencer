@@ -16,8 +16,7 @@ use rtt_target::{rprintln, rtt_init_print};
 use rp_pico_examples::rgb_led::PwmRgbLed;
 use rp_pico_examples::time::{Duration, HardwareTimer, Instant};
 
-use palette::Srgb;
-use rgb_sequencer::{RgbSequence8, RgbSequencer8, ServiceTiming, TimeDuration, WHITE};
+use rgb_sequencer::{Rgb, RgbSequence8, RgbSequencer8, ServiceTiming, TimeDuration, WHITE};
 
 pub const FRAME_RATE_MS: u64 = 16;
 
@@ -29,7 +28,7 @@ pub type Led = PwmRgbLed<
 >;
 
 /// Sine-based breathing effect function
-fn breathing_sine_wave(base_color: Srgb, elapsed: Duration) -> Srgb {
+fn breathing_sine_wave(base_color: Rgb, elapsed: Duration) -> Rgb {
     // Breathing cycle period in milliseconds (4 seconds total)
     const PERIOD_MS: u64 = 4000;
 
@@ -46,12 +45,9 @@ fn breathing_sine_wave(base_color: Srgb, elapsed: Duration) -> Srgb {
     let sine_value = libm::sinf(angle);
     let brightness = 0.1 + 0.45 * (1.0 + sine_value);
 
-    // Apply brightness to the base color
-    Srgb::new(
-        base_color.red * brightness,
-        base_color.green * brightness,
-        base_color.blue * brightness,
-    )
+    // Apply brightness to the base color. The sequencer core is float-free; this
+    // effect opts into f32 for the sine and hands back an 8-bit scale factor.
+    base_color.scale((brightness * 255.0) as u8)
 }
 
 /// Timing function for continuous animation

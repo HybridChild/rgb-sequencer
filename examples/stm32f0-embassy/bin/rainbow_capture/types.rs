@@ -1,8 +1,7 @@
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_sync::signal::Signal;
-use palette::Srgb;
-use rgb_sequencer::SequencerCommand8;
+use rgb_sequencer::{Rgb, SequencerCommand8};
 
 // Re-export the time types from the library
 pub use stm32f0_embassy::time_wrapper::{EmbassyDuration, EmbassyInstant, EmbassyTimeSource};
@@ -26,7 +25,7 @@ pub enum ExtendedCommand {
     /// Response will be sent via the provided signal
     GetColor {
         led_id: LedId,
-        response: &'static Signal<ThreadModeRawMutex, Srgb>,
+        response: &'static Signal<ThreadModeRawMutex, Rgb>,
     },
 }
 
@@ -37,4 +36,4 @@ pub static BUTTON_SIGNAL: Signal<ThreadModeRawMutex, ()> = Signal::new();
 pub static RGB_COMMAND_CHANNEL: Channel<ThreadModeRawMutex, ExtendedCommand, 4> = Channel::new();
 
 /// Signal for receiving color query responses
-pub static COLOR_RESPONSE_SIGNAL: Signal<ThreadModeRawMutex, Srgb> = Signal::new();
+pub static COLOR_RESPONSE_SIGNAL: Signal<ThreadModeRawMutex, Rgb> = Signal::new();
