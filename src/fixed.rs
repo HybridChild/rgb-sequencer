@@ -14,14 +14,12 @@ pub(crate) const HALF: u16 = ONE / 2;
 /// Fractional bit count of the Q0.15 format.
 pub(crate) const SHIFT: u32 = 15;
 
-/// Longest step duration that [`progress_q15`] can resolve with a 32-bit divide.
+/// Bit width the operands of [`progress_q15`] are reduced to before dividing.
 ///
-/// `131_071 << 15` is the largest left-shifted value that still fits a `u32`.
-const MAX_FAST_DURATION_MS: u64 = (u32::MAX >> SHIFT) as u64;
+/// The widest numerator whose 15-bit shift still fits a `u32`.
+const OPERAND_BITS: u32 = 17;
 
-/// Multiplies two Q0.15 values.
-///
-/// Both operands must be in `0..=ONE`; the result is too.
+/// Multiplies two Q0.15 values. Both operands must be in `0..=ONE`; the result is too.
 #[inline]
 pub(crate) const fn mul_q15(a: u16, b: u16) -> u16 {
     ((a as u32 * b as u32) >> SHIFT) as u16
@@ -29,32 +27,25 @@ pub(crate) const fn mul_q15(a: u16, b: u16) -> u16 {
 
 /// Computes elapsed-within-step progress as a Q0.15 fraction, saturating at [`ONE`].
 ///
-/// A zero duration reports fully complete, matching the f32 implementation this
-/// replaces (which short-circuited zero-duration steps before dividing).
+/// A zero duration reports fully complete.
+///
+/// Both operands are reduced by a shared right shift before dividing, so a 32-bit
+/// divide always suffices however long the step is. The shift preserves the ratio and
+/// only engages beyond ~131 seconds, where 17 bits still resolve finer than Q0.15.
 #[inline]
 pub(crate) const fn progress_q15(time_ms: u64, duration_ms: u64) -> u16 {
     if duration_ms == 0 || time_ms >= duration_ms {
         return ONE;
     }
 
-    if duration_ms <= MAX_FAST_DURATION_MS {
-        // Fast path: one 32-bit divide. Covers every step shorter than ~131 seconds,
-        // which is every realistic LED animation step.
-        (((time_ms as u32) << SHIFT) / duration_ms as u32) as u16
-    } else if time_ms <= u64::MAX >> SHIFT {
-        // Exact, but pays for a 64-bit divide.
-        ((time_ms << SHIFT) / duration_ms) as u16
-    } else {
-        // Only reachable if elapsed time exceeds 2^49 ms (~17,800 years). Dividing
-        // first keeps this total; `duration_ms >> SHIFT` is enormous here, so the
-        // lost precision is far below one Q0.15 LSB.
-        let scaled = time_ms / (duration_ms >> SHIFT);
-        if scaled > ONE as u64 {
-            ONE
-        } else {
-            scaled as u16
-        }
-    }
+    let significant_bits = u64::BITS - duration_ms.leading_zeros();
+    let shift = significant_bits.saturating_sub(OPERAND_BITS);
+
+    let numerator = (time_ms >> shift) as u32;
+    let denominator = (duration_ms >> shift) as u32;
+
+    // The shared shift keeps `numerator <= denominator`, so this cannot exceed ONE.
+    ((numerator << SHIFT) / denominator) as u16
 }
 
 /// Linearly interpolates one color channel by a Q0.15 factor.
@@ -138,10 +129,26 @@ mod tests {
 
     #[test]
     fn progress_matches_f32_ratio() {
-        let durations = [1u64, 2, 7, 100, 1000, 16_384, 131_071];
+        // Spans both the unshifted range and durations wide enough to force the
+        // shared-shift reduction, up to the top of u64.
+        let durations = [
+            1u64,
+            2,
+            7,
+            100,
+            1000,
+            16_384,
+            131_071,
+            131_072,
+            1_000_000,
+            u32::MAX as u64,
+            u64::MAX / 3,
+            u64::MAX,
+        ];
         for &d in &durations {
             for n in 0..=32u64 {
-                let t = n * d / 32;
+                // Divide first: `n * d` would overflow for durations near u64::MAX.
+                let t = d / 32 * n;
                 if t >= d {
                     continue;
                 }
@@ -156,13 +163,35 @@ mod tests {
     }
 
     #[test]
-    fn progress_slow_path_matches_fast_path_semantics() {
-        // Just past MAX_FAST_DURATION_MS, forcing the 64-bit branch.
-        let d = MAX_FAST_DURATION_MS + 1;
-        assert_eq!(progress_q15(0, d), 0);
-        assert_eq!(progress_q15(d, d), ONE);
-        let mid = progress_q15(d / 2, d) as i32;
-        assert!((mid - HALF as i32).abs() <= 1, "midpoint was {mid}");
+    fn progress_holds_up_for_durations_that_need_reduction() {
+        // Every duration wide enough to trigger the shared shift, including the
+        // boundary where it first kicks in and the extreme top of u64.
+        for d in [
+            (1u64 << OPERAND_BITS) - 1,
+            1 << OPERAND_BITS,
+            (1 << OPERAND_BITS) + 1,
+            1 << 40,
+            u64::MAX,
+        ] {
+            assert_eq!(progress_q15(0, d), 0, "start of {d}");
+            assert_eq!(progress_q15(d, d), ONE, "end of {d}");
+            let mid = progress_q15(d / 2, d) as i32;
+            assert!((mid - HALF as i32).abs() <= 1, "midpoint of {d} was {mid}");
+            let quarter = progress_q15(d / 4, d) as i32;
+            assert!(
+                (quarter - (ONE / 4) as i32).abs() <= 1,
+                "quarter of {d} was {quarter}"
+            );
+        }
+    }
+
+    #[test]
+    fn progress_never_exceeds_one() {
+        // The shared shift can make numerator == denominator, which must clamp at
+        // ONE rather than overshooting into a value that breaks mul_q15.
+        for d in [1u64, 3, 131_071, 131_073, 1 << 40, u64::MAX] {
+            assert!(progress_q15(d - 1, d) <= ONE, "duration {d}");
+        }
     }
 
     #[test]
