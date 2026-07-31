@@ -39,8 +39,10 @@ jobs:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
 
+      # Covers unit tests, the integration suites under tests/, and doc examples.
+      # Previously --lib only, which silently skipped every integration test.
       - name: Run tests
-        run: cargo test --lib --no-default-features
+        run: cargo test --no-default-features
 
   clippy:
     name: Clippy
@@ -72,10 +74,10 @@ jobs:
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run clippy (no features)
-        run: cargo clippy --lib --no-default-features -- -D warnings
+        run: cargo clippy --all-targets --no-default-features -- -D warnings
 
       - name: Run clippy (all features)
-        run: cargo clippy --lib --all-features -- -D warnings
+        run: cargo clippy --all-targets --all-features -- -D warnings
 
   fmt:
     name: Format

@@ -255,7 +255,13 @@ Trait implementations are minimal stubs (zero-size) to isolate library overhead.
 
 ### Understanding Symbol Analysis
 
-On non-FPU targets (Cortex-M0/M0+), **compiler_builtins symbols** like \`__divsf3\`, \`__addsf3\`, and \`__mulsf3\` indicate software f32 emulation overhead. These are absent on Cortex-M4F/M7 with hardware FPU.
+**compiler_builtins symbols** are support routines the compiler emits for operations the
+target has no instruction for. Expect integer helpers such as \`u32_div_rem\` and
+\`memcpy\`; ARMv6-M carries more of them than ARMv7E-M because it lacks a hardware divide.
+
+Soft-float routines (\`__divsf3\`, \`__addsf3\`, \`__mulsf3\`, \`__aeabi_f*\`) should **not**
+appear at all — all color math is fixed-point integer arithmetic. If they show up,
+floating point has crept back into the library.
 
 **rgb_sequencer crate symbols** - Library code:
 - \`RgbSequencer::service\` - Main sequencer logic

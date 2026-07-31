@@ -1,9 +1,8 @@
 # RP2350 Benchmark Results
 
-**Last Updated:** 2025-12-16 19:57:07  
-**Toolchain:** rustc 1.91.1 (ed61e7d7e 2025-11-07)  
-**Target:** thumbv8m.main-none-eabihf (Cortex-M33, with FPU)  
-**Optimization:** --release
+> **STALE — measured against the pre-0.3 floating-point implementation.** These numbers predate the fixed-point migration and no longer describe the library. Re-run `./run_benchmark.sh` on hardware to regenerate.
+
+**Last Updated:** 2025-12-16 19:57:07 **Toolchain:** rustc 1.91.1 (ed61e7d7e 2025-11-07) **Target:** thumbv8m.main-none-eabihf (Cortex-M33, with FPU) **Optimization:** --release
 
 ## Results
 

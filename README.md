@@ -12,6 +12,7 @@ A `no_std`-compatible Rust library for controlling RGB LEDs in embedded systems 
 **rgb-sequencer** provides a lightweight framework for creating and executing RGB LED animations on resource-constrained embedded devices. Define high-level sequences and let the library handle timing, interpolation, and LED updates.
 
 **Key features:**
+- **No floating point** - All color math is fixed-point integer arithmetic, so nothing pulls in soft-float emulation on Cortex-M0/M0+
 - **Platform independent** - Hardware is abstracted through traits for LEDs and time systems
 - **Smooth color transitions** - Linear interpolation and quadratic easing
 - **Brightness control** - Global brightness adjustment without recreating sequences
@@ -25,17 +26,15 @@ A `no_std`-compatible Rust library for controlling RGB LEDs in embedded systems 
 ### Add Dependency
 ```toml
 [dependencies]
-rgb-sequencer = "0.2"
-palette = { version = "0.7.6", default-features = false, features = ["libm"] }
+rgb-sequencer = "0.3"
 ```
 
 ### Minimal Example
 ```rust
 use rgb_sequencer::{
-    RgbSequencer8, RgbSequence8, RgbLed, TimeSource, TransitionStyle,
+    Rgb, RgbSequencer8, RgbSequence8, RgbLed, TimeSource, TransitionStyle,
     LoopCount, WHITE, BLACK
 };
-use palette::Srgb;
 
 // 1. Implement the RgbLed trait for your hardware
 struct MyLed {
@@ -43,9 +42,10 @@ struct MyLed {
 }
 
 impl RgbLed for MyLed {
-    fn set_color(&mut self, color: Srgb) {
-        // Convert Srgb color to your hardware format
-        // e.g., PWM duty cycles, 8-bit RGB values
+    fn set_color(&mut self, color: Rgb) {
+        // Channels are 0..=65535. Scale to your hardware's format:
+        //   PWM:    (color.r as u32 * max_duty as u32 / 65535) as u16
+        //   8-bit:  let (r, g, b) = color.to_u8();
     }
 }
 
@@ -101,33 +101,41 @@ loop {
 
 **Binary analysis**: Use the [binary-analyzer](tools/binary-analyzer/README.md) to measure Flash/RAM overhead on embedded ARM targets with symbol-level breakdowns.
 
-## Performance Considerations
+## Colors
 
-### Benchmark Results
+Colors are `Rgb`, three `u16` channels running `0..=65535`:
 
-Performance measured on embedded targets:
+```rust
+use rgb_sequencer::{Rgb, RED};
 
-**RP2040 (Cortex-M0+, 125 MHz, no FPU)**
-- Step transitions: ~50 µs per `service()` call
-- Linear/Easing: ~75 µs per `service()` call
+let orange = Rgb::from_u8(255, 128, 0);  // const-friendly, 255 maps to 65535 exactly
+let half    = RED.scale(128);            // 8-bit brightness factor, 255 = unchanged
+let blend   = RED.lerp(orange, 16384);   // Q0.15 factor, 32768 = fully `orange`
+let (r, g, b) = orange.to_u8();          // for WS2812 and other 8-bit drivers
+```
 
-**RP2350 (Cortex-M33F, 150 MHz, with FPU)**
-- Step transitions: ~19 µs per `service()` call
-- Linear/Easing: ~22 µs per `service()` call
+Sixteen bits per channel is both a normalized value and a natural 16-bit PWM duty, so most hardware needs only a multiply and a shift. Interpolation happens at full 16-bit precision, so slow fades show no banding on 8-bit hardware.
 
-See [benchmark results](tools/benchmark/) for detailed cycle counts and test configurations.
+## Performance
 
-### Floating Point Math Requirements
+### No Floating Point
 
-This library uses `f32` for color math and interpolation, so performance will vary by target as the benchmarks demonstrate:
+All color math — progress, easing, interpolation, and brightness — is fixed-point integer arithmetic. Nothing in the library links soft-float emulation, so Cortex-M0/M0+ pays no penalty for `Linear` or easing transitions, and every transition style is practical on every target.
 
-#### Hardware FPU (Fast) ✅
-Cortex-M4F, M7, M33F - Hardware-accelerated `f32` operations. Minimal overhead for easing functions.
+### Flash Footprint
 
-#### No Hardware FPU (Slower) ⚠️
-Cortex-M0/M0+, M3 - Software-emulated `f32` operations. Linear/easing adds ~50% overhead vs Step transitions.
+Measured with [binary-analyzer](tools/binary-analyzer/README.md) against a minimal reference binary (`opt-level = "z"`, LTO):
 
-**Recommendation:** For low-power scenarios on non-FPU targets, prefer Step transitions exclusively.
+| Target | Flash |
+|--------|-------|
+| `thumbv6m-none-eabi` (Cortex-M0/M0+, no FPU) | 2156 B |
+| `thumbv7em-none-eabihf` (Cortex-M4F/M7, FPU) | 1848 B |
+
+Dropping `f32` cut the non-FPU build by 43% — the `__divsf3`/`__addsf3`/`__mulsf3` emulation routines it used to carry are gone entirely.
+
+### Timing
+
+Per-`service()` timings depend on your target and sequence capacity. Use the [benchmark tool](tools/benchmark/) to measure on your own hardware; it reports every transition style across capacities of 4 to 32 steps.
 
 ## License
 

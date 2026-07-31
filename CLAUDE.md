@@ -25,6 +25,7 @@ This repository maintains **professional, lean documentation**:
 - **No verbosity** - Concise language, respect reader's time
 - **No speculation** - Document what exists, not future possibilities
 - **Proper distribution** - README for getting started, code comments for implementation details
+- **No hard-wrapping** - Write each markdown paragraph as one long line and let editors soft-wrap it. Never reflow prose to a fixed column. Hard wrapping produces noisy diffs, since changing one word re-wraps every following line of the paragraph.
 
 **When updating docs:**
 1. Remove redundant explanations across files
@@ -42,9 +43,9 @@ This repository maintains **professional, lean documentation**:
 
 ```rust
 let sequence = RgbSequence::<_, 3>::builder()
-    .step(Srgb::new(1.0, 0.0, 0.0), ms(1000), TransitionStyle::Linear)?
-    .step(Srgb::new(0.0, 1.0, 0.0), ms(1000), TransitionStyle::Linear)?
-    .step(Srgb::new(0.0, 0.0, 1.0), ms(1000), TransitionStyle::Linear)?
+    .step(RED, ms(1000), TransitionStyle::Linear)?
+    .step(GREEN, ms(1000), TransitionStyle::Linear)?
+    .step(BLUE, ms(1000), TransitionStyle::Linear)?
     .loop_count(LoopCount::Infinite)
     .build()?;
 ```
@@ -61,10 +62,10 @@ let sequence = RgbSequence::<_, 3>::builder()
 
 ```rust
 let sequence = RgbSequence::<_, 3>::builder()
-    .start_color(Srgb::new(0.0, 0.0, 0.0))
-    .step(Srgb::new(1.0, 0.0, 0.0), ms(1000), TransitionStyle::EaseIn)?     // Slow start
-    .step(Srgb::new(0.0, 1.0, 0.0), ms(1000), TransitionStyle::EaseOut)?    // Slow end
-    .step(Srgb::new(0.0, 0.0, 1.0), ms(1000), TransitionStyle::EaseInOut)?  // Slow both
+    .start_color(BLACK)
+    .step(RED, ms(1000), TransitionStyle::EaseIn)?     // Slow start
+    .step(GREEN, ms(1000), TransitionStyle::EaseOut)?  // Slow end
+    .step(BLUE, ms(1000), TransitionStyle::EaseInOut)? // Slow both
     .build()?;
 ```
 
@@ -80,16 +81,18 @@ let sequence = RgbSequence::<_, 3>::builder()
 - All easing functions use quadratic interpolation (computationally efficient)
 - Easing requires non-zero duration (like Linear)
 - Returns `ServiceTiming::Continuous` (requires frequent updates)
-- Performance note: Uses f32 math, consider impact on non-FPU targets
+- All curves are integer Q0.15 math - no penalty on non-FPU targets
 
 ### Creating a Function-Based Sequence
 
 **Pattern:** Use custom functions for algorithmic animations.
 
 ```rust
-fn breathing_color(base: Srgb, t: Milliseconds) -> Srgb {
-    let phase = (t.as_millis() as f32 * 0.001).sin() * 0.5 + 0.5;
-    Srgb::new(base.red * phase, base.green * phase, base.blue * phase)
+fn breathing_color(base: Rgb, t: Milliseconds) -> Rgb {
+    // Triangle wave over a 4 s cycle, integer only.
+    let phase = (t.as_millis() % 4000) as u32;
+    let level = if phase < 2000 { phase } else { 4000 - phase };
+    base.scale((level * 255 / 2000) as u8)
 }
 
 fn breathing_timing(_t: Milliseconds) -> Option<Milliseconds> {
@@ -97,7 +100,7 @@ fn breathing_timing(_t: Milliseconds) -> Option<Milliseconds> {
 }
 
 let sequence = RgbSequence::<Milliseconds, 0>::from_function(
-    Srgb::new(1.0, 1.0, 1.0),
+    WHITE,
     breathing_color,
     breathing_timing,
 );
@@ -105,19 +108,19 @@ let sequence = RgbSequence::<Milliseconds, 0>::from_function(
 
 **Key points:**
 - Use `N=0` for function-based sequences (no step storage needed)
-- Color function: `fn(base_color: Srgb, elapsed: D) -> Srgb`
+- Color function: `fn(base_color: Rgb, elapsed: D) -> Rgb`
 - Timing function: `fn(elapsed: D) -> Option<D>` (returns delay or None for complete)
-- Avoid complex math on non-FPU targets
+- The library itself is float-free; an effect function may use `f32` and `libm` if it wants, but integer math (or `Rgb::scale`) keeps non-FPU targets fast
 
 ### Implementing Traits
 
 **`RgbLed`** - Abstract LED hardware control:
 ```rust
 impl RgbLed for MyLed {
-    fn set_color(&mut self, color: Srgb) {
-        // Convert 0.0-1.0 range to hardware format (PWM, SPI, etc.)
-        let r = (color.red * 255.0) as u8;
-        // ...write to hardware
+    fn set_color(&mut self, color: Rgb) {
+        // Channels are 0..=65535. Convert to hardware format (PWM, SPI, etc.)
+        let duty = (color.r as u32 * max_duty as u32 / 65535) as u16;
+        let (r, g, b) = color.to_u8(); // ...or for 8-bit drivers
     }
 }
 ```
@@ -146,16 +149,17 @@ See README.md and examples for complete usage patterns.
 
 ### Performance Characteristics
 
-This library uses `f32` for color math and interpolation. Benchmarked performance (see tools/benchmark/):
+All color math is fixed-point integer arithmetic (Q0.15 for progress and easing, `u16` per channel). No soft-float emulation is linked in on any target.
 
-- **Non-FPU targets (RP2040)**: Linear/easing adds ~50% overhead vs Step transitions, but all transitions remain efficient for typical LED control (~50-75 µs per service call)
-- **FPU targets (RP2350)**: Minimal overhead difference between transition types (~19-22 µs per service call)
+Flash footprint measured with `tools/binary-analyzer`:
+- **Non-FPU (thumbv6m, Cortex-M0/M0+)**: 2156 B
+- **FPU (thumbv7em, Cortex-M4F/M7)**: 1848 B
 
 **When providing guidance:**
-- Don't over-warn about performance - benchmarks show all transition types are practical
-- For ultra-low-power scenarios on non-FPU targets, suggest Step transitions
-- Refer users to benchmark tool (tools/benchmark/) for profiling their specific hardware
-- Avoid speculative performance claims - we have real data now
+- Don't warn about easing costing more than Linear - the difference is a couple of 32-bit multiplies, invisible in practice
+- Don't suggest Step transitions "for performance" on non-FPU targets; that advice belonged to the f32 implementation
+- Refer users to the benchmark tool (tools/benchmark/) for timing on their hardware. Note the committed result files predate 0.3.0 and are marked stale
+- Avoid speculative performance claims
 
 ### Static Allocation & Zero-Copy
 
@@ -166,10 +170,11 @@ This library uses `f32` for color math and interpolation. Benchmarked performanc
 
 ### Color Handling
 
-- **Color type**: Always `palette::Srgb` (f32 RGB in 0.0-1.0 range)
-- **Hardware conversion**: Convert in `RgbLed::set_color()` to native format
-- **Interpolation**: Linear RGB interpolation (perceptually incorrect but fast)
-- **Const colors**: Use `const BLACK: Srgb = Srgb::new(0.0, 0.0, 0.0)`
+- **Color type**: Always `Rgb` - three `u16` channels, `0..=65535`
+- **Construction**: `Rgb::from_u8(255, 128, 0)` for 8-bit sources, `Rgb::new` for 16-bit. Both are `const`
+- **Hardware conversion**: Convert in `RgbLed::set_color()` to native format; `Rgb::to_u8()` for 8-bit drivers
+- **Interpolation**: Per-channel linear interpolation (perceptually incorrect but fast). Note it operates on gamma-encoded values, matching the previous behaviour - do not introduce gamma conversion
+- **Fixed-point helpers**: `src/fixed.rs` holds `ONE`/`HALF`/`mul_q15`/ `progress_q15`/`lerp_channel`/`scale_channel`. Keep every intermediate inside a `u32` - a 64-bit divide alone costs ~900 B of `compiler_builtins`
 
 ---
 
@@ -309,17 +314,16 @@ let sequence = RgbSequence::<_, 4>::builder()  // Capacity matches steps
 .step(color, Duration::zero(), TransitionStyle::Step)  // OK - only Step allows zero duration
 ```
 
-### ❌ Complex Math on Non-FPU Targets
+### ❌ Reintroducing Floating Point into the Library
 ```rust
-// WRONG - Very slow on Cortex-M0
-fn expensive_color(base: Srgb, t: Milliseconds) -> Srgb {
-    let phase = (t.as_millis() as f32 * 0.001).sin();
-    let hue = (phase * 360.0).rem_euclid(360.0);
-    // HSV to RGB conversion with more f32 math...
-}
+// WRONG - drags __divsf3/__addsf3/__mulsf3 back into every no_std build
+fn interpolate(a: Rgb, b: Rgb, t: f32) -> Rgb { /* ... */ }
 
-// RIGHT - Use step-based sequences on non-FPU targets instead
+// RIGHT - Q0.15 integer factor
+fn interpolate(a: Rgb, b: Rgb, t: u16) -> Rgb { a.lerp(b, t) }
 ```
+
+User-authored effect functions may still use `f32` and `libm` - that is their choice. The constraint applies to `src/`.
 
 ### ❌ Forgetting to Service Sequencer
 ```rust
@@ -339,16 +343,12 @@ loop {
 
 ### ❌ Incorrect Color Range
 ```rust
-// WRONG - Srgb expects 0.0-1.0 range
-Srgb::new(255.0, 128.0, 64.0)
+// WRONG - channels are 0..=65535, not 0..=255
+Rgb::new(255, 128, 64)   // almost black
 
 // RIGHT
-Srgb::new(1.0, 0.5, 0.25)
-
-// Or convert from 8-bit
-fn from_u8(r: u8, g: u8, b: u8) -> Srgb {
-    Srgb::new(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0)
-}
+Rgb::from_u8(255, 128, 64)
+Rgb::new(65535, 32896, 16448)
 ```
 
 ---
@@ -357,15 +357,16 @@ fn from_u8(r: u8, g: u8, b: u8) -> Srgb {
 
 ### Test Organization
 
-Tests are organized as **integration tests** in the `tests/` directory:
-- `tests/sequence_tests.rs`: Tests for sequence validation, evaluation, looping
-- `tests/sequencer_tests.rs`: Tests for state machine, timing, operations
-- `tests/colors_tests.rs`: Tests for HSV color conversion helpers
-- `tests/common/mod.rs`: Shared test infrastructure (mocks, helpers, constants)
+Integration tests in the `tests/` directory provide black-box coverage of the public API:
+- `tests/sequence_tests.rs`: Sequence validation, evaluation, looping
+- `tests/sequencer_tests.rs`: State machine, timing, operations
+- `tests/colors_tests.rs`: HSV color conversion helpers
+- `tests/common/mod.rs`: Shared infrastructure (mocks, helpers, constants)
 
-**Total: 94 integration tests**
+Unit tests in `src/` cover the fixed-point primitives, which are `pub(crate)` and so unreachable from integration tests:
+- `src/fixed.rs`, `src/color.rs`, `src/colors.rs`, and the easing curves in `src/sequence.rs`
 
-This organization keeps source files clean and provides true black-box testing of the public API.
+**Total: 89 integration tests, 28 unit tests, 6 doc tests**
 
 ### Shared Test Infrastructure
 
@@ -410,7 +411,8 @@ assert_eq!(sequencer.pause(), Err(SequencerError::InvalidState));
 ### Running Tests
 
 ```bash
-cargo test                        # Run all tests (integration + unit)
+cargo test                        # Run all tests (unit + integration + doc)
+cargo test --lib                  # Unit tests only (fixed-point primitives)
 cargo test --test sequence_tests  # Run sequence tests only
 cargo test --test sequencer_tests # Run sequencer tests only
 cargo test --test colors_tests    # Run color tests only
@@ -425,9 +427,9 @@ cargo test --test colors_tests    # Run color tests only
 cargo check
 
 # Run tests
-cargo test                         # All tests (integration + unit)
+cargo test                         # All tests (unit + integration + doc)
 cargo test --test '*'              # Integration tests only
-cargo test --lib                   # Unit tests only (currently none)
+cargo test --lib                   # Unit tests only (fixed-point primitives)
 
 # Lint
 cargo clippy --all-features -- -D warnings
@@ -468,6 +470,9 @@ rgb-sequencer = { version = "0.1", features = ["defmt"] }
 ```
 src/
 ├── lib.rs          # Public API, module declarations, documentation
+├── color.rs        # Rgb color type (u16 per channel)
+├── colors.rs       # Integer HSV helpers
+├── fixed.rs        # Q0.15 fixed-point primitives (private)
 ├── types.rs        # TransitionStyle, LoopCount, SequenceStep, errors
 ├── time.rs         # TimeSource, TimeInstant, TimeDuration traits
 ├── sequence.rs     # RgbSequence, SequenceBuilder, evaluation logic
@@ -493,7 +498,7 @@ tools/
 **For contributions:**
 1. Follow existing architectural patterns (see above)
 2. Write comprehensive tests for new features
-3. Run `cargo test --lib` to verify all tests pass
+3. Run `cargo test` to verify all tests pass
 4. Run `cargo fmt` and `cargo clippy` before committing
 5. Update documentation for API changes
 6. Consider performance on non-FPU targets
@@ -515,7 +520,7 @@ tools/
 - **Code identifiers:** `RgbSequencer`, `RgbSequence`, `RgbLed`, `no_std`, `TransitionStyle::Linear`
 - **Project name:** "rgb-sequencer" (kebab-case)
 - **Feature names:** `std`, `defmt` (lowercase)
-- **Color type:** "Srgb" or "`palette::Srgb`" (not "RGB" or "sRGB" in code context)
+- **Color type:** "`Rgb`" (not "RGB" or "sRGB" in code context)
 - **Timing:** "time system" (not "timer" - encompasses SysTick, HAL timers, Embassy time driver, etc.)
 
 ---

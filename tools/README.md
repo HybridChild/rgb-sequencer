@@ -22,7 +22,7 @@ cd tools/binary-analyzer
 cat report.md
 ```
 
-**Use for:** Binary footprint measurement, FPU impact analysis, release optimization.
+**Use for:** Binary footprint measurement, architecture comparison, release optimization.
 
 ## [benchmark](benchmark/)
 
@@ -33,7 +33,7 @@ cd tools/benchmark
 cargo run --release  # Requires connected RP2040 (or configured target)
 ```
 
-**Use for:** Performance measurement, transition style comparison, FPU vs non-FPU impact analysis.
+**Use for:** Performance measurement, transition style comparison, cross-target timing.
 
 ---
 
