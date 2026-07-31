@@ -357,16 +357,19 @@ Rgb::new(65535, 32896, 16448)
 
 ### Test Organization
 
-Integration tests in the `tests/` directory provide black-box coverage of the public API:
-- `tests/sequence_tests.rs`: Sequence validation, evaluation, looping
-- `tests/sequencer_tests.rs`: State machine, timing, operations
-- `tests/colors_tests.rs`: HSV color conversion helpers
-- `tests/common/mod.rs`: Shared infrastructure (mocks, helpers, constants)
+Tests are organized as **integration tests** in the `tests/` directory:
+- `tests/sequence_tests.rs`: Tests for sequence validation, evaluation, looping
+- `tests/sequencer_tests.rs`: Tests for state machine, timing, operations
+- `tests/color_tests.rs`: Tests for the `Rgb` color type
+- `tests/colors_tests.rs`: Tests for HSV color conversion helpers
+- `tests/easing_tests.rs`: Tests for transition curves and within-step progress
+- `tests/common/mod.rs`: Shared test infrastructure (mocks, helpers, constants)
 
-Unit tests in `src/` cover the fixed-point primitives, which are `pub(crate)` and so unreachable from integration tests:
-- `src/fixed.rs`, `src/color.rs`, `src/colors.rs`, and the easing curves in `src/sequence.rs`
+**Total: 114 integration tests**
 
-**Total: 89 integration tests, 28 unit tests, 6 doc tests**
+This organization keeps source files clean and provides true black-box testing of the public API. **`src/` contains no `#[cfg(test)]` blocks, and none should be added.**
+
+Private internals are still covered, by reaching them through the public API rather than by exposing them. `src/fixed.rs` and the easing curves are private, so `tests/easing_tests.rs` drives them through a single BLACK -> WHITE step whose duration matches the Q0.15 scale: the red channel then reads back the eased progress directly, at finer resolution than the value being checked. A mutation of 4 parts in 32768 is detected. Reach for that pattern before concluding something "can only be unit-tested in-file".
 
 ### Shared Test Infrastructure
 
@@ -411,11 +414,12 @@ assert_eq!(sequencer.pause(), Err(SequencerError::InvalidState));
 ### Running Tests
 
 ```bash
-cargo test                        # Run all tests (unit + integration + doc)
-cargo test --lib                  # Unit tests only (fixed-point primitives)
+cargo test                        # Run all tests
 cargo test --test sequence_tests  # Run sequence tests only
 cargo test --test sequencer_tests # Run sequencer tests only
-cargo test --test colors_tests    # Run color tests only
+cargo test --test color_tests     # Run Rgb color type tests only
+cargo test --test colors_tests    # Run HSV helper tests only
+cargo test --test easing_tests    # Run transition curve tests only
 ```
 
 ---
@@ -427,9 +431,8 @@ cargo test --test colors_tests    # Run color tests only
 cargo check
 
 # Run tests
-cargo test                         # All tests (unit + integration + doc)
+cargo test                         # All tests
 cargo test --test '*'              # Integration tests only
-cargo test --lib                   # Unit tests only (fixed-point primitives)
 
 # Lint
 cargo clippy --all-features -- -D warnings
