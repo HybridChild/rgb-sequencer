@@ -5,6 +5,7 @@
 - [Step-Based Sequences](#step-based-sequences)
 - [Choosing Sequence Capacity](#choosing-sequence-capacity)
 - [Function-Based Sequences](#function-based-sequences)
+- [Colors](#colors)
 - [Predefined Colors](#predefined-colors)
 - [State Machine](#state-machine)
 - [Servicing the Sequencer](#servicing-the-sequencer)
@@ -22,8 +23,8 @@ Step-based sequences define animations as a series of color waypoints with expli
 
 ```rust
 let sequence = RgbSequence::builder()
-    .step(Srgb::new(1.0, 0.0, 0.0), Duration::from_millis(1000), TransitionStyle::Step)?
-    .step(Srgb::new(0.0, 1.0, 0.0), Duration::from_millis(500), TransitionStyle::Linear)?
+    .step(RED, Duration::from_millis(1000), TransitionStyle::Step)?
+    .step(GREEN, Duration::from_millis(500), TransitionStyle::Linear)?
     .build()?;
 ```
 
@@ -35,7 +36,7 @@ let sequence = RgbSequence::builder()
 - `TransitionStyle::EaseOut`: Starts quickly and decelerates toward the target color using quadratic interpolation. Creates smooth, natural-looking exits from color transitions.
 - `TransitionStyle::EaseInOut`: Starts slowly, accelerates in the middle, and decelerates at the end using quadratic interpolation. Creates the smoothest transitions with gentle starts and stops.
 
-**Performance Note:** Easing transitions (`EaseIn`, `EaseOut`, `EaseInOut`) use additional f32 math operations. On non-FPU targets (Cortex-M0/M0+/M3), prefer `Step` for better performance.
+**Performance Note:** All transition styles use fixed-point integer math. Easing costs a couple of extra 32-bit multiplies over `Linear`, which is negligible even on Cortex-M0/M0+ - there is no need to avoid easing on non-FPU targets.
 
 ### Zero-Duration Steps
 
@@ -43,8 +44,8 @@ For steps with `TransitionStyle::Step`, setting zero-duration is allowed and ser
 
 ```rust
 let sequence = RgbSequence::builder()
-    .step(Srgb::new(1.0, 1.0, 0.0), Duration::from_millis(0), TransitionStyle::Step)?       // Yellow waypoint
-    .step(Srgb::new(0.0, 0.0, 0.0), Duration::from_millis(1000), TransitionStyle::Linear)?  // Fade to black
+    .step(YELLOW, Duration::from_millis(0), TransitionStyle::Step)?       // Yellow waypoint
+    .step(BLACK, Duration::from_millis(1000), TransitionStyle::Linear)?  // Fade to black
     .loop_count(LoopCount::Infinite)
     .build()?;
 ```
@@ -59,9 +60,9 @@ The `start_color()` method allows you to define a color to interpolate from at t
 
 ```rust
 let sequence = RgbSequence::builder()
-    .start_color(Srgb::new(0.0, 0.0, 0.0))  // Start from black
-    .step(Srgb::new(1.0, 0.0, 0.0), Duration::from_millis(2000), TransitionStyle::Linear)?  // Fade to red
-    .step(Srgb::new(0.0, 0.0, 1.0), Duration::from_millis(2000), TransitionStyle::Linear)?  // Fade to blue
+    .start_color(BLACK)  // Start from black
+    .step(RED, Duration::from_millis(2000), TransitionStyle::Linear)?  // Fade to red
+    .step(BLUE, Duration::from_millis(2000), TransitionStyle::Linear)?  // Fade to blue
     .loop_count(LoopCount::Infinite)
     .build()?;
 ```
@@ -172,7 +173,7 @@ Function-based sequences use custom functions to compute colors algorithmically 
 
 ```rust
 // Define color function
-fn breathing_effect(base_color: Srgb, elapsed: Duration) -> Srgb {
+fn breathing_effect(base_color: Rgb, elapsed: Duration) -> Rgb {
     // Calculate breathing cycle (4 seconds)
     let time_in_cycle = (elapsed.as_millis() % 4000) as f32 / 4000.0;
     let angle = time_in_cycle * 2.0 * core::f32::consts::PI;
@@ -180,11 +181,9 @@ fn breathing_effect(base_color: Srgb, elapsed: Duration) -> Srgb {
     // Sine wave brightness (10% to 100%)
     let brightness = 0.1 + 0.45 * (1.0 + libm::sinf(angle));
     
-    Srgb::new(
-        base_color.red * brightness,
-        base_color.green * brightness,
-        base_color.blue * brightness,
-    )
+    // The library is float-free; an effect function may still use f32 if it
+    // wants to, then hand back an 8-bit scale factor.
+    base_color.scale((brightness * 255.0) as u8)
 }
 
 // Define timing function
@@ -193,7 +192,7 @@ fn continuous_timing(_elapsed: Duration) -> Option<Duration> {
 }
 
 // Define base color 
-let white = Srgb::new(1.0, 1.0, 1.0)
+let white = WHITE
 
 // Create sequence
 let sequence = RgbSequence::from_function(
@@ -207,7 +206,7 @@ let sequence = RgbSequence::from_function(
 
 Function-based sequences requires two custom function definitions:
 
-#### 1. Color Function: `fn(Srgb, Duration) -> Srgb`
+#### 1. Color Function: `fn(Rgb, Duration) -> Rgb`
 
 Computes the LED color for a given elapsed time:
 - **First parameter**: The base color
@@ -217,8 +216,8 @@ Computes the LED color for a given elapsed time:
 This design allows the same function to be reused with different base colors:
 
 ```rust
-let red = Srgb::new(1.0, 0.0, 0.0);
-let blue = Srgb::new(0.0, 0.0, 1.0);
+let red = RED;
+let blue = BLUE;
 
 // Same function, different colors
 let red_pulse = RgbSequence::from_function(
@@ -239,9 +238,9 @@ let blue_pulse = RgbSequence::from_function(
 Tells the sequencer when it needs to be serviced again:
 - **Parameter**: Time elapsed since sequence started
 - **Returns**: The duration until next service at this time
-  - `Some(Duration::ZERO)` - Continuous animation, call `service()` at your desired frame rate
-  - `Some(duration)` - Static color period - the LED needs updating after this duration
-  - `None` - Animation complete - Sequence is done - No further service is needed
+- `Some(Duration::ZERO)` - Continuous animation, call `service()` at your desired frame rate
+- `Some(duration)` - Static color period - the LED needs updating after this duration
+- `None` - Animation complete - Sequence is done - No further service is needed
 
 Example with completion:
 
@@ -263,7 +262,7 @@ This allows for flexible color-agnostic functions:
 
 ```rust
 // Organic fire flicker using multiple sine waves
-fn fire_flicker(base: Srgb, elapsed: Duration) -> Srgb {
+fn fire_flicker(base: Rgb, elapsed: Duration) -> Rgb {
     let t = elapsed.as_millis() as f32 / 1000.0;
     
     // Combine multiple frequencies for organic look
@@ -274,14 +273,10 @@ fn fire_flicker(base: Srgb, elapsed: Duration) -> Srgb {
     let combined = (flicker1 + flicker2 + flicker3) / 1.75;
     let brightness = 0.7 + 0.3 * combined;
     
-    Srgb::new(
-        base.red * brightness,
-        base.green * brightness,
-        base.blue * brightness
-    )
+    base.scale((brightness * 255.0) as u8)
 }
 
-let red = Srgb::new(1.0, 0.0, 0.0)
+let red = RED
 
 let red_flame = RgbSequence::from_function(
     orange,
@@ -301,6 +296,42 @@ Use function-based sequences when:
 - Your color patterns don't fit into discrete steps
 - Your animation depends on complex calculations
 
+## Colors
+
+`Rgb` holds three `u16` channels running `0..=65535`. This is a normalized value rather than a hardware value — `RgbLed::set_color` scales it to whatever the hardware wants. Sixteen bits doubles as a natural PWM duty, and keeps interpolation fine enough that slow fades show no banding on 8-bit hardware.
+
+```rust
+use rgb_sequencer::Rgb;
+
+let orange = Rgb::from_u8(255, 128, 0);   // 255 maps to exactly 65535
+let dim    = orange.scale(64);            // 8-bit factor, 255 leaves it unchanged
+let blend  = orange.lerp(BLACK, 16384);   // Q0.15 factor, 32768 = fully BLACK
+let (r, g, b) = orange.to_u8();           // for WS2812 and other 8-bit drivers
+```
+
+All of `new`, `from_u8`, `to_u8`, `lerp` and `scale` are `const`, so palettes can be built at compile time.
+
+### HSV
+
+The `colors` module converts from HSV, using integer math only:
+
+```rust
+use rgb_sequencer::colors::{degrees, hsv, hue};
+
+let red    = hue(0);
+let green  = hue(degrees(120));
+let pastel = hsv(degrees(200), 32768, 65535);  // half saturation, full value
+```
+
+Hue spans the full color wheel across the whole `u16` range, so rotating is plain addition and wraps for free:
+
+```rust
+current_hue = current_hue.wrapping_add(512);  // no range check needed
+let color = hue(current_hue);
+```
+
+`saturation` and `value` run `0..=65535`. Because a sixth of 65536 is not an integer, sector boundaries other than red land within a part or two of the exact primary — invisible at 8 bits, but worth knowing if you assert on exact values.
+
 ## Predefined Colors
 
 The library provides constants for common colors:
@@ -316,14 +347,19 @@ let sequence = RgbSequence::builder()
 ```
 
 **Available Constants:**
-- `BLACK` - `Srgb::new(0.0, 0.0, 0.0)`
-- `RED` - `Srgb::new(1.0, 0.0, 0.0)`
-- `GREEN` - `Srgb::new(0.0, 1.0, 0.0)`
-- `BLUE` - `Srgb::new(0.0, 0.0, 1.0)`
-- `WHITE` - `Srgb::new(1.0, 1.0, 1.0)`
-- `YELLOW` - `Srgb::new(1.0, 1.0, 0.0)`
-- `CYAN` - `Srgb::new(0.0, 1.0, 1.0)`
-- `MAGENTA` - `Srgb::new(1.0, 0.0, 1.0)`
+
+| Constant | Value |
+|----------|-------|
+| `BLACK` | `Rgb::new(0, 0, 0)` |
+| `RED` | `Rgb::new(FULL, 0, 0)` |
+| `GREEN` | `Rgb::new(0, FULL, 0)` |
+| `BLUE` | `Rgb::new(0, 0, FULL)` |
+| `WHITE` | `Rgb::new(FULL, FULL, FULL)` |
+| `YELLOW` | `Rgb::new(FULL, FULL, 0)` |
+| `CYAN` | `Rgb::new(0, FULL, FULL)` |
+| `MAGENTA` | `Rgb::new(FULL, 0, FULL)` |
+
+`FULL` is also exported, and equals `u16::MAX` (65535).
 
 ## State Machine
 
@@ -522,24 +558,24 @@ A global `brightness` can be set for each individual sequencer, which allows you
 let mut sequencer = RgbSequencer8::new(led, &timer);
 sequencer.load(sequence);
 
-// Set brightness to 50%
-sequencer.set_brightness(0.5);
+// Set brightness to ~50%
+sequencer.set_brightness(128);
 
 sequencer.start()?;
 ```
 
 Brightness Range
-- `1.0` (default): Full brightness
-- `0.0`: LED off (black)
+- `255` (default): Full brightness
+- `0`: LED off (black)
+
+The `u8` bounds the range, so there is nothing to clamp.
 
 ```rust
-// Values are automatically clamped to 0.0-1.0 range
-sequencer.set_brightness(2.5);   // Becomes 1.0 (full)
-sequencer.set_brightness(-0.5);  // Becomes 0.0 (off)
-
 // Query current brightness
-let current = sequencer.brightness();  // Returns 0.0-1.0
+let current = sequencer.brightness();  // Returns 0..=255
 ```
+
+Full brightness is skipped rather than multiplied through, so leaving it at the default costs nothing per `service()` call.
 
 Brightness can be changed at any time, including during playback.
 
@@ -609,7 +645,7 @@ pub enum AnyLed<'d> {
 }
 
 impl<'d> RgbLed for AnyLed<'d> {
-    fn set_color(&mut self, color: Srgb) {
+    fn set_color(&mut self, color: Rgb) {
         match self {
             AnyLed::Tim1(led) => led.set_color(color),
             AnyLed::Tim3(led) => led.set_color(color),
@@ -656,7 +692,7 @@ pub enum SequencerAction<D: TimeDuration, const N: usize> {
     Resume,
     Restart,
     Clear,
-    SetBrightness(f32),
+    SetBrightness(u8),
 }
 
 // Receive command and dispatch action to sequencer

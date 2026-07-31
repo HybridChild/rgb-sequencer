@@ -1,9 +1,8 @@
 # RP2040 Benchmark Results
 
-**Last Updated:** 2025-12-16 19:59:06  
-**Toolchain:** rustc 1.91.1 (ed61e7d7e 2025-11-07)  
-**Target:** thumbv6m-none-eabi (Cortex-M0+, no FPU)  
-**Optimization:** --release
+> **STALE — measured against the pre-0.3 floating-point implementation.** These numbers predate the fixed-point migration and no longer describe the library. Re-run `./run_benchmark.sh` on hardware to regenerate.
+
+**Last Updated:** 2025-12-16 19:59:06 **Toolchain:** rustc 1.91.1 (ed61e7d7e 2025-11-07) **Target:** thumbv6m-none-eabi (Cortex-M0+, no FPU) **Optimization:** --release
 
 ## Results
 

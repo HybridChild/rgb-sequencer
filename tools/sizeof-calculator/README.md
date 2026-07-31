@@ -10,7 +10,7 @@ cat report.md
 
 ## Output
 
-- **Component Sizes:** Individual type sizes (`Srgb`, `TransitionStyle`, `LoopCount`)
+- **Component Sizes:** Individual type sizes (`Rgb`, `TransitionStyle`, `LoopCount`)
 - **Duration/Instant Types:** Sizes for u32, u64, Embassy
 - **Step Sizes:** Memory per step for each duration type
 - **Sequence Tables:** RAM cost by capacity (N=4,8,16,32,64) for each duration type

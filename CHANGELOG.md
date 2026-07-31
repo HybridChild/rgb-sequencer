@@ -2,10 +2,75 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.3.0] - 2026-07-31
+
+Replaces all floating-point color math with fixed-point integer arithmetic and drops the `palette` dependency. On Cortex-M0/M0+ this removes the software float emulation routines (`__divsf3`, `__addsf3`, `__mulsf3`) entirely.
+
+Measured with `tools/binary-analyzer` against a minimal reference binary:
+
+| Target | 0.2.1 | 0.3.0 | Change |
+|--------|-------|-------|--------|
+| `thumbv6m-none-eabi` (Cortex-M0/M0+, no FPU) | 3784 B | 2156 B | **-43.0%** |
+| `thumbv7em-none-eabihf` (Cortex-M4F/M7, FPU) | 1996 B | 1848 B | **-7.4%** |
+
+RAM per sequence drops too — `SequenceStep<u32>` goes from 20 B to 12 B, and `RgbSequence<u32, 32>` from 712 B to 440 B.
+
+### Breaking
+
+- **Color type** — `palette::Srgb` is replaced by `rgb_sequencer::Rgb`, three `u16` channels running `0..=65535`. `palette` is no longer a dependency, so it can be removed from your `Cargo.toml` unless you use it directly.
+
+  ```rust
+  // Before
+  Srgb::new(1.0, 0.5, 0.0)
+  // After
+  Rgb::from_u8(255, 128, 0)   // or Rgb::new(65535, 32768, 0)
+  ```
+
+- **`RgbLed::set_color`** now receives an `Rgb`. Convert to your hardware format with integer math:
+
+  ```rust
+  // Before
+  let duty = (color.red.clamp(0.0, 1.0) * max_duty as f32) as u16;
+  // After
+  let duty = (color.r as u32 * max_duty as u32 / 65535) as u16;
+  // ...or, for 8-bit drivers
+  let (r, g, b) = color.to_u8();
+  ```
+
+- **Channel fields** are `r`, `g`, `b` rather than `red`, `green`, `blue`.
+
+- **Brightness** is a `u8` where 255 is full brightness: `set_brightness`, `brightness()` and `SequencerAction::SetBrightness` all changed. The type bounds the range, so out-of-range values are no longer clamped — they cannot be expressed. `0.5` becomes `128`, `1.0` becomes `255`.
+
+- **`colors::hsv` and `colors::hue`** take `u16` arguments. Hue spans the full color wheel across the whole `u16` range, so rotation wraps by plain addition. Use the new `colors::degrees()` helper to convert: `hue(60.0)` becomes `hue(degrees(60))`.
+
+- **`DEFAULT_COLOR_EPSILON`**, `with_epsilon`, `color_epsilon()` and `set_color_epsilon()` use `u16` per-channel thresholds instead of `f32`. The default is 64 out of 65535 (~0.1%), matching the previous `0.001`.
+
+### Added
+
+- `Rgb` with `new`, `from_u8`, `to_u8`, `lerp`, `scale` and `approx_eq` — all `const`, so palettes can be built at compile time.
+- `colors::degrees()` for converting degrees to the `u16` hue wheel.
+- `FULL` (`u16::MAX`) and `FULL_BRIGHTNESS` (`255`) constants.
+- Unit tests for the fixed-point primitives, including an exhaustive sweep of every easing curve across all 32769 progress values against its floating-point reference.
+
+### Changed
+
+- Progress, easing and interpolation use Q0.15 fixed point. Every intermediate fits in 32 bits, so no 64-bit multiply or divide helper is linked in.
+- HSV conversion is integer sector math and needs no `libm`.
+- CI now runs the integration test suite, which `cargo test --lib` had been skipping.
+
+### Removed
+
+- The `palette` dependency, and with it `libm` and `fast-srgb8`.
+
+### Notes
+
+Interpolation behaviour is unchanged. `palette::Srgb` was gamma-encoded and its `Mix` was a naive per-channel lerp, so the integer lerp is equivalent — no gamma conversion was introduced.
+
+The benchmark result files under `tools/benchmark/` predate this change and are marked stale; regenerating them needs RP2040 and RP2350 hardware.
 
 ## [0.2.1] - 2026-03-11
 
@@ -84,8 +149,4 @@ Initial release of rgb-sequencer, a `no_std` embedded RGB LED animation library.
 - Optional `defmt` logging support
 - Example projects for STM32F0 and RP Pico
 
-[Unreleased]: https://github.com/HybridChild/rgb-sequencer/compare/v0.2.1...HEAD
-[0.2.1]: https://github.com/HybridChild/rgb-sequencer/compare/v0.2.0...v0.2.1
-[0.2.0]: https://github.com/HybridChild/rgb-sequencer/compare/v0.1.1...v0.2.0
-[0.1.1]: https://github.com/HybridChild/rgb-sequencer/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/HybridChild/rgb-sequencer/releases/tag/v0.1.0
+[Unreleased]: https://github.com/HybridChild/rgb-sequencer/compare/v0.2.1...HEAD [0.2.1]: https://github.com/HybridChild/rgb-sequencer/compare/v0.2.0...v0.2.1 [0.2.0]: https://github.com/HybridChild/rgb-sequencer/compare/v0.1.1...v0.2.0 [0.1.1]: https://github.com/HybridChild/rgb-sequencer/compare/v0.1.0...v0.1.1 [0.1.0]: https://github.com/HybridChild/rgb-sequencer/releases/tag/v0.1.0

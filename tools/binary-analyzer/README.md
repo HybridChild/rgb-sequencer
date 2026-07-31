@@ -29,18 +29,18 @@ The generated `report.md` contains:
 
 1. **Target Comparison Table** - Side-by-side Flash/RAM usage for Cortex-M0 vs Cortex-M4F
 2. **Per-Target Analysis**:
-   - Binary size breakdown (.text, .rodata, .data, .bss)
-   - Top 20 largest symbols showing what contributes to Flash usage
+- Binary size breakdown (.text, .rodata, .data, .bss)
+- Top 20 largest symbols showing what contributes to Flash usage
 3. **Interpretation Guide**:
-   - Test scenario description
-   - Binary section meanings
-   - Symbol analysis guide
-   - How to estimate your application's total size
+- Test scenario description
+- Binary section meanings
+- Symbol analysis guide
+- How to estimate your application's total size
 
 ### Key Insights from the Report
 
-- **FPU Impact**: Compare Cortex-M0 (software f32) vs Cortex-M4F (hardware FPU) overhead
-- **Symbol analysis**: Identifies library code (`RgbSequencer::service`) vs compiler overhead (`__divsf3`, etc.)
+- **Architecture comparison**: Cortex-M0/M0+ (ARMv6-M) vs Cortex-M4F/M7 (ARMv7E-M)
+- **Symbol analysis**: Identifies library code (`RgbSequencer::service`) vs compiler support routines (`u32_div_rem`, `memcpy`, etc.)
 - **Baseline cost**: Minimum library overhead with production optimization
 
 ## Understanding Your Total Cost
@@ -49,7 +49,7 @@ The analysis measures **rgb-sequencer's baseline overhead** using minimal stub i
 
 **Measured baseline** (from report.md)
 - Library code (sequencer logic, builder)
-- Software f32 emulation (non-FPU targets only)
+- Integer division support routines
 - Minimal test sequence
 
 **Your additions** (not measured):
@@ -57,16 +57,14 @@ The analysis measures **rgb-sequencer's baseline overhead** using minimal stub i
 - `TimeSource` trait implementation: Timer integration
 - Your sequence data: Additional sequencers and sequences
 
-## FPU Considerations
+## Floating Point
 
-This library uses `f32` for color math and interpolation:
+Since 0.3.0 all color math is fixed-point integer arithmetic, so **no soft-float routines should appear in either binary**. Seeing `__divsf3`, `__addsf3`, `__mulsf3` or `__aeabi_f*` in the symbol lists means floating point has crept back into the library — treat that as a regression.
 
-- **Cortex-M0/M0+/M3** (no FPU): Software f32 emulation adds overhead (visible as `compiler_builtins` symbols)
-- **Cortex-M4F/M7/M33** (with FPU): Hardware f32 operations, no emulation overhead
+The two targets are still compared because ARMv6-M lacks instructions ARMv7E-M has (notably hardware divide), so the non-FPU build carries division support routines the other does not.
 
-The report compares both to show the FPU impact clearly.
+For reference, dropping `f32` in 0.3.0 took the non-FPU build from 3784 B to 2156 B (-43%) and the FPU build from 1996 B to 1848 B (-7%).
 
-To minimize overhead on non-FPU targets:
-- Use `TransitionStyle::Step` instead of `Linear` (avoids interpolation)
-- Keep sequences simple
-- Avoid function-based sequences with f32 operations
+To minimize overhead:
+- Keep sequences small — `N` dominates RAM, and the step search is linear
+- Prefer `TransitionStyle::Step` only if you genuinely need no interpolation; it is no longer a meaningful performance lever
