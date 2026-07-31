@@ -3,11 +3,10 @@
 mod common;
 use common::*;
 
-use palette::Srgb;
 use rgb_sequencer::sequence::RgbSequence;
 use rgb_sequencer::types::{LoopCount, TransitionStyle};
 use rgb_sequencer::{
-    DEFAULT_COLOR_EPSILON, RgbSequencer, SequencerError, SequencerState, ServiceTiming,
+    DEFAULT_COLOR_EPSILON, Rgb, RgbSequencer, SequencerError, SequencerState, ServiceTiming,
     TimeDuration,
 };
 
@@ -153,13 +152,12 @@ fn function_based_sequence_computes_colors_correctly() {
     let timer = MockTimeSource::new();
     let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-    fn brightness_pulse(base: Srgb, elapsed: TestDuration) -> Srgb {
-        let brightness = if elapsed.as_millis() < 500 { 0.5 } else { 1.0 };
-        Srgb::new(
-            base.red * brightness,
-            base.green * brightness,
-            base.blue * brightness,
-        )
+    fn brightness_pulse(base: Rgb, elapsed: TestDuration) -> Rgb {
+        if elapsed.as_millis() < 500 {
+            Rgb::new(base.r / 2, base.g / 2, base.b / 2)
+        } else {
+            base
+        }
     }
 
     fn continuous(_elapsed: TestDuration) -> Option<TestDuration> {
@@ -175,7 +173,7 @@ fn function_based_sequence_computes_colors_correctly() {
     // At start - 50% brightness
     assert!(colors_equal(
         sequencer.current_color(),
-        Srgb::new(0.5, 0.0, 0.0)
+        rgb_f(0.5, 0.0, 0.0)
     ));
 
     // After 500ms - full brightness
@@ -864,7 +862,7 @@ fn current_position_returns_none_for_function_based_sequences() {
     let timer = MockTimeSource::new();
     let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-    fn color_fn(base: Srgb, _elapsed: TestDuration) -> Srgb {
+    fn color_fn(base: Rgb, _elapsed: TestDuration) -> Rgb {
         base
     }
 
@@ -957,7 +955,7 @@ fn color_epsilon_is_configurable() {
 
     // Test with_epsilon constructor
     let led = MockLed::new();
-    let custom_epsilon = 0.0001;
+    let custom_epsilon = 1; // Write on any single-LSB change
     let sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::with_epsilon(
         led,
         &timer,
@@ -968,7 +966,7 @@ fn color_epsilon_is_configurable() {
     // Test set_color_epsilon
     let led = MockLed::new();
     let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
-    let new_epsilon = 0.01;
+    let new_epsilon = 655; // ~1% of full scale
     sequencer.set_color_epsilon(new_epsilon);
     assert_eq!(sequencer.color_epsilon(), new_epsilon);
 }
@@ -978,7 +976,7 @@ fn brightness_defaults_to_full() {
     let led = MockLed::new();
     let timer = MockTimeSource::new();
     let sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
-    assert_eq!(sequencer.brightness(), 1.0);
+    assert_eq!(sequencer.brightness(), bright(1.0));
 }
 
 #[test]
@@ -994,35 +992,34 @@ fn set_brightness_applies_to_led_output() {
         .unwrap();
 
     // Set brightness to 50%
-    sequencer.set_brightness(0.5);
-    assert_eq!(sequencer.brightness(), 0.5);
+    sequencer.set_brightness(bright(0.5));
+    assert_eq!(sequencer.brightness(), bright(0.5));
 
     sequencer.load(sequence);
     sequencer.start().unwrap();
     sequencer.service().unwrap();
 
     // LED should be at 50% brightness (RED at 50%)
-    let expected = Srgb::new(0.5, 0.0, 0.0);
-    assert!(colors_equal(sequencer.current_color(), expected));
+    let expected = rgb_f(0.5, 0.0, 0.0);
+    assert!(colors_equal_epsilon(
+        sequencer.current_color(),
+        expected,
+        BRIGHTNESS_EPSILON
+    ));
 }
 
 #[test]
-fn brightness_is_clamped_to_valid_range() {
+fn brightness_round_trips_across_its_whole_range() {
+    // Brightness is a u8, so the type itself bounds the range - there is no
+    // out-of-range value to clamp, unlike the f32 API this replaced.
     let led = MockLed::new();
     let timer = MockTimeSource::new();
     let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-    // Test clamping upper bound
-    sequencer.set_brightness(2.5);
-    assert_eq!(sequencer.brightness(), 1.0);
-
-    // Test clamping lower bound
-    sequencer.set_brightness(-0.5);
-    assert_eq!(sequencer.brightness(), 0.0);
-
-    // Test valid range
-    sequencer.set_brightness(0.75);
-    assert_eq!(sequencer.brightness(), 0.75);
+    for value in [0u8, 1, 64, 128, 191, 254, 255] {
+        sequencer.set_brightness(value);
+        assert_eq!(sequencer.brightness(), value);
+    }
 }
 
 #[test]
@@ -1045,13 +1042,17 @@ fn brightness_can_be_changed_during_playback() {
     assert!(colors_equal(sequencer.current_color(), RED));
 
     // Change brightness to 25% during playback
-    sequencer.set_brightness(0.25);
+    sequencer.set_brightness(bright(0.25));
     timer.advance(TestDuration(100));
     sequencer.service().unwrap();
 
     // LED should now be at 25% brightness
-    let expected = Srgb::new(0.25, 0.0, 0.0);
-    assert!(colors_equal(sequencer.current_color(), expected));
+    let expected = rgb_f(0.25, 0.0, 0.0);
+    assert!(colors_equal_epsilon(
+        sequencer.current_color(),
+        expected,
+        BRIGHTNESS_EPSILON
+    ));
 }
 
 #[test]
@@ -1066,7 +1067,7 @@ fn zero_brightness_turns_led_off() {
         .build()
         .unwrap();
 
-    sequencer.set_brightness(0.0);
+    sequencer.set_brightness(bright(0.0));
     sequencer.load(sequence);
     sequencer.start().unwrap();
 
@@ -1081,7 +1082,7 @@ fn brightness_applies_to_all_color_channels() {
     let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
     // White color
-    let white = Srgb::new(1.0, 1.0, 1.0);
+    let white = rgb_f(1.0, 1.0, 1.0);
 
     let sequence = RgbSequence::<TestDuration, 8>::builder()
         .step(white, TestDuration(1000), TransitionStyle::Step)
@@ -1089,14 +1090,18 @@ fn brightness_applies_to_all_color_channels() {
         .build()
         .unwrap();
 
-    sequencer.set_brightness(0.3);
+    sequencer.set_brightness(bright(0.3));
     sequencer.load(sequence);
     sequencer.start().unwrap();
     sequencer.service().unwrap();
 
     // All channels should be at 30%
-    let expected = Srgb::new(0.3, 0.3, 0.3);
-    assert!(colors_equal(sequencer.current_color(), expected));
+    let expected = rgb_f(0.3, 0.3, 0.3);
+    assert!(colors_equal_epsilon(
+        sequencer.current_color(),
+        expected,
+        BRIGHTNESS_EPSILON
+    ));
 }
 
 #[test]
@@ -1114,15 +1119,16 @@ fn brightness_works_with_linear_transitions() {
         .build()
         .unwrap();
 
-    sequencer.set_brightness(0.5);
+    sequencer.set_brightness(bright(0.5));
     sequencer.load(sequence);
     sequencer.start().unwrap();
     sequencer.service().unwrap();
 
     // Start at RED at 50%
-    assert!(colors_equal(
+    assert!(colors_equal_epsilon(
         sequencer.current_color(),
-        Srgb::new(0.5, 0.0, 0.0)
+        rgb_f(0.5, 0.0, 0.0),
+        BRIGHTNESS_EPSILON
     ));
 
     // Advance into linear transition
@@ -1131,5 +1137,9 @@ fn brightness_works_with_linear_transitions() {
 
     // Should be half way transitioning from RED to GREEN, at 50% brightness
     let current = sequencer.current_color();
-    assert!(colors_equal(current, Srgb::new(0.25, 0.25, 0.0)));
+    assert!(colors_equal_epsilon(
+        current,
+        rgb_f(0.25, 0.25, 0.0),
+        BRIGHTNESS_EPSILON
+    ));
 }

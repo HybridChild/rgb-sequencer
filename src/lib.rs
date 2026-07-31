@@ -5,10 +5,11 @@
 //! `no_std` RGB LED animation library for embedded systems.
 //!
 //! Provides step-based and function-based color sequences with trait abstractions for LED hardware and timing.
-//! Zero heap allocation, platform-independent, type-safe colors via `palette::Srgb<f32>`.
+//! Zero heap allocation, platform-independent, and entirely free of floating-point math.
 //!
 //! # Core Types
 //!
+//! - **`Rgb`** - 16-bit-per-channel color (`0..=65535`)
 //! - **`RgbSequence`** - Defines an animation (steps, loops, transitions, colors)
 //! - **`RgbSequencer`** - Controls a single LED through sequences with state management
 //! - **`RgbLed`** - Trait for LED hardware abstraction
@@ -19,17 +20,18 @@
 //!
 //! - **`colors`** module - HSV color space helpers for intuitive color creation
 //!
-//! Uses f32 extensively - performance varies by FPU availability.
+//! All color math is fixed-point integer arithmetic - no soft-float emulation on any target.
 
-// Re-export Srgb from palette for user convenience
-pub use palette::Srgb;
-
+pub mod color;
 pub mod colors;
 pub mod command;
+mod fixed;
 pub mod sequence;
 pub mod sequencer;
 pub mod time;
 pub mod types;
+
+pub use color::Rgb;
 
 pub use command::{SequencerAction, SequencerCommand};
 pub use sequence::{RgbSequence, SequenceBuilder, StepPosition};
@@ -40,29 +42,32 @@ pub use sequencer::{
 pub use time::{TimeDuration, TimeInstant, TimeSource};
 pub use types::{LoopCount, SequenceError, SequenceStep, TransitionStyle};
 
+/// Full-scale channel value.
+pub const FULL: u16 = u16::MAX;
+
 /// Black color (all channels off).
-pub const BLACK: Srgb = Srgb::new(0.0, 0.0, 0.0);
+pub const BLACK: Rgb = Rgb::new(0, 0, 0);
 
 /// Red color (full red channel).
-pub const RED: Srgb = Srgb::new(1.0, 0.0, 0.0);
+pub const RED: Rgb = Rgb::new(FULL, 0, 0);
 
 /// Green color (full green channel).
-pub const GREEN: Srgb = Srgb::new(0.0, 1.0, 0.0);
+pub const GREEN: Rgb = Rgb::new(0, FULL, 0);
 
 /// Blue color (full blue channel).
-pub const BLUE: Srgb = Srgb::new(0.0, 0.0, 1.0);
+pub const BLUE: Rgb = Rgb::new(0, 0, FULL);
 
 /// White color (all channels full).
-pub const WHITE: Srgb = Srgb::new(1.0, 1.0, 1.0);
+pub const WHITE: Rgb = Rgb::new(FULL, FULL, FULL);
 
 /// Yellow color (red + green).
-pub const YELLOW: Srgb = Srgb::new(1.0, 1.0, 0.0);
+pub const YELLOW: Rgb = Rgb::new(FULL, FULL, 0);
 
 /// Cyan color (green + blue).
-pub const CYAN: Srgb = Srgb::new(0.0, 1.0, 1.0);
+pub const CYAN: Rgb = Rgb::new(0, FULL, FULL);
 
 /// Magenta color (red + blue).
-pub const MAGENTA: Srgb = Srgb::new(1.0, 0.0, 1.0);
+pub const MAGENTA: Rgb = Rgb::new(FULL, 0, FULL);
 
 // Type aliases for common sequencer capacities
 

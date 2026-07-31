@@ -1,7 +1,7 @@
 //! Core types for sequence construction.
 
+use crate::color::Rgb;
 use crate::time::TimeDuration;
-use palette::Srgb;
 
 /// How to transition to a step's target color.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -45,8 +45,8 @@ impl Default for LoopCount {
 /// A single step in an RGB sequence.
 #[derive(Debug, Clone, Copy)]
 pub struct SequenceStep<D: TimeDuration> {
-    /// Target color (0.0-1.0 range).
-    pub color: Srgb,
+    /// Target color.
+    pub color: Rgb,
 
     /// Step duration (how long to hold for Step, or interpolate over for Linear/easing).
     pub duration: D,
@@ -58,7 +58,7 @@ pub struct SequenceStep<D: TimeDuration> {
 impl<D: TimeDuration> SequenceStep<D> {
     /// Creates a new sequence step.
     #[inline]
-    pub fn new(color: Srgb, duration: D, transition: TransitionStyle) -> Self {
+    pub fn new(color: Rgb, duration: D, transition: TransitionStyle) -> Self {
         Self {
             color,
             duration,

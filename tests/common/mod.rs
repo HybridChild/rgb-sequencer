@@ -2,8 +2,7 @@
 
 #![allow(dead_code)] // Items used across multiple test files; Rust analyzes per-file
 
-use palette::Srgb;
-use rgb_sequencer::{RgbLed, TimeDuration, TimeInstant, TimeSource};
+use rgb_sequencer::{Rgb, RgbLed, TimeDuration, TimeInstant, TimeSource};
 
 // ============================================================================
 // Mock Time Types
@@ -55,29 +54,29 @@ impl TimeInstant for TestInstant {
 
 /// Mock LED that records all color changes for testing
 pub struct MockLed {
-    current_color: Srgb,
-    color_history: heapless::Vec<Srgb, 32>,
+    current_color: Rgb,
+    color_history: heapless::Vec<Rgb, 32>,
 }
 
 impl MockLed {
     pub fn new() -> Self {
         Self {
-            current_color: Srgb::new(0.0, 0.0, 0.0),
+            current_color: Rgb::new(0, 0, 0),
             color_history: heapless::Vec::new(),
         }
     }
 
-    pub fn get_last_color(&self) -> Srgb {
+    pub fn get_last_color(&self) -> Rgb {
         self.current_color
     }
 
-    pub fn color_history(&self) -> &[Srgb] {
+    pub fn color_history(&self) -> &[Rgb] {
         &self.color_history
     }
 }
 
 impl RgbLed for MockLed {
-    fn set_color(&mut self, color: Srgb) {
+    fn set_color(&mut self, color: Rgb) {
         self.current_color = color;
         let _ = self.color_history.push(color);
     }
@@ -127,17 +126,51 @@ pub use rgb_sequencer::{BLACK, BLUE, GREEN, RED};
 // Test Helper Functions
 // ============================================================================
 
-/// Compare two colors with floating-point tolerance
-pub fn colors_equal(a: Srgb, b: Srgb) -> bool {
-    const EPSILON: f32 = 0.001;
-    (a.red - b.red).abs() < EPSILON
-        && (a.green - b.green).abs() < EPSILON
-        && (a.blue - b.blue).abs() < EPSILON
+/// Compare two colors with the default tolerance.
+pub fn colors_equal(a: Rgb, b: Rgb) -> bool {
+    a.approx_eq(b, DEFAULT_TEST_EPSILON)
 }
 
+/// Default per-channel tolerance used by [`colors_equal`], ~0.2% of full scale.
+///
+/// Several tests sample a transition at 999/1000 of the way through and assert it
+/// has essentially reached its target, which leaves a residual of ~0.1%. The
+/// tolerance has to sit above that residual: the old f32 epsilon of 0.001 was
+/// exactly on that boundary and passed only by rounding luck.
+pub const DEFAULT_TEST_EPSILON: u16 = 128;
+
 /// Compare two colors with custom epsilon
-pub fn colors_equal_epsilon(a: Srgb, b: Srgb, epsilon: f32) -> bool {
-    (a.red - b.red).abs() < epsilon
-        && (a.green - b.green).abs() < epsilon
-        && (a.blue - b.blue).abs() < epsilon
+pub fn colors_equal_epsilon(a: Rgb, b: Rgb, epsilon: u16) -> bool {
+    a.approx_eq(b, epsilon)
 }
+
+/// Converts a 0.0-1.0 fraction to a channel value, for readable test expectations.
+///
+/// Test cases were originally written against f32 colors; this keeps those
+/// intentions legible (`channel(0.5)` rather than `32768`) without putting any
+/// floating point into the library itself.
+pub fn channel(fraction: f32) -> u16 {
+    (fraction * 65535.0) as u16
+}
+
+/// Builds a color from 0.0-1.0 fractions, mirroring the old `Srgb::new`.
+pub fn rgb_f(r: f32, g: f32, b: f32) -> Rgb {
+    Rgb::new(channel(r), channel(g), channel(b))
+}
+
+/// Q0.15 interpolation factor from a 0.0-1.0 fraction, mirroring the old `mix`.
+pub fn factor(fraction: f32) -> u16 {
+    (fraction * 32768.0) as u16
+}
+
+/// 8-bit brightness value from a 0.0-1.0 fraction.
+pub fn bright(fraction: f32) -> u8 {
+    (fraction * 255.0).round() as u8
+}
+
+/// Tolerance for comparisons that pass through 8-bit brightness scaling.
+///
+/// A `u8` brightness cannot represent fractions like 50% exactly — 127/255 and
+/// 128/255 straddle it — so an expectation written as a decimal fraction lands up
+/// to ~0.2% of full scale away. This tolerance sits just above that.
+pub const BRIGHTNESS_EPSILON: u16 = 256;
