@@ -2,11 +2,10 @@
 #![no_main]
 
 use cortex_m_rt::entry;
-use palette::Srgb;
 use panic_halt as _;
 use rgb_sequencer::{
-    LoopCount, RgbLed, RgbSequence, RgbSequencer, TimeDuration, TimeInstant, TimeSource,
-    TransitionStyle,
+    BLACK, BLUE, GREEN, LoopCount, RED, Rgb, RgbLed, RgbSequence, RgbSequencer, TimeDuration,
+    TimeInstant, TimeSource, TransitionStyle, WHITE,
 };
 
 // ============================================================================
@@ -67,7 +66,7 @@ impl TimeInstant for Instant32 {
 pub struct MinimalLed;
 
 impl RgbLed for MinimalLed {
-    fn set_color(&mut self, _color: Srgb) {
+    fn set_color(&mut self, _color: Rgb) {
         // Minimal no-op implementation
         core::hint::black_box(());
     }
@@ -102,31 +101,31 @@ fn test_sequence() {
     // - Finite loop count
     let sequence = RgbSequence::<Duration32, 4>::builder()
         .step(
-            Srgb::new(1.0, 0.0, 0.0), // Red
+            RED, // Red
             Duration32::new(1000),
             TransitionStyle::Linear,
         )
         .unwrap()
         .step(
-            Srgb::new(0.0, 1.0, 0.0), // Green
+            GREEN, // Green
             Duration32::new(1000),
             TransitionStyle::Linear,
         )
         .unwrap()
         .step(
-            Srgb::new(0.0, 0.0, 1.0), // Blue
+            BLUE, // Blue
             Duration32::new(1000),
             TransitionStyle::Step,
         )
         .unwrap()
         .step(
-            Srgb::new(1.0, 1.0, 1.0), // White
+            WHITE, // White
             Duration32::new(1000),
             TransitionStyle::Step,
         )
         .unwrap()
-        .start_color(Srgb::new(0.0, 0.0, 0.0)) // Start from black
-        .landing_color(Srgb::new(0.0, 0.0, 0.0)) // End on black
+        .start_color(Rgb::new(0, 0, 0)) // Start from black
+        .landing_color(Rgb::new(0, 0, 0)) // End on black
         .loop_count(LoopCount::Finite(3))
         .build();
 

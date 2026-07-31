@@ -18,7 +18,8 @@ use stm32f0::rgb_led::PwmRgbLed;
 
 use rgb_sequencer::{
     BLACK, LoopCount, RgbSequence8, RgbSequencer8, ServiceTiming, TimeDuration, TimeInstant,
-    TimeSource, TransitionStyle, colors::hue,
+    TimeSource, TransitionStyle,
+    colors::{degrees, hue},
 };
 
 /// Type alias for LED 1
@@ -161,15 +162,15 @@ fn main() -> ! {
 
     // Create a sequence
     let sequence = RgbSequence8::<BlinkyDuration>::builder()
-        .step(hue(60.0), BlinkyDuration(0), TransitionStyle::Step)
+        .step(hue(degrees(60)), BlinkyDuration(0), TransitionStyle::Step)
         .unwrap() // Yellow
         .step(BLACK, BlinkyDuration(1000), TransitionStyle::Linear)
         .unwrap() // Fade out
-        .step(hue(180.0), BlinkyDuration(0), TransitionStyle::Step)
+        .step(hue(degrees(180)), BlinkyDuration(0), TransitionStyle::Step)
         .unwrap() // Cyan
         .step(BLACK, BlinkyDuration(1000), TransitionStyle::Linear)
         .unwrap() // Fade out
-        .step(hue(300.0), BlinkyDuration(0), TransitionStyle::Step)
+        .step(hue(degrees(300)), BlinkyDuration(0), TransitionStyle::Step)
         .unwrap() // Purple
         .step(BLACK, BlinkyDuration(1000), TransitionStyle::Linear)
         .unwrap() // Fade out

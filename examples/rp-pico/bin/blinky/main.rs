@@ -18,7 +18,7 @@ use rp_pico_examples::time::{Duration, HardwareTimer, Instant};
 
 use rgb_sequencer::{
     BLACK, LoopCount, RgbSequence8, RgbSequencer8, ServiceTiming, TimeDuration, TransitionStyle,
-    colors::hue,
+    colors::{degrees, hue},
 };
 
 pub const FRAME_RATE_MS: u64 = 16;
@@ -114,15 +114,27 @@ fn main() -> ! {
 
     // Create a sequence
     let sequence = RgbSequence8::<Duration>::builder()
-        .step(hue(60.0), Duration::from_millis(0), TransitionStyle::Step)
+        .step(
+            hue(degrees(60)),
+            Duration::from_millis(0),
+            TransitionStyle::Step,
+        )
         .unwrap() // Yellow
         .step(BLACK, Duration::from_millis(1000), TransitionStyle::Linear)
         .unwrap() // Fade out
-        .step(hue(180.0), Duration::from_millis(0), TransitionStyle::Step)
+        .step(
+            hue(degrees(180)),
+            Duration::from_millis(0),
+            TransitionStyle::Step,
+        )
         .unwrap() // Cyan
         .step(BLACK, Duration::from_millis(1000), TransitionStyle::Linear)
         .unwrap() // Fade out
-        .step(hue(300.0), Duration::from_millis(0), TransitionStyle::Step)
+        .step(
+            hue(degrees(300)),
+            Duration::from_millis(0),
+            TransitionStyle::Step,
+        )
         .unwrap() // Purple
         .step(BLACK, Duration::from_millis(1000), TransitionStyle::Linear)
         .unwrap() // Fade out

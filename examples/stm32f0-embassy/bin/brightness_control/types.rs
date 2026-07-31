@@ -33,14 +33,25 @@ impl BrightnessLevel {
         }
     }
 
-    /// Get the brightness value (0.0-1.0)
-    pub fn value(&self) -> f32 {
+    /// Get the brightness value (0..=255, where 255 is full brightness)
+    pub fn value(&self) -> u8 {
         match self {
-            BrightnessLevel::Full => 1.0,
-            BrightnessLevel::High => 0.75,
-            BrightnessLevel::Medium => 0.5,
-            BrightnessLevel::Low => 0.25,
-            BrightnessLevel::Dim => 0.1,
+            BrightnessLevel::Full => 255,
+            BrightnessLevel::High => 191,
+            BrightnessLevel::Medium => 128,
+            BrightnessLevel::Low => 64,
+            BrightnessLevel::Dim => 26,
+        }
+    }
+
+    /// Get the brightness as a whole percentage, for logging
+    pub fn percent(&self) -> u8 {
+        match self {
+            BrightnessLevel::Full => 100,
+            BrightnessLevel::High => 75,
+            BrightnessLevel::Medium => 50,
+            BrightnessLevel::Low => 25,
+            BrightnessLevel::Dim => 10,
         }
     }
 }

@@ -80,7 +80,8 @@ fn main() -> ! {
         let mut builder = RgbSequence::<Microseconds, N>::builder();
 
         for i in 0..N {
-            let hue = (i as f32 / N as f32) * 360.0;
+            // Spread hues evenly around the wheel; u16 spans the full circle.
+            let hue = (i as u32 * 65536 / N as u32) as u16;
             let color = rgb_sequencer::colors::hue(hue);
             builder = builder
                 .step(

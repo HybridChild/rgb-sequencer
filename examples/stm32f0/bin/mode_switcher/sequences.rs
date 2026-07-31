@@ -1,6 +1,5 @@
-use palette::Srgb;
 use rgb_sequencer::{
-    BLACK, BLUE, GREEN, LoopCount, RED, RgbSequence, TimeDuration, TransitionStyle, WHITE,
+    BLACK, BLUE, GREEN, LoopCount, RED, Rgb, RgbSequence, TimeDuration, TransitionStyle, WHITE,
 };
 use stm32f0::time_source::HalDuration;
 
@@ -16,7 +15,7 @@ use stm32f0::time_source::HalDuration;
 ///
 /// # Returns
 /// The color with modulated brightness based on sine wave position
-fn breathing_sine_wave(base_color: Srgb, elapsed: HalDuration) -> Srgb {
+fn breathing_sine_wave(base_color: Rgb, elapsed: HalDuration) -> Rgb {
     // Breathing cycle period in milliseconds (4 seconds total)
     const PERIOD_MS: u64 = 4000;
 
@@ -33,12 +32,9 @@ fn breathing_sine_wave(base_color: Srgb, elapsed: HalDuration) -> Srgb {
     let sine_value = libm::sinf(angle);
     let brightness = 0.1 + 0.45 * (1.0 + sine_value);
 
-    // Apply brightness to the base color
-    Srgb::new(
-        base_color.red * brightness,
-        base_color.green * brightness,
-        base_color.blue * brightness,
-    )
+    // Apply brightness to the base color. The sequencer core is float-free; this
+    // effect opts into f32 for the sine and hands back an 8-bit scale factor.
+    base_color.scale((brightness * 255.0) as u8)
 }
 
 /// Timing function for continuous animation
@@ -70,7 +66,7 @@ pub fn create_breathing_sequence() -> RgbSequence<HalDuration, 16> {
 /// This is the original step-based implementation, kept for comparison.
 #[allow(dead_code)]
 pub fn create_breathing_sequence_step_based() -> RgbSequence<HalDuration, 16> {
-    let dim_white = Srgb::new(0.1, 0.1, 0.1);
+    let dim_white = Rgb::from_u8(26, 26, 26);
 
     RgbSequence::builder()
         .step(dim_white, HalDuration(2000), TransitionStyle::Linear)
@@ -139,7 +135,7 @@ pub fn create_police_sequence() -> RgbSequence<HalDuration, 16> {
 ///
 /// # Returns
 /// The color with modulated brightness and temperature to simulate flame flicker
-fn flame_flicker(base_color: Srgb, elapsed: HalDuration) -> Srgb {
+fn flame_flicker(base_color: Rgb, elapsed: HalDuration) -> Rgb {
     let elapsed_ms = elapsed.as_millis();
 
     // Use multiple sine waves at different frequencies to create pseudo-random flicker
@@ -169,14 +165,21 @@ fn flame_flicker(base_color: Srgb, elapsed: HalDuration) -> Srgb {
 
     // Color temperature: shift between deep orange (more red) and bright yellow-orange
     // Positive color_shift = more yellow (hotter), negative = more red (cooler flame)
-    let red_component = base_color.red * brightness;
-    let green_component = base_color.green * brightness * (1.0 + 0.15 * color_shift);
-    let blue_component = base_color.blue * brightness * (1.0 + 0.3 * color_shift);
+    // Each channel gets its own factor, so scale them individually and clamp
+    // before converting back to the integer color space.
+    let scale = |channel: u16, factor: f32| -> u16 {
+        let scaled = channel as f32 * factor;
+        if scaled > 65535.0 {
+            65535
+        } else {
+            scaled as u16
+        }
+    };
 
-    Srgb::new(
-        red_component.min(1.0),
-        green_component.min(1.0),
-        blue_component.min(1.0),
+    Rgb::new(
+        scale(base_color.r, brightness),
+        scale(base_color.g, brightness * (1.0 + 0.15 * color_shift)),
+        scale(base_color.b, brightness * (1.0 + 0.3 * color_shift)),
     )
 }
 
@@ -188,7 +191,7 @@ fn flame_flicker(base_color: Srgb, elapsed: HalDuration) -> Srgb {
 /// The flame stays within orange/yellow tones and never goes completely dark.
 pub fn create_flame_sequence() -> RgbSequence<HalDuration, 16> {
     // Base flame color: warm orange
-    let flame_orange = Srgb::new(1.0, 0.4, 0.0);
+    let flame_orange = Rgb::from_u8(255, 102, 0);
 
     RgbSequence::from_function(flame_orange, flame_flicker, continuous_timing)
 }

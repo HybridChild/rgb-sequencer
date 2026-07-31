@@ -48,7 +48,7 @@ pub async fn app_logic_task() {
         info!(
             "New brightness: {:?} ({}%)",
             current_brightness,
-            (current_brightness.value() * 100.0) as u8
+            current_brightness.percent()
         );
 
         // Update blink pattern

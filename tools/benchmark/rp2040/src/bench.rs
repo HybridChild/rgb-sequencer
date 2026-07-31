@@ -1,6 +1,5 @@
 use core::hint::black_box;
-use palette::Srgb;
-use rgb_sequencer::{RgbLed, TimeDuration, TimeInstant, TimeSource};
+use rgb_sequencer::{Rgb, RgbLed, TimeDuration, TimeInstant, TimeSource};
 
 // Benchmark configuration
 pub const WARMUP_ITERATIONS: u32 = 100;
@@ -59,19 +58,19 @@ impl TimeInstant for Instant {
 
 /// Minimal LED that just accepts colors (no actual hardware)
 pub struct BenchLed {
-    current_color: core::cell::Cell<Srgb>,
+    current_color: core::cell::Cell<Rgb>,
 }
 
 impl BenchLed {
     pub fn new() -> Self {
         Self {
-            current_color: core::cell::Cell::new(Srgb::new(0.0, 0.0, 0.0)),
+            current_color: core::cell::Cell::new(Rgb::new(0, 0, 0)),
         }
     }
 }
 
 impl RgbLed for BenchLed {
-    fn set_color(&mut self, color: Srgb) {
+    fn set_color(&mut self, color: Rgb) {
         black_box(self.current_color.set(color));
     }
 }
