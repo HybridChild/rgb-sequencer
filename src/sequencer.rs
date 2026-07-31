@@ -1,18 +1,18 @@
 //! RGB LED sequencer with state management.
 
 use crate::BLACK;
+use crate::color::Rgb;
 use crate::command::SequencerAction;
 use crate::sequence::RgbSequence;
 use crate::time::{TimeDuration, TimeInstant, TimeSource};
-use palette::Srgb;
 
 /// Trait for abstracting RGB LED hardware.
 pub trait RgbLed {
     /// Sets LED to specified color.
     ///
-    /// Color components are in 0.0-1.0 range. Convert to your hardware's native format
-    /// (PWM duty cycles, 8-bit values, etc.) in your implementation.
-    fn set_color(&mut self, color: Srgb);
+    /// Color channels are in the `0..=65535` range. Convert to your hardware's native
+    /// format in your implementation ([`Rgb::to_u8`] covers 8-bit drivers).
+    fn set_color(&mut self, color: Rgb);
 }
 
 /// RGB sequencer state.
@@ -94,21 +94,16 @@ pub struct RgbSequencer<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N
     sequence: Option<RgbSequence<I::Duration, N>>,
     start_time: Option<I>,
     pause_start_time: Option<I>,
-    current_color: Srgb,
-    color_epsilon: f32,
-    brightness: f32,
+    current_color: Rgb,
+    color_epsilon: u16,
+    brightness: u8,
 }
 
-/// Default epsilon for floating-point color comparisons.
-pub const DEFAULT_COLOR_EPSILON: f32 = 0.001;
+/// Default per-channel threshold below which a color change is not written to the LED.
+pub const DEFAULT_COLOR_EPSILON: u16 = 64;
 
-/// Returns true if two colors are approximately equal within the given epsilon.
-#[inline]
-fn colors_approximately_equal(a: Srgb, b: Srgb, epsilon: f32) -> bool {
-    (a.red - b.red).abs() < epsilon
-        && (a.green - b.green).abs() < epsilon
-        && (a.blue - b.blue).abs() < epsilon
-}
+/// Full brightness, the default multiplier.
+pub const FULL_BRIGHTNESS: u8 = 255;
 
 impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequencer<'t, I, L, T, N> {
     /// Creates sequencer with LED off and default color epsilon.
@@ -124,12 +119,12 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
             pause_start_time: None,
             current_color: BLACK,
             color_epsilon: DEFAULT_COLOR_EPSILON,
-            brightness: 1.0,
+            brightness: FULL_BRIGHTNESS,
         }
     }
 
     /// Creates sequencer with custom color epsilon threshold.
-    pub fn with_epsilon(mut led: L, time_source: &'t T, epsilon: f32) -> Self {
+    pub fn with_epsilon(mut led: L, time_source: &'t T, epsilon: u16) -> Self {
         led.set_color(BLACK);
 
         Self {
@@ -141,7 +136,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
             pause_start_time: None,
             current_color: BLACK,
             color_epsilon: epsilon,
-            brightness: 1.0,
+            brightness: FULL_BRIGHTNESS,
         }
     }
 
@@ -252,18 +247,19 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
         // Evaluate color and timing
         let (new_color, next_service) = sequence.evaluate(elapsed);
 
-        // Apply brightness to the evaluated color
-        let dimmed_color = Srgb::new(
-            new_color.red * self.brightness,
-            new_color.green * self.brightness,
-            new_color.blue * self.brightness,
-        );
+        // Apply brightness to the evaluated color. Full brightness is the common case,
+        // so skip the scaling entirely rather than multiplying by unity.
+        let dimmed_color = if self.brightness == FULL_BRIGHTNESS {
+            new_color
+        } else {
+            new_color.scale(self.brightness)
+        };
 
-        // Update LED only if color changed (using epsilon for f32 comparison).
-        // This avoids unnecessary hardware writes during static holds and prevents
-        // spurious updates from floating-point rounding (<0.1% difference).
-        // Particularly valuable for slow I2C/SPI LED drivers.
-        if !colors_approximately_equal(dimmed_color, self.current_color, self.color_epsilon) {
+        // Update LED only if the color changed by more than the epsilon threshold.
+        // This avoids unnecessary hardware writes during static holds and suppresses
+        // sub-perceptual churn during slow fades. Particularly valuable for slow
+        // I2C/SPI LED drivers.
+        if !dimmed_color.approx_eq(self.current_color, self.color_epsilon) {
             self.led.set_color(dimmed_color);
             self.current_color = dimmed_color;
         }
@@ -390,7 +386,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
 
     /// Returns current color.
     #[inline]
-    pub fn current_color(&self) -> Srgb {
+    pub fn current_color(&self) -> Rgb {
         self.current_color
     }
 
@@ -422,7 +418,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
 
     /// Returns the current color epsilon threshold.
     #[inline]
-    pub fn color_epsilon(&self) -> f32 {
+    pub fn color_epsilon(&self) -> u16 {
         self.color_epsilon
     }
 
@@ -430,20 +426,20 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
     ///
     /// Controls the sensitivity of color change detection.
     #[inline]
-    pub fn set_color_epsilon(&mut self, epsilon: f32) {
+    pub fn set_color_epsilon(&mut self, epsilon: u16) {
         self.color_epsilon = epsilon;
     }
 
-    /// Returns current brightness multiplier (0.0-1.0).
+    /// Returns current brightness multiplier, where 255 is full brightness.
     #[inline]
-    pub fn brightness(&self) -> f32 {
+    pub fn brightness(&self) -> u8 {
         self.brightness
     }
 
-    /// Sets global brightness multiplier.
+    /// Sets global brightness multiplier, where 255 is full brightness and 0 is off.
     #[inline]
-    pub fn set_brightness(&mut self, brightness: f32) {
-        self.brightness = brightness.clamp(0.0, 1.0);
+    pub fn set_brightness(&mut self, brightness: u8) {
+        self.brightness = brightness;
     }
 
     /// Returns current playback position.

@@ -3,10 +3,9 @@
 mod common;
 use common::*;
 
-use palette::{Mix, Srgb};
 use rgb_sequencer::sequence::RgbSequence;
 use rgb_sequencer::types::{LoopCount, SequenceError, TransitionStyle};
-use rgb_sequencer::{TimeDuration, YELLOW};
+use rgb_sequencer::{Rgb, TimeDuration, YELLOW};
 
 #[test]
 fn builder_rejects_empty_sequence() {
@@ -156,13 +155,12 @@ fn solid_requires_capacity_of_at_least_one() {
 #[test]
 fn function_based_sequence_applies_function_to_base_color() {
     // BEHAVIOR: Function receives base_color as parameter, allowing reusable color functions
-    fn brightness_pulse(base: Srgb, elapsed: TestDuration) -> Srgb {
-        let brightness = if elapsed.as_millis() < 500 { 0.5 } else { 1.0 };
-        Srgb::new(
-            base.red * brightness,
-            base.green * brightness,
-            base.blue * brightness,
-        )
+    fn brightness_pulse(base: Rgb, elapsed: TestDuration) -> Rgb {
+        if elapsed.as_millis() < 500 {
+            Rgb::new(base.r / 2, base.g / 2, base.b / 2)
+        } else {
+            base
+        }
     }
 
     fn test_timing(elapsed: TestDuration) -> Option<TestDuration> {
@@ -181,14 +179,14 @@ fn function_based_sequence_applies_function_to_base_color() {
     // Function modulates base color: RED at 50%, then 100%
     assert!(colors_equal(
         seq.evaluate(TestDuration(100)).0,
-        Srgb::new(0.5, 0.0, 0.0)
+        rgb_f(0.5, 0.0, 0.0)
     ));
     assert!(colors_equal(seq.evaluate(TestDuration(600)).0, RED));
 }
 
 #[test]
 fn function_based_sequence_respects_timing_function() {
-    fn test_color(base: Srgb, _elapsed: TestDuration) -> Srgb {
+    fn test_color(base: Rgb, _elapsed: TestDuration) -> Rgb {
         base
     }
 
@@ -227,7 +225,7 @@ fn evaluate_returns_both_color_and_timing() {
 
     // During linear transition - should return ZERO for continuous updates
     let (color, timing) = sequence.evaluate(TestDuration(200));
-    assert!(colors_equal(color, RED.mix(GREEN, 0.5)));
+    assert!(colors_equal(color, RED.lerp(GREEN, factor(0.5))));
     assert_eq!(timing, Some(TestDuration::ZERO));
 }
 
@@ -274,7 +272,7 @@ fn linear_transition_interpolates_correctly() {
     assert!(colors_equal(color, RED));
 
     let (color, _) = sequence.evaluate(TestDuration(600));
-    let expected_middle = RED.mix(BLUE, 0.5);
+    let expected_middle = RED.lerp(BLUE, factor(0.5));
     assert!(colors_equal(color, expected_middle));
 
     let (color, _) = sequence.evaluate(TestDuration(1099));
@@ -295,7 +293,7 @@ fn first_step_with_linear_transition_interpolates_from_last_step() {
         .build()
         .unwrap();
 
-    let expected_middle = BLUE.mix(RED, 0.5);
+    let expected_middle = BLUE.lerp(RED, factor(0.5));
 
     let (color, _) = sequence.evaluate(TestDuration(0));
     assert!(colors_equal(color, BLUE));
@@ -334,14 +332,14 @@ fn start_color_used_for_first_linear_step_first_loop_only() {
     assert!(colors_equal(sequence.evaluate(TestDuration(0)).0, BLACK));
     assert!(colors_equal(
         sequence.evaluate(TestDuration(500)).0,
-        BLACK.mix(RED, 0.5)
+        BLACK.lerp(RED, factor(0.5))
     ));
 
     // Second loop: GREEN → RED (last step → first step)
     assert!(colors_equal(sequence.evaluate(TestDuration(2000)).0, GREEN));
     assert!(colors_equal(
         sequence.evaluate(TestDuration(2500)).0,
-        GREEN.mix(RED, 0.5)
+        GREEN.lerp(RED, factor(0.5))
     ));
 }
 
@@ -361,13 +359,13 @@ fn start_color_only_affects_first_loop_with_finite_loops() {
     // Loop 0: YELLOW → RED
     assert!(colors_equal(
         sequence.evaluate(TestDuration(500)).0,
-        YELLOW.mix(RED, 0.5)
+        YELLOW.lerp(RED, factor(0.5))
     ));
 
     // Loop 1 and beyond: GREEN → RED
     assert!(colors_equal(
         sequence.evaluate(TestDuration(2500)).0,
-        GREEN.mix(RED, 0.5)
+        GREEN.lerp(RED, factor(0.5))
     ));
 }
 
@@ -561,7 +559,7 @@ fn infinite_sequence_never_reports_completion() {
 
 #[test]
 fn function_based_sequence_query_methods_return_expected_values() {
-    fn test_color(base: Srgb, _elapsed: TestDuration) -> Srgb {
+    fn test_color(base: Rgb, _elapsed: TestDuration) -> Rgb {
         base
     }
 
@@ -669,7 +667,7 @@ fn sequence_with_mixed_transition_styles_works_correctly() {
 
     // Linear transition - interpolates
     let (color, timing) = sequence.evaluate(TestDuration(150));
-    assert!(colors_equal(color, RED.mix(GREEN, 0.5)));
+    assert!(colors_equal(color, RED.lerp(GREEN, factor(0.5))));
     assert_eq!(timing, Some(TestDuration::ZERO)); // Continuous
 
     // Another step transition
@@ -678,7 +676,7 @@ fn sequence_with_mixed_transition_styles_works_correctly() {
 
     // Another linear transition
     let (color, _) = sequence.evaluate(TestDuration(350));
-    assert!(colors_equal(color, BLUE.mix(YELLOW, 0.5)));
+    assert!(colors_equal(color, BLUE.lerp(YELLOW, factor(0.5))));
 }
 
 #[test]
@@ -699,11 +697,11 @@ fn linear_interpolation_works_correctly_at_step_boundaries() {
 
     // Midway through linear transition
     let (color, _) = sequence.evaluate(TestDuration(150));
-    assert!(colors_equal(color, RED.mix(GREEN, 0.5)));
+    assert!(colors_equal(color, RED.lerp(GREEN, factor(0.5))));
 
     // Near end of linear transition (99% progress)
     let (color, _) = sequence.evaluate(TestDuration(199));
-    assert!(colors_equal(color, RED.mix(GREEN, 0.99)));
+    assert!(colors_equal(color, RED.lerp(GREEN, factor(0.99))));
 
     // Past end (should wrap to next loop, back to step 0 which is RED with Step transition)
     let (color, _) = sequence.evaluate(TestDuration(200));
@@ -759,8 +757,8 @@ fn ease_in_transition_accelerates() {
 
     // At 50% time: 0.5² = 0.25 progress (slow start)
     assert!(
-        sequence.evaluate(TestDuration(500)).0.red > 0.2
-            && sequence.evaluate(TestDuration(500)).0.red < 0.3
+        sequence.evaluate(TestDuration(500)).0.r > channel(0.2)
+            && sequence.evaluate(TestDuration(500)).0.r < channel(0.3)
     );
 
     // At 100% time: reaches full color
@@ -779,8 +777,8 @@ fn ease_out_transition_decelerates() {
 
     // At 50% time: 0.5 * 1.5 = 0.75 progress (fast start)
     assert!(
-        sequence.evaluate(TestDuration(500)).0.red > 0.7
-            && sequence.evaluate(TestDuration(500)).0.red < 0.8
+        sequence.evaluate(TestDuration(500)).0.r > channel(0.7)
+            && sequence.evaluate(TestDuration(500)).0.r < channel(0.8)
     );
 
     // At 100% time: reaches full color
@@ -798,16 +796,16 @@ fn ease_in_out_transition_symmetric() {
         .unwrap();
 
     // At 25% time: ease-in phase (slow start, progress < 0.2)
-    assert!(sequence.evaluate(TestDuration(250)).0.red < 0.2);
+    assert!(sequence.evaluate(TestDuration(250)).0.r < channel(0.2));
 
     // At 50% time: midpoint (progress ≈ 0.5)
     assert!(
-        sequence.evaluate(TestDuration(500)).0.red > 0.49
-            && sequence.evaluate(TestDuration(500)).0.red < 0.51
+        sequence.evaluate(TestDuration(500)).0.r > channel(0.49)
+            && sequence.evaluate(TestDuration(500)).0.r < channel(0.51)
     );
 
     // At 75% time: ease-out phase (fast middle, progress > 0.8)
-    assert!(sequence.evaluate(TestDuration(750)).0.red > 0.8);
+    assert!(sequence.evaluate(TestDuration(750)).0.r > channel(0.8));
 
     // At 100% time: reaches full color
     assert!(colors_equal(sequence.evaluate(TestDuration(1000)).0, RED));
@@ -825,20 +823,20 @@ fn ease_out_in_transition_inverted_curve() {
 
     // At 25% time: fast start phase (progress ≈ 0.375)
     assert!(
-        sequence.evaluate(TestDuration(250)).0.red > 0.35
-            && sequence.evaluate(TestDuration(250)).0.red < 0.40
+        sequence.evaluate(TestDuration(250)).0.r > channel(0.35)
+            && sequence.evaluate(TestDuration(250)).0.r < channel(0.40)
     );
 
     // At 50% time: midpoint (progress ≈ 0.5)
     assert!(
-        sequence.evaluate(TestDuration(500)).0.red > 0.49
-            && sequence.evaluate(TestDuration(500)).0.red < 0.51
+        sequence.evaluate(TestDuration(500)).0.r > channel(0.49)
+            && sequence.evaluate(TestDuration(500)).0.r < channel(0.51)
     );
 
     // At 75% time: slow middle transitioning to fast end (progress ≈ 0.625)
     assert!(
-        sequence.evaluate(TestDuration(750)).0.red > 0.60
-            && sequence.evaluate(TestDuration(750)).0.red < 0.65
+        sequence.evaluate(TestDuration(750)).0.r > channel(0.60)
+            && sequence.evaluate(TestDuration(750)).0.r < channel(0.65)
     );
 
     // At 100% time: reaches full color
@@ -907,9 +905,9 @@ fn easing_works_with_start_color() {
     // Should interpolate from BLACK to RED with ease-in
     let (color_50, _) = sequence.evaluate(TestDuration(500));
     // At 50% time with ease-in: 0.5² = 0.25 progress
-    assert!(color_50.red > 0.2 && color_50.red < 0.3);
-    assert!(color_50.green < 0.01);
-    assert!(color_50.blue < 0.01);
+    assert!(color_50.r > channel(0.2) && color_50.r < channel(0.3));
+    assert!(color_50.g < channel(0.01));
+    assert!(color_50.b < channel(0.01));
 }
 
 #[test]
@@ -931,14 +929,14 @@ fn easing_works_in_multi_step_sequences() {
     // At 600ms (500ms into ease-out transition): Should be mostly green
     // Ease-out at 50%: 0.5 * 1.5 = 0.75 progress from RED to GREEN
     let (color_600, _) = sequence.evaluate(TestDuration(600));
-    assert!(color_600.red < 0.3); // Less red
-    assert!(color_600.green > 0.7); // More green
+    assert!(color_600.r < channel(0.3)); // Less red
+    assert!(color_600.g > channel(0.7)); // More green
 
     // At 1600ms (500ms into ease-in transition): Should be transitioning slowly to blue
     // Ease-in at 50%: 0.5² = 0.25 progress from GREEN to BLUE
     let (color_1600, _) = sequence.evaluate(TestDuration(1600));
-    assert!(color_1600.green > 0.7); // Still mostly green
-    assert!(color_1600.blue < 0.3); // Not much blue yet
+    assert!(color_1600.g > channel(0.7)); // Still mostly green
+    assert!(color_1600.b < channel(0.3)); // Not much blue yet
 }
 
 #[test]
@@ -954,9 +952,9 @@ fn easing_loops_correctly() {
 
     // First loop
     let (color_50, _) = sequence.evaluate(TestDuration(50));
-    let first_loop_red = color_50.red;
+    let first_loop_red = color_50.r;
 
     // Second loop - should have same color at same position
     let (color_250, _) = sequence.evaluate(TestDuration(250));
-    assert!((color_250.red - first_loop_red).abs() < 0.01);
+    assert!(color_250.r.abs_diff(first_loop_red) < channel(0.01));
 }

@@ -1,39 +1,50 @@
 //! RGB color sequence definitions and evaluation.
 
 use crate::BLACK;
+use crate::color::Rgb;
+use crate::fixed::{HALF, ONE, SHIFT, mul_q15, progress_q15};
 use crate::time::TimeDuration;
 use crate::types::{LoopCount, SequenceError, SequenceStep, TransitionStyle};
 use heapless::Vec;
-use palette::{Mix, Srgb};
 
-/// Applies easing curve to linear progress value (0.0 to 1.0).
+/// Applies easing curve to linear progress, both as Q0.15 fractions (`0..=ONE`).
 ///
 /// Uses quadratic easing for balance between visual smoothness and computational
 /// efficiency on embedded targets. More complex curves (cubic, sinusoidal) can be
 /// implemented via function-based sequences if needed.
+///
+/// Every coefficient is a power of two, and the widest intermediate is `2^31`, so
+/// every step stays a 32-bit integer operation.
 #[inline]
-fn apply_easing(t: f32, transition: TransitionStyle) -> f32 {
+const fn apply_easing(t: u16, transition: TransitionStyle) -> u16 {
+    let t32 = t as u32;
+    let one = ONE as u32;
+
     match transition {
         TransitionStyle::Step => t,
         TransitionStyle::Linear => t,
-        TransitionStyle::EaseIn => t * t,
-        TransitionStyle::EaseOut => t * (2.0 - t),
+        // t * t
+        TransitionStyle::EaseIn => mul_q15(t, t),
+        // t * (2 - t)
+        TransitionStyle::EaseOut => ((t32 * (2 * one - t32)) >> SHIFT) as u16,
         TransitionStyle::EaseInOut => {
-            if t < 0.5 {
-                2.0 * t * t
+            if t < HALF {
+                // 2 * t * t
+                ((t32 * t32) >> (SHIFT - 1)) as u16
             } else {
-                -1.0 + (4.0 - 2.0 * t) * t
+                // -1 + (4 - 2 * t) * t
+                ((((4 * one - 2 * t32) * t32) >> SHIFT) - one) as u16
             }
         }
         TransitionStyle::EaseOutIn => {
-            if t < 0.5 {
-                // Fast start (EaseOut on first half)
-                let t2 = t * 2.0;
-                t2 * (2.0 - t2) * 0.5
+            if t < HALF {
+                // Fast start (EaseOut on first half): t2 * (2 - t2) * 0.5
+                let t2 = t32 * 2;
+                ((t2 * (2 * one - t2)) >> (SHIFT + 1)) as u16
             } else {
-                // Fast end (EaseIn on second half)
-                let t2 = (t - 0.5) * 2.0;
-                0.5 + t2 * t2 * 0.5
+                // Fast end (EaseIn on second half): 0.5 + t2 * t2 * 0.5
+                let t2 = (t32 - HALF as u32) * 2;
+                HALF + ((t2 * t2) >> (SHIFT + 1)) as u16
             }
         }
     }
@@ -59,11 +70,11 @@ pub struct StepPosition<D: TimeDuration> {
 pub struct RgbSequence<D: TimeDuration, const N: usize> {
     steps: Vec<SequenceStep<D>, N>,
     loop_count: LoopCount,
-    start_color: Option<Srgb>,
-    landing_color: Option<Srgb>,
+    start_color: Option<Rgb>,
+    landing_color: Option<Rgb>,
     loop_duration: D,
 
-    color_fn: Option<fn(Srgb, D) -> Srgb>,
+    color_fn: Option<fn(Rgb, D) -> Rgb>,
     timing_fn: Option<fn(D) -> Option<D>>,
 }
 
@@ -79,8 +90,8 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
     /// The `timing_fn` returns next service delay (`Some(D::ZERO)` for continuous updates,
     /// `Some(delay)` to wait, `None` when complete).
     pub fn from_function(
-        base_color: Srgb,
-        color_fn: fn(Srgb, D) -> Srgb,
+        base_color: Rgb,
+        color_fn: fn(Rgb, D) -> Rgb,
         timing_fn: fn(D) -> Option<D>,
     ) -> Self {
         Self {
@@ -97,7 +108,7 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
     /// Creates a simple solid color sequence with zero duration.
     ///
     /// Returns `SequenceError::CapacityExceeded` if `N < 1`.
-    pub fn solid(color: Srgb) -> Result<Self, SequenceError> {
+    pub fn solid(color: Rgb) -> Result<Self, SequenceError> {
         Self::builder()
             .step(color, D::ZERO, TransitionStyle::Step)?
             .build()
@@ -108,7 +119,7 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
     /// Returns `(color, timing)` where timing is `Some(D::ZERO)` for continuous animation,
     /// `Some(delay)` for static hold, or `None` when sequence completes.
     #[inline]
-    pub fn evaluate(&self, elapsed: D) -> (Srgb, Option<D>) {
+    pub fn evaluate(&self, elapsed: D) -> (Rgb, Option<D>) {
         // Use custom functions if present
         if let (Some(color_fn), Some(timing_fn)) = (self.color_fn, self.timing_fn) {
             let base = self.start_color.unwrap_or(BLACK);
@@ -214,12 +225,12 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
 
     /// Interpolates color at current position with easing applied.
     ///
-    /// Uses linear sRGB interpolation for computational efficiency (3 multiplies + 3 adds).
-    /// While not perceptually uniform (e.g., red→green may appear darker at midpoint), this
-    /// avoids expensive gamma correction or LAB color space conversions, making it suitable
-    /// for embedded targets with FPU.
+    /// Interpolates each channel directly for computational efficiency (3 multiplies +
+    /// 3 adds, all 32-bit integer). While not perceptually uniform (e.g., red→green may
+    /// appear darker at midpoint), this avoids expensive gamma correction or LAB color
+    /// space conversions, keeping it cheap even on cores without an FPU.
     #[inline]
-    fn interpolate_color(&self, position: &StepPosition<D>, step: &SequenceStep<D>) -> Srgb {
+    fn interpolate_color(&self, position: &StepPosition<D>, step: &SequenceStep<D>) -> Rgb {
         // Determine if this transition should use start_color for first step of first loop
         let use_start_color = position.step_index == 0
             && position.current_loop == 0
@@ -247,13 +258,12 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
         }
 
         let time_millis = position.time_in_step.as_millis();
-        let mut progress = (time_millis as f32) / (duration_millis as f32);
-        progress = progress.clamp(0.0, 1.0);
+        let progress = progress_q15(time_millis, duration_millis);
 
         // Apply easing function
-        progress = apply_easing(progress, step.transition);
+        let eased = apply_easing(progress, step.transition);
 
-        previous_color.mix(step.color, progress)
+        previous_color.lerp(step.color, eased)
     }
 
     /// Returns the current position within the sequence at the given elapsed time.
@@ -285,7 +295,7 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
 
     /// Returns the color at the given position.
     #[inline]
-    fn color_at_position(&self, position: &StepPosition<D>) -> Srgb {
+    fn color_at_position(&self, position: &StepPosition<D>) -> Rgb {
         if position.is_complete {
             return self
                 .landing_color
@@ -354,13 +364,13 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
 
     /// Returns landing color.
     #[inline]
-    pub fn landing_color(&self) -> Option<Srgb> {
+    pub fn landing_color(&self) -> Option<Rgb> {
         self.landing_color
     }
 
     /// Returns start color.
     #[inline]
-    pub fn start_color(&self) -> Option<Srgb> {
+    pub fn start_color(&self) -> Option<Rgb> {
         self.start_color
     }
 
@@ -382,8 +392,8 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
 pub struct SequenceBuilder<D: TimeDuration, const N: usize> {
     steps: Vec<SequenceStep<D>, N>,
     loop_count: LoopCount,
-    landing_color: Option<Srgb>,
-    start_color: Option<Srgb>,
+    landing_color: Option<Rgb>,
+    start_color: Option<Rgb>,
 }
 
 impl<D: TimeDuration, const N: usize> SequenceBuilder<D, N> {
@@ -402,7 +412,7 @@ impl<D: TimeDuration, const N: usize> SequenceBuilder<D, N> {
     /// Panics if capacity `N` is exceeded.
     pub fn step(
         mut self,
-        color: Srgb,
+        color: Rgb,
         duration: D,
         transition: TransitionStyle,
     ) -> Result<Self, SequenceError> {
@@ -419,13 +429,13 @@ impl<D: TimeDuration, const N: usize> SequenceBuilder<D, N> {
     }
 
     /// Sets landing color shown after sequence completes (finite sequences only).
-    pub fn landing_color(mut self, color: Srgb) -> Self {
+    pub fn landing_color(mut self, color: Rgb) -> Self {
         self.landing_color = Some(color);
         self
     }
 
     /// Sets start color for smooth entry into first step (first loop only, Linear transitions only).
-    pub fn start_color(mut self, color: Srgb) -> Self {
+    pub fn start_color(mut self, color: Rgb) -> Self {
         self.start_color = Some(color);
         self
     }
@@ -490,5 +500,96 @@ impl<D: TimeDuration, const N: usize> Default for SequenceBuilder<D, N> {
     /// Returns a new default sequence builder.
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod easing_tests {
+    use super::*;
+
+    const ALL: [TransitionStyle; 6] = [
+        TransitionStyle::Step,
+        TransitionStyle::Linear,
+        TransitionStyle::EaseIn,
+        TransitionStyle::EaseOut,
+        TransitionStyle::EaseInOut,
+        TransitionStyle::EaseOutIn,
+    ];
+
+    /// The floating-point easing curves this module replaced, kept here as the
+    /// reference the fixed-point versions are checked against.
+    fn reference(t: f32, transition: TransitionStyle) -> f32 {
+        match transition {
+            TransitionStyle::Step => t,
+            TransitionStyle::Linear => t,
+            TransitionStyle::EaseIn => t * t,
+            TransitionStyle::EaseOut => t * (2.0 - t),
+            TransitionStyle::EaseInOut => {
+                if t < 0.5 {
+                    2.0 * t * t
+                } else {
+                    -1.0 + (4.0 - 2.0 * t) * t
+                }
+            }
+            TransitionStyle::EaseOutIn => {
+                if t < 0.5 {
+                    let t2 = t * 2.0;
+                    t2 * (2.0 - t2) * 0.5
+                } else {
+                    let t2 = (t - 0.5) * 2.0;
+                    0.5 + t2 * t2 * 0.5
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn every_curve_matches_the_f32_reference_across_its_whole_domain() {
+        let mut t = 0u32;
+        while t <= ONE as u32 {
+            let f = t as f32 / ONE as f32;
+            for style in ALL {
+                let expected = (reference(f, style) * ONE as f32) as i32;
+                let actual = apply_easing(t as u16, style) as i32;
+                assert!(
+                    (expected - actual).abs() <= 2,
+                    "{style:?} at t={t}: got {actual}, expected ~{expected}"
+                );
+            }
+            t += 1;
+        }
+    }
+
+    #[test]
+    fn every_curve_hits_both_endpoints_exactly() {
+        for style in ALL {
+            assert_eq!(apply_easing(0, style), 0, "{style:?} at t=0");
+            assert_eq!(apply_easing(ONE, style), ONE, "{style:?} at t=ONE");
+        }
+    }
+
+    #[test]
+    fn every_curve_stays_in_range_and_is_monotonic() {
+        for style in ALL {
+            let mut previous = 0u16;
+            let mut t = 0u32;
+            while t <= ONE as u32 {
+                let v = apply_easing(t as u16, style);
+                assert!(v <= ONE, "{style:?} overshot at t={t}: {v}");
+                assert!(v >= previous, "{style:?} went backwards at t={t}");
+                previous = v;
+                t += 1;
+            }
+        }
+    }
+
+    #[test]
+    fn easing_curves_pass_through_the_midpoint_as_expected() {
+        // EaseInOut and EaseOutIn are symmetric about the centre by construction.
+        assert_eq!(apply_easing(HALF, TransitionStyle::EaseInOut), HALF);
+        assert_eq!(apply_easing(HALF, TransitionStyle::EaseOutIn), HALF);
+        // EaseIn lags the midpoint, EaseOut leads it.
+        assert!(apply_easing(HALF, TransitionStyle::EaseIn) < HALF);
+        assert!(apply_easing(HALF, TransitionStyle::EaseOut) > HALF);
     }
 }
