@@ -5,6 +5,7 @@ mod common;
 use common::{channel, colors_equal, rgb_f};
 
 use rgb_sequencer::colors::{self, degrees};
+use rgb_sequencer::{BLACK, BLUE, GREEN, RED, Rgb, WHITE};
 
 /// Full saturation / full value, in the module's 0..=65535 scale.
 const FULL: u16 = 65535;
@@ -80,4 +81,79 @@ fn hue_wraps_by_plain_addition() {
         colors::hue(three_quarters.wrapping_add(quarter)),
         colors::hue(0)
     ));
+}
+
+#[test]
+fn red_is_exact_and_other_primaries_are_within_a_hair() {
+    // Hue 0 is the one sector boundary that lands exactly on a representable value;
+    // the rest are off by a part or two in 65535, which vanishes at 8 bits.
+    assert_eq!(colors::hue(0), RED);
+    assert!(colors_equal(colors::hue(degrees(120)), GREEN));
+    assert!(colors_equal(colors::hue(degrees(240)), BLUE));
+    assert_eq!(colors::hue(degrees(120)).to_u8(), (0, 255, 0));
+    assert_eq!(colors::hue(degrees(240)).to_u8(), (0, 0, 255));
+}
+
+#[test]
+fn secondary_hues_are_close() {
+    assert!(
+        colors_equal(colors::hue(degrees(60)), Rgb::new(FULL, FULL, 0)),
+        "yellow"
+    );
+    assert!(
+        colors_equal(colors::hue(degrees(180)), Rgb::new(0, FULL, FULL)),
+        "cyan"
+    );
+    assert!(
+        colors_equal(colors::hue(degrees(300)), Rgb::new(FULL, 0, FULL)),
+        "magenta"
+    );
+}
+
+#[test]
+fn zero_saturation_is_greyscale() {
+    assert_eq!(colors::hsv(0, 0, FULL), WHITE);
+    assert_eq!(colors::hsv(30000, 0, FULL), WHITE);
+    assert_eq!(colors::hsv(12345, 0, 32768), Rgb::new(32768, 32768, 32768));
+}
+
+#[test]
+fn zero_value_is_black() {
+    for h in [0u16, 10000, 30000, 50000, 65535] {
+        assert_eq!(colors::hsv(h, FULL, 0), BLACK, "hue {h}");
+    }
+}
+
+#[test]
+fn value_scales_every_channel() {
+    assert!(colors_equal(
+        colors::hsv(0, FULL, 32768),
+        Rgb::new(32768, 0, 0)
+    ));
+    assert!(colors_equal(
+        colors::hsv(degrees(180), FULL, 32768),
+        Rgb::new(0, 32768, 32768)
+    ));
+}
+
+#[test]
+fn degrees_wraps_at_full_circle() {
+    assert_eq!(degrees(0), degrees(360));
+    assert_eq!(degrees(90), degrees(450));
+    assert_eq!(colors::hue(degrees(360)), RED);
+}
+
+#[test]
+fn every_hue_keeps_one_channel_full_and_one_empty() {
+    // A fully saturated, full-value color always has one channel at full scale and
+    // one at zero. This catches sector-boundary arithmetic errors.
+    let mut h = 0u32;
+    while h <= 65535 {
+        let c = colors::hue(h as u16);
+        let max = c.r.max(c.g).max(c.b);
+        let min = c.r.min(c.g).min(c.b);
+        assert!(max >= FULL - 128, "hue {h} peaked at only {max}");
+        assert!(min <= 128, "hue {h} bottomed out at {min}");
+        h += 7;
+    }
 }
