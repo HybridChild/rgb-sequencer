@@ -61,13 +61,32 @@ pub(crate) const fn lerp_channel(from: u16, to: u16, t: u16) -> u16 {
     }
 }
 
-/// Scales a channel by an 8-bit factor where 255 is unity.
+/// Scales a channel by a 16-bit factor where [`FULL`](crate::FULL) is unity.
 ///
-/// Divides by 255 via the series `1/255 = (1 + 2^-8 + 2^-16 + ...) / 256`. Both
-/// correction terms are needed over this 24-bit product; the single-term form used
-/// for 8-bit blending is one ULP short at the top and would make 255 lossy.
+/// Divides by 65535 via the series `1/65535 = (1 + 2^-16 + 2^-32 + ...) / 65536`,
+/// rounding to nearest. One correction term suffices: the next is worth less than a
+/// ULP over a 32-bit product, and a factor of 65535 still lands exactly on `value`,
+/// so full brightness is not lossy.
+///
+/// The widest intermediate is `65535 * 65535 + 32768 + 65534`, which is 32768 short
+/// of `u32::MAX` - the operand types bound it, so it cannot overflow.
 #[inline]
-pub(crate) const fn scale_channel(value: u16, factor: u8) -> u16 {
-    let x = value as u32 * factor as u32 + 128;
-    ((x + (x >> 8) + (x >> 16)) >> 8) as u16
+pub(crate) const fn scale_channel(value: u16, factor: u16) -> u16 {
+    // 32768 is the round-to-nearest bias - half a divisor, rounded up.
+    let x = value as u32 * factor as u32 + 32768;
+    ((x + (x >> 16)) >> 16) as u16
+}
+
+/// Divides by 65535, truncating, for products of two values in `0..=65535`.
+///
+/// The same reciprocal series as [`scale_channel`] but without the rounding bias, so
+/// it reproduces a plain `/ 65535` bit for bit while costing only shifts - `thumbv6m`
+/// has no divide instruction, so the literal form calls `__udivsi3`.
+///
+/// The trailing `+ 1` is load-bearing rather than a rounding term: without it the
+/// series falls one short at every exact multiple of 65535. Verified against
+/// `x / 65535` for every `x` in `0..=65535 * 65535`.
+#[inline]
+pub(crate) const fn div_65535(x: u32) -> u32 {
+    (x + (x >> 16) + 1) >> 16
 }

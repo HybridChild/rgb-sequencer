@@ -46,8 +46,8 @@ fn breathing_sine_wave(base_color: Rgb, elapsed: Duration) -> Rgb {
     let brightness = 0.1 + 0.45 * (1.0 + sine_value);
 
     // Apply brightness to the base color. The sequencer core is float-free; this
-    // effect opts into f32 for the sine and hands back an 8-bit scale factor.
-    base_color.scale((brightness * 255.0) as u8)
+    // effect opts into f32 for the sine and hands back a 16-bit scale factor.
+    base_color.scale((brightness * 65535.0) as u16)
 }
 
 /// Timing function for continuous animation

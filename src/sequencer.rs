@@ -1,10 +1,10 @@
 //! RGB LED sequencer with state management.
 
-use crate::BLACK;
 use crate::color::Rgb;
 use crate::command::SequencerAction;
 use crate::sequence::RgbSequence;
 use crate::time::{TimeDuration, TimeInstant, TimeSource};
+use crate::{BLACK, FULL};
 
 /// Trait for abstracting RGB LED hardware.
 pub trait RgbLed {
@@ -96,14 +96,11 @@ pub struct RgbSequencer<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N
     pause_start_time: Option<I>,
     current_color: Rgb,
     color_epsilon: u16,
-    brightness: u8,
+    brightness: u16,
 }
 
 /// Default per-channel threshold below which a color change is not written to the LED.
 pub const DEFAULT_COLOR_EPSILON: u16 = 64;
-
-/// Full brightness, the default multiplier.
-pub const FULL_BRIGHTNESS: u8 = 255;
 
 impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequencer<'t, I, L, T, N> {
     /// Creates sequencer with LED off and default color epsilon.
@@ -119,7 +116,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
             pause_start_time: None,
             current_color: BLACK,
             color_epsilon: DEFAULT_COLOR_EPSILON,
-            brightness: FULL_BRIGHTNESS,
+            brightness: FULL,
         }
     }
 
@@ -136,7 +133,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
             pause_start_time: None,
             current_color: BLACK,
             color_epsilon: epsilon,
-            brightness: FULL_BRIGHTNESS,
+            brightness: FULL,
         }
     }
 
@@ -249,7 +246,7 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
 
         // Apply brightness to the evaluated color. Full brightness is the common case,
         // so skip the scaling entirely rather than multiplying by unity.
-        let dimmed_color = if self.brightness == FULL_BRIGHTNESS {
+        let dimmed_color = if self.brightness == FULL {
             new_color
         } else {
             new_color.scale(self.brightness)
@@ -430,15 +427,15 @@ impl<'t, I: TimeInstant, L: RgbLed, T: TimeSource<I>, const N: usize> RgbSequenc
         self.color_epsilon = epsilon;
     }
 
-    /// Returns current brightness multiplier, where 255 is full brightness.
+    /// Returns current brightness multiplier, where 65535 is full brightness.
     #[inline]
-    pub fn brightness(&self) -> u8 {
+    pub fn brightness(&self) -> u16 {
         self.brightness
     }
 
-    /// Sets global brightness multiplier, where 255 is full brightness and 0 is off.
+    /// Sets global brightness multiplier, where 65535 is full brightness and 0 is off.
     #[inline]
-    pub fn set_brightness(&mut self, brightness: u8) {
+    pub fn set_brightness(&mut self, brightness: u16) {
         self.brightness = brightness;
     }
 

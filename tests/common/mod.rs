@@ -163,14 +163,18 @@ pub fn factor(fraction: f32) -> u16 {
     (fraction * 32768.0) as u16
 }
 
-/// 8-bit brightness value from a 0.0-1.0 fraction.
-pub fn bright(fraction: f32) -> u8 {
-    (fraction * 255.0).round() as u8
+/// Brightness factor from a 0.0-1.0 fraction, where 65535 is full brightness.
+///
+/// Numerically the same scale as [`channel`] — brightness and channel values share
+/// the 65535 unity — but kept separate so a test reads as setting brightness rather
+/// than building a color. Note [`factor`] is the odd one out, on the Q0.15 scale.
+pub fn bright(fraction: f32) -> u16 {
+    (fraction * 65535.0).round() as u16
 }
 
-/// Tolerance for comparisons that pass through 8-bit brightness scaling.
+/// Tolerance for comparisons that pass through brightness scaling.
 ///
-/// A `u8` brightness cannot represent fractions like 50% exactly — 127/255 and
-/// 128/255 straddle it — so an expectation written as a decimal fraction lands up
-/// to ~0.2% of full scale away. This tolerance sits just above that.
-pub const BRIGHTNESS_EPSILON: u16 = 256;
+/// A `u16` brightness represents any fraction to within an LSB, so the only slack
+/// needed is the rounding in the scale itself plus, where a transition is in flight,
+/// the Q0.15 interpolation — a couple of counts in the worst case.
+pub const BRIGHTNESS_EPSILON: u16 = 8;

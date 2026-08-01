@@ -6,8 +6,8 @@ use common::*;
 use rgb_sequencer::sequence::RgbSequence;
 use rgb_sequencer::types::{LoopCount, TransitionStyle};
 use rgb_sequencer::{
-    DEFAULT_COLOR_EPSILON, Rgb, RgbSequencer, SequencerError, SequencerState, ServiceTiming,
-    TimeDuration,
+    DEFAULT_COLOR_EPSILON, Rgb, RgbSequencer, SequencerAction, SequencerError, SequencerState,
+    ServiceTiming, TimeDuration,
 };
 
 #[test]
@@ -1010,16 +1010,31 @@ fn set_brightness_applies_to_led_output() {
 
 #[test]
 fn brightness_round_trips_across_its_whole_range() {
-    // Brightness is a u8, so the type itself bounds the range - there is no
+    // Brightness is a u16, so the type itself bounds the range - there is no
     // out-of-range value to clamp, unlike the f32 API this replaced.
     let led = MockLed::new();
     let timer = MockTimeSource::new();
     let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
 
-    for value in [0u8, 1, 64, 128, 191, 254, 255] {
+    for value in [0u16, 1, 16384, 32768, 49151, 65534, 65535] {
         sequencer.set_brightness(value);
         assert_eq!(sequencer.brightness(), value);
     }
+}
+
+#[test]
+fn set_brightness_action_reaches_the_sequencer() {
+    // The command-routing path is how the embassy example sets brightness, and it is
+    // otherwise untested - handle_action must land on the same state as the setter.
+    let led = MockLed::new();
+    let timer = MockTimeSource::new();
+    let mut sequencer = RgbSequencer::<TestInstant, MockLed, MockTimeSource, 8>::new(led, &timer);
+
+    sequencer
+        .handle_action(SequencerAction::SetBrightness(bright(0.25)))
+        .unwrap();
+
+    assert_eq!(sequencer.brightness(), bright(0.25));
 }
 
 #[test]

@@ -111,12 +111,14 @@ Colors are `Rgb`, three `u16` channels running `0..=65535`:
 use rgb_sequencer::{Rgb, RED};
 
 let orange = Rgb::from_u8(255, 128, 0);  // const-friendly, 255 maps to 65535 exactly
-let half    = RED.scale(128);            // ~50% brightness - 8-bit factor, 255 = unchanged
+let half    = RED.scale(32768);          // 50% brightness - scale factor, 65535 = unchanged
 let blend   = RED.lerp(orange, 16384);   // 50% toward orange - Q0.15 factor, 32768 = fully orange
 let (r, g, b) = orange.to_u8();          // for WS2812 and other 8-bit drivers
 ```
 
 Sixteen bits per channel is both a normalized value and a natural 16-bit PWM duty, so most hardware needs only a multiply and a shift. Interpolation happens at full 16-bit precision, so slow fades show no banding on 8-bit hardware.
+
+Two scales are in play above, and they are not interchangeable. Channel values and scaling factors run to 65535, so `scale` takes a factor where 65535 leaves a color unchanged. Interpolation factors are Q0.15 and run to 32768, which is why `lerp` reaches its target at 32768 rather than 65535 — squaring a Q0.15 value keeps the easing curves inside a `u32`.
 
 ## Performance
 
@@ -130,8 +132,8 @@ Measured with [binary-analyzer](tools/binary-analyzer/README.md) against a minim
 
 | Target | Flash |
 |--------|-------|
-| `thumbv6m-none-eabi` (Cortex-M0/M0+, no FPU) | 2100 B |
-| `thumbv7em-none-eabihf` (Cortex-M4F/M7, FPU) | 1816 B |
+| `thumbv6m-none-eabi` (Cortex-M0/M0+, no FPU) | 2104 B |
+| `thumbv7em-none-eabihf` (Cortex-M4F/M7, FPU) | 1828 B |
 
 Dropping `f32` cut the non-FPU build by 44% — the `__divsf3`/`__addsf3`/`__mulsf3` emulation routines it used to carry are gone entirely.
 
@@ -141,11 +143,11 @@ CPU cycles per `service()` call, measured with the [benchmark tool](tools/benchm
 
 | Transition | M0+ N=4 | M0+ N=32 | M33F N=4 | M33F N=32 |
 |------------|--------:|---------:|---------:|----------:|
-| Step       |    3171 |    18351 |     1704 |     10052 |
-| Linear     |    3755 |    18940 |     1989 |     10339 |
-| EaseIn     |    3760 |    18943 |     1993 |     10349 |
-| EaseOut    |    3764 |    18947 |     1995 |     10336 |
-| EaseInOut  |    3769 |    18952 |     1999 |     10349 |
+| Step       |    3185 |    18420 |     1705 |     10053 |
+| Linear     |    3767 |    19005 |     1989 |     10337 |
+| EaseIn     |    3772 |    19000 |     1995 |     10341 |
+| EaseOut    |    3775 |    19013 |     1996 |     10337 |
+| EaseInOut  |    3780 |    19019 |     2000 |     10330 |
 
 RP2040 (Cortex-M0+, 125 MHz) and RP2350 (Cortex-M33F, 150 MHz). Full results in [rp2040_benchmarks.md](tools/benchmark/rp2040_benchmarks.md) and [rp2350_benchmarks.md](tools/benchmark/rp2350_benchmarks.md).
 
