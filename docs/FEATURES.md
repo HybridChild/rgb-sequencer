@@ -41,7 +41,6 @@ let sequence = RgbSequence::builder()
 - `TransitionStyle::EaseIn`: Starts slowly and accelerates toward the target color using quadratic interpolation. Creates smooth, natural-looking entries into color transitions.
 - `TransitionStyle::EaseOut`: Starts quickly and decelerates toward the target color using quadratic interpolation. Creates smooth, natural-looking exits from color transitions.
 - `TransitionStyle::EaseInOut`: Starts slowly, accelerates in the middle, and decelerates at the end using quadratic interpolation. Creates the smoothest transitions with gentle starts and stops.
-- `TransitionStyle::EaseOutIn`: Starts and ends quickly, slowing through the middle using quadratic interpolation. Lingers on the blend between the two colors instead of on the endpoints.
 
 **Performance Note:** All transition styles use fixed-point integer math. Easing costs a couple of extra 32-bit multiplies over `Linear`, which is negligible even on Cortex-M0/M0+ - there is no need to avoid easing on non-FPU targets.
 
@@ -80,7 +79,7 @@ let sequence = RgbSequence::builder()
 
 Useful for creating smooth entry animations from current color into new looping sequence without affecting loop-to-loop transitions.
 
-**Validation:** The builder rejects sequences where `start_color` is set but the first step uses `TransitionStyle::Step`, since `start_color` only applies to interpolating transitions (`Linear`, `EaseIn`, `EaseOut`, `EaseInOut`, `EaseOutIn`).
+**Validation:** The builder rejects sequences where `start_color` is set but the first step uses `TransitionStyle::Step`, since `start_color` only applies to interpolating transitions (`Linear`, `EaseIn`, `EaseOut`, `EaseInOut`).
 
 ### Landing Color for Completion
 

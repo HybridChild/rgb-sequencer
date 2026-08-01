@@ -153,12 +153,6 @@ fn main() -> ! {
         timer_freq_hz,
         cpu_freq_hz,
     );
-    bench_row(
-        "EaseOutIn",
-        TransitionStyle::EaseOutIn,
-        timer_freq_hz,
-        cpu_freq_hz,
-    );
 
     rprintln!("");
     rprintln!("Benchmark complete.");

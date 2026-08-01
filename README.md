@@ -130,10 +130,10 @@ Measured with [binary-analyzer](tools/binary-analyzer/README.md) against a minim
 
 | Target | Flash |
 |--------|-------|
-| `thumbv6m-none-eabi` (Cortex-M0/M0+, no FPU) | 2156 B |
-| `thumbv7em-none-eabihf` (Cortex-M4F/M7, FPU) | 1848 B |
+| `thumbv6m-none-eabi` (Cortex-M0/M0+, no FPU) | 2100 B |
+| `thumbv7em-none-eabihf` (Cortex-M4F/M7, FPU) | 1816 B |
 
-Dropping `f32` cut the non-FPU build by 43% — the `__divsf3`/`__addsf3`/`__mulsf3` emulation routines it used to carry are gone entirely.
+Dropping `f32` cut the non-FPU build by 44% — the `__divsf3`/`__addsf3`/`__mulsf3` emulation routines it used to carry are gone entirely.
 
 ### Timing
 
@@ -146,11 +146,10 @@ CPU cycles per `service()` call, measured with the [benchmark tool](tools/benchm
 | EaseIn     |    3760 |    18943 |     1993 |     10349 |
 | EaseOut    |    3764 |    18947 |     1995 |     10336 |
 | EaseInOut  |    3769 |    18952 |     1999 |     10349 |
-| EaseOutIn  |    3775 |    18955 |     1980 |     10354 |
 
 RP2040 (Cortex-M0+, 125 MHz) and RP2350 (Cortex-M33F, 150 MHz). Full results in [rp2040_benchmarks.md](tools/benchmark/rp2040_benchmarks.md) and [rp2350_benchmarks.md](tools/benchmark/rp2350_benchmarks.md).
 
-Choose a transition style for how it looks, not what it costs: the spread across all five interpolating curves is about 20 cycles on either core, under 1% and within run-to-run variation. Capacity is what drives cost — the step search is linear in `N`, so raising `N` from 4 to 32 adds roughly 15,000 cycles on the M0+ where the transition style is worth 20.
+Choose a transition style for how it looks, not what it costs: the spread across all four interpolating curves is about 15 cycles on either core, under 1% and within run-to-run variation. Capacity is what drives cost — the step search is linear in `N`, so raising `N` from 4 to 32 adds roughly 15,000 cycles on the M0+ where the transition style is worth 15.
 
 ## License
 

@@ -33,3 +33,5 @@ EaseInOut       3769/30      5939/47     10614/84     18952/151
 EaseOutIn       3775/30      5942/47     10618/84     18955/151
 
 ```
+
+**Note:** The `EaseOutIn` row predates 0.3.0, which removed that transition style. The capture is left as recorded.

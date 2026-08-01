@@ -61,13 +61,13 @@ Points that are easy to get wrong and that the feature guide does not spell out:
 All color math is fixed-point integer arithmetic (Q0.15 for progress and easing, `u16` per channel). No soft-float emulation is linked in on any target.
 
 Flash footprint measured with `tools/binary-analyzer`:
-- **Non-FPU (thumbv6m, Cortex-M0/M0+)**: 2156 B
-- **FPU (thumbv7em, Cortex-M4F/M7)**: 1848 B
+- **Non-FPU (thumbv6m, Cortex-M0/M0+)**: 2100 B
+- **FPU (thumbv7em, Cortex-M4F/M7)**: 1816 B
 
 `service()` cycles measured with `tools/benchmark/` on RP2040 (Cortex-M0+) and RP2350 (Cortex-M33F); see the committed result files for the full tables.
 
 **When providing guidance:**
-- Don't warn about easing costing more than Linear - measured at ~20 cycles across all five curves, under 1% and inside run-to-run noise
+- Don't warn about easing costing more than Linear - measured at ~15 cycles across all four curves, under 1% and inside run-to-run noise
 - Don't suggest Step transitions "for performance" on non-FPU targets; that advice belonged to the f32 implementation
 - Capacity dominates timing, not transition style - the step search is O(N), and N=32 costs roughly 5x N=4
 - Avoid speculative performance claims; the benchmark files hold real numbers, use them
@@ -155,7 +155,6 @@ let sequence = RgbSequence::<_, 4>::builder()  // Capacity covers the steps adde
 .step(color, Duration::zero(), TransitionStyle::EaseIn)    // Invalid!
 .step(color, Duration::zero(), TransitionStyle::EaseOut)   // Invalid!
 .step(color, Duration::zero(), TransitionStyle::EaseInOut) // Invalid!
-.step(color, Duration::zero(), TransitionStyle::EaseOutIn) // Invalid!
 
 // RIGHT
 .step(color, Duration::zero(), TransitionStyle::Step)  // OK - only Step allows zero duration
@@ -212,7 +211,7 @@ Tests are organized as **integration tests** in the `tests/` directory:
 - `tests/easing_tests.rs`: Tests for transition curves and within-step progress
 - `tests/common/mod.rs`: Shared test infrastructure (mocks, helpers, constants)
 
-**Total: 115 integration tests**
+**Total: 114 integration tests**
 
 This organization keeps source files clean and provides true black-box testing of the public API. **`src/` contains no `#[cfg(test)]` blocks, and none should be added.**
 

@@ -15,13 +15,12 @@ use rgb_sequencer::{BLACK, WHITE};
 const ONE: u32 = 32768;
 const HALF: u32 = ONE / 2;
 
-const ALL_STYLES: [TransitionStyle; 6] = [
+const ALL_STYLES: [TransitionStyle; 5] = [
     TransitionStyle::Step,
     TransitionStyle::Linear,
     TransitionStyle::EaseIn,
     TransitionStyle::EaseOut,
     TransitionStyle::EaseInOut,
-    TransitionStyle::EaseOutIn,
 ];
 
 /// Builds a BLACK -> WHITE step whose duration matches the Q0.15 scale, so elapsed
@@ -54,15 +53,6 @@ fn reference(t: f32, transition: TransitionStyle) -> f32 {
                 2.0 * t * t
             } else {
                 -1.0 + (4.0 - 2.0 * t) * t
-            }
-        }
-        TransitionStyle::EaseOutIn => {
-            if t < 0.5 {
-                let t2 = t * 2.0;
-                t2 * (2.0 - t2) * 0.5
-            } else {
-                let t2 = (t - 0.5) * 2.0;
-                0.5 + t2 * t2 * 0.5
             }
         }
     }
@@ -124,9 +114,8 @@ fn every_curve_is_monotonic_and_stays_in_range() {
 fn easing_curves_pass_through_the_midpoint_as_expected() {
     let midpoint = |style| eased_at(&curve(style), HALF) as i64;
 
-    // EaseInOut and EaseOutIn are symmetric about the centre by construction.
+    // EaseInOut is symmetric about the centre by construction.
     assert!((midpoint(TransitionStyle::EaseInOut) - HALF as i64).abs() <= 3);
-    assert!((midpoint(TransitionStyle::EaseOutIn) - HALF as i64).abs() <= 3);
     // EaseIn lags the midpoint, EaseOut leads it.
     assert!(midpoint(TransitionStyle::EaseIn) < HALF as i64);
     assert!(midpoint(TransitionStyle::EaseOut) > HALF as i64);

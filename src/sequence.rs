@@ -36,17 +36,6 @@ const fn apply_easing(t: u16, transition: TransitionStyle) -> u16 {
                 ((((4 * one - 2 * t32) * t32) >> SHIFT) - one) as u16
             }
         }
-        TransitionStyle::EaseOutIn => {
-            if t < HALF {
-                // Fast start (EaseOut on first half): t2 * (2 - t2) * 0.5
-                let t2 = t32 * 2;
-                ((t2 * (2 * one - t2)) >> (SHIFT + 1)) as u16
-            } else {
-                // Fast end (EaseIn on second half): 0.5 + t2 * t2 * 0.5
-                let t2 = (t32 - HALF as u32) * 2;
-                HALF + ((t2 * t2) >> (SHIFT + 1)) as u16
-            }
-        }
     }
 }
 
@@ -241,7 +230,6 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
                     | TransitionStyle::EaseIn
                     | TransitionStyle::EaseOut
                     | TransitionStyle::EaseInOut
-                    | TransitionStyle::EaseOutIn
             );
 
         let previous_color = if use_start_color {
@@ -309,8 +297,7 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
             TransitionStyle::Linear
             | TransitionStyle::EaseIn
             | TransitionStyle::EaseOut
-            | TransitionStyle::EaseInOut
-            | TransitionStyle::EaseOutIn => self.interpolate_color(position, step),
+            | TransitionStyle::EaseInOut => self.interpolate_color(position, step),
         }
     }
 
@@ -327,8 +314,7 @@ impl<D: TimeDuration, const N: usize> RgbSequence<D, N> {
             TransitionStyle::Linear
             | TransitionStyle::EaseIn
             | TransitionStyle::EaseOut
-            | TransitionStyle::EaseInOut
-            | TransitionStyle::EaseOutIn => Some(D::ZERO),
+            | TransitionStyle::EaseInOut => Some(D::ZERO),
             // Step transition can wait until the end
             TransitionStyle::Step => Some(position.time_until_step_end),
         }
@@ -460,7 +446,6 @@ impl<D: TimeDuration, const N: usize> SequenceBuilder<D, N> {
                         | TransitionStyle::EaseIn
                         | TransitionStyle::EaseOut
                         | TransitionStyle::EaseInOut
-                        | TransitionStyle::EaseOutIn
                 )
             {
                 return Err(SequenceError::ZeroDurationWithInterpolation);
