@@ -13,6 +13,7 @@ use embassy_executor::Spawner;
 use embassy_stm32::bind_interrupts;
 use embassy_stm32::exti::ExtiInput;
 use embassy_stm32::gpio::{Level, Output, Pull, Speed};
+use embassy_stm32::mode::Async;
 use embassy_stm32::peripherals::TIM3;
 use embassy_stm32::time::Hertz;
 use embassy_stm32::timer::simple_pwm::{PwmPin, SimplePwm};
@@ -89,7 +90,7 @@ fn setup_pwm_tim3(p: &mut Peripherals) -> (SimplePwm<'static, TIM3>, u32) {
 }
 
 /// Configure user button with EXTI interrupt
-fn setup_button(p: &mut Peripherals) -> ExtiInput<'static> {
+fn setup_button(p: &mut Peripherals) -> ExtiInput<'static, Async> {
     let pc13 = unsafe { p.PC13.clone_unchecked() };
     let exti13 = unsafe { p.EXTI13.clone_unchecked() };
 
@@ -113,10 +114,10 @@ async fn main(spawner: Spawner) {
     let (pwm_tim3, max_duty_tim3) = setup_pwm_tim3(&mut p);
     let onboard_led = setup_onboard_led(&mut p);
 
-    spawner.spawn(button_task(button)).unwrap();
-    spawner.spawn(blink_task(onboard_led)).unwrap();
-    spawner.spawn(app_logic_task()).unwrap();
-    spawner.spawn(rgb_task(pwm_tim3, max_duty_tim3)).unwrap();
+    spawner.spawn(button_task(button).unwrap());
+    spawner.spawn(blink_task(onboard_led).unwrap());
+    spawner.spawn(app_logic_task().unwrap());
+    spawner.spawn(rgb_task(pwm_tim3, max_duty_tim3).unwrap());
 
     info!("Ready!");
 

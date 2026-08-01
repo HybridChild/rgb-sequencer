@@ -1,5 +1,6 @@
 use defmt::info;
 use embassy_stm32::exti::ExtiInput;
+use embassy_stm32::mode::Async;
 use embassy_time::Timer;
 
 use crate::types::BUTTON_SIGNAL;
@@ -8,7 +9,7 @@ use crate::types::BUTTON_SIGNAL;
 const DEBOUNCE_MS: u64 = 50;
 
 #[embassy_executor::task]
-pub async fn button_task(mut button: ExtiInput<'static>) {
+pub async fn button_task(mut button: ExtiInput<'static, Async>) {
     info!("Button task started");
 
     loop {

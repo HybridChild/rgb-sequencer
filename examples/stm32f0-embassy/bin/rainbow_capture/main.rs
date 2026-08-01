@@ -6,6 +6,7 @@ use defmt::*;
 use embassy_executor::Spawner;
 use embassy_stm32::exti::ExtiInput;
 use embassy_stm32::gpio::{Level, Output, Pull, Speed};
+use embassy_stm32::mode::Async;
 use embassy_stm32::peripherals::{TIM1, TIM3};
 use embassy_stm32::time::Hertz;
 use embassy_stm32::timer::simple_pwm::{PwmPin, SimplePwm};
@@ -116,7 +117,7 @@ fn setup_pwm_tim1(p: &mut Peripherals) -> (SimplePwm<'static, TIM1>, u32) {
 }
 
 /// Configure user button with EXTI interrupt
-fn setup_button(p: &mut Peripherals) -> ExtiInput<'static> {
+fn setup_button(p: &mut Peripherals) -> ExtiInput<'static, Async> {
     let pc13 = unsafe { p.PC13.clone_unchecked() };
     let exti13 = unsafe { p.EXTI13.clone_unchecked() };
 
@@ -154,11 +155,9 @@ async fn main(spawner: Spawner) {
     info!("All hardware initialized successfully");
 
     // Spawn async tasks
-    spawner.spawn(button_task(button)).unwrap();
-    spawner.spawn(app_logic_task(onboard_led)).unwrap();
-    spawner
-        .spawn(rgb_task(pwm_tim3, max_duty_tim3, pwm_tim1, max_duty_tim1))
-        .unwrap();
+    spawner.spawn(button_task(button).unwrap());
+    spawner.spawn(app_logic_task(onboard_led).unwrap());
+    spawner.spawn(rgb_task(pwm_tim3, max_duty_tim3, pwm_tim1, max_duty_tim1).unwrap());
 
     info!("=== System Ready ===");
     info!("LED 1: Rainbow animation (red -> green -> blue)");
