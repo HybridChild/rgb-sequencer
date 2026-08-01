@@ -185,6 +185,33 @@ fn progress_matches_the_elapsed_fraction() {
 }
 
 #[test]
+fn a_slow_fade_advances_in_even_steps() {
+    // Banding on hardware is a fade that stalls or jumps, not one that ends up in the
+    // wrong place, so bound the step rather than the value. Real fade durations are not
+    // powers of two, which leaves the progress divide a remainder that the exact
+    // 32768 ms case above never exercises.
+    //
+    // Elapsed truncates to progress and progress truncates to a channel value, and each
+    // rounding can land a single step a count either side of the ideal. Three counts of
+    // slack absorbs that; a stall or a doubled step is far larger.
+    for duration in [2_000u64, 5_000, 10_000, 30_000] {
+        let sequence = ramp(duration);
+        let ideal = 65535.0 / duration as f64;
+
+        let mut previous = 0u16;
+        for t in 1..duration {
+            let value = sequence.evaluate(TestDuration(t)).0.r;
+            let step = value as f64 - previous as f64;
+            assert!(
+                step >= 1.0 && (step - ideal).abs() < 3.0,
+                "{duration} ms fade stepped by {step} at t={t}, expected ~{ideal:.2}"
+            );
+            previous = value;
+        }
+    }
+}
+
+#[test]
 fn progress_holds_up_for_durations_that_need_reduction() {
     // Durations above 131_071 ms force the shared-shift path. The boundary values
     // and the top of u64 are where an off-by-one in that reduction would show up.
