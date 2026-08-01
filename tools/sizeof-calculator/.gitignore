@@ -3,4 +3,3 @@ report.md
 
 # Build artifacts
 target/
-Cargo.lock

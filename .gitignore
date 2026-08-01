@@ -2,14 +2,14 @@
 .vscode/
 .DS_Store
 
-Cargo.lock
+# The library's lockfile stays untracked so CI resolves dependencies the way a
+# downstream consumer does. Examples and tools are binaries and track theirs.
+/Cargo.lock
 /target/
 /.cargo/
 
 /examples/*/target/
-/examples/*/Cargo.lock
 /tools/target/
-/tools/Cargo.lock
 
 scratch.md
 TODO.md
