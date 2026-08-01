@@ -33,14 +33,14 @@ impl BrightnessLevel {
         }
     }
 
-    /// Get the brightness value (0..=255, where 255 is full brightness)
-    pub fn value(&self) -> u8 {
+    /// Get the brightness value (0..=65535, where 65535 is full brightness)
+    pub fn value(&self) -> u16 {
         match self {
-            BrightnessLevel::Full => 255,
-            BrightnessLevel::High => 191,
-            BrightnessLevel::Medium => 128,
-            BrightnessLevel::Low => 64,
-            BrightnessLevel::Dim => 26,
+            BrightnessLevel::Full => 65535,
+            BrightnessLevel::High => 49151,
+            BrightnessLevel::Medium => 32768,
+            BrightnessLevel::Low => 16384,
+            BrightnessLevel::Dim => 6554,
         }
     }
 

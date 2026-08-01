@@ -14,8 +14,8 @@ Measured with `tools/binary-analyzer` against a minimal reference binary:
 
 | Target | 0.2.1 | 0.3.0 | Change |
 |--------|-------|-------|--------|
-| `thumbv6m-none-eabi` (Cortex-M0/M0+, no FPU) | 3784 B | 2100 B | **-44.5%** |
-| `thumbv7em-none-eabihf` (Cortex-M4F/M7, FPU) | 1996 B | 1816 B | **-9.0%** |
+| `thumbv6m-none-eabi` (Cortex-M0/M0+, no FPU) | 3784 B | 2104 B | **-44.4%** |
+| `thumbv7em-none-eabihf` (Cortex-M4F/M7, FPU) | 1996 B | 1828 B | **-8.4%** |
 
 RAM per sequence drops too — `SequenceStep<u32>` goes from 20 B to 12 B, and `RgbSequence<u32, 32>` from 712 B to 440 B.
 
@@ -43,7 +43,7 @@ RAM per sequence drops too — `SequenceStep<u32>` goes from 20 B to 12 B, and `
 
 - **Channel fields** are `r`, `g`, `b` rather than `red`, `green`, `blue`.
 
-- **Brightness** is a `u8` where 255 is full brightness: `set_brightness`, `brightness()` and `SequencerAction::SetBrightness` all changed. The type bounds the range, so out-of-range values are no longer clamped — they cannot be expressed. `0.5` becomes `128`, `1.0` becomes `255`.
+- **Brightness** is a `u16` where 65535 is full brightness: `set_brightness`, `brightness()` and `SequencerAction::SetBrightness` all changed, as did `Rgb::scale`. The type bounds the range, so out-of-range values are no longer clamped — they cannot be expressed. `0.5` becomes `32768`, `1.0` becomes `65535`. Sixteen bits keep dimming smooth at the bottom of the range, where adjacent factors differ by a single channel count.
 
 - **`colors::hsv` and `colors::hue`** take `u16` arguments. Hue spans the full color wheel across the whole `u16` range, so rotation wraps by plain addition. Use the new `colors::degrees()` helper to convert: `hue(60.0)` becomes `hue(degrees(60))`.
 
@@ -55,7 +55,7 @@ RAM per sequence drops too — `SequenceStep<u32>` goes from 20 B to 12 B, and `
 
 - `Rgb` with `new`, `from_u8`, `to_u8`, `lerp`, `scale` and `approx_eq` — all `const`, so palettes can be built at compile time.
 - `colors::degrees()` for converting degrees to the `u16` hue wheel.
-- `FULL` (`u16::MAX`) and `FULL_BRIGHTNESS` (`255`) constants.
+- `FULL` (`u16::MAX`) constant, serving as both the full-scale channel value and the unity brightness factor.
 - Unit tests for the fixed-point primitives, including an exhaustive sweep of every easing curve across all 32769 progress values against its floating-point reference.
 
 ### Changed

@@ -2,7 +2,7 @@
 
 mod common;
 
-use rgb_sequencer::Rgb;
+use rgb_sequencer::{Rgb, WHITE};
 
 #[test]
 fn from_u8_round_trips() {
@@ -37,16 +37,30 @@ fn lerp_reaches_the_target_in_both_directions() {
 #[test]
 fn scale_extremes() {
     let c = Rgb::new(65535, 32768, 100);
-    assert_eq!(c.scale(255), c);
+    assert_eq!(c.scale(65535), c);
     assert_eq!(c.scale(0), Rgb::default());
 }
 
 #[test]
 fn scale_by_full_is_lossless_across_the_range() {
-    // A factor of 255 must be the exact identity - an approximate divide by 255
+    // A factor of 65535 must be the exact identity - an approximate divide by 65535
     // loses the top LSB and silently dims full brightness.
     for v in [0u16, 1, 255, 12345, 32768, 65534, 65535] {
-        assert_eq!(Rgb::new(v, v, v).scale(255), Rgb::new(v, v, v), "value {v}");
+        assert_eq!(
+            Rgb::new(v, v, v).scale(65535),
+            Rgb::new(v, v, v),
+            "value {v}"
+        );
+    }
+}
+
+#[test]
+fn scale_resolves_the_bottom_of_its_range() {
+    // The point of a 16-bit factor: small factors have to produce distinct, evenly
+    // spaced channel values. An 8-bit factor jumped 0 -> 257 -> 514 here, so the last
+    // few steps of a fade to off were visibly coarse.
+    for f in 1u16..=8 {
+        assert_eq!(WHITE.scale(f), Rgb::new(f, f, f), "factor {f}");
     }
 }
 

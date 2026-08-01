@@ -7,6 +7,7 @@
 //! All functions are `const` and use integer arithmetic only.
 
 use crate::color::Rgb;
+use crate::fixed::div_65535;
 
 /// Converts degrees to the full-circle hue units used by [`hsv`] and [`hue`].
 ///
@@ -29,7 +30,7 @@ pub const fn hsv(hue: u16, saturation: u16, value: u16) -> Rgb {
     let v = value as u32;
 
     // Chroma: the span between the brightest and dimmest channel.
-    let c = v * saturation as u32 / 65535;
+    let c = div_65535(v * saturation as u32);
     // Minimum channel value, added back to every channel at the end.
     let m = v - c;
 
@@ -42,8 +43,8 @@ pub const fn hsv(hue: u16, saturation: u16, value: u16) -> Rgb {
     let falling = 65535 - rising;
 
     // The second-largest channel ramps linearly across each sector.
-    let x_up = c * rising / 65535;
-    let x_down = c * falling / 65535;
+    let x_up = div_65535(c * rising);
+    let x_down = div_65535(c * falling);
 
     let (r, g, b) = match sector {
         0 => (c, x_up, 0),

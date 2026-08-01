@@ -188,8 +188,8 @@ fn breathing_effect(base_color: Rgb, elapsed: Duration) -> Rgb {
     let brightness = 0.1 + 0.45 * (1.0 + libm::sinf(angle));
     
     // The library is float-free; an effect function may still use f32 if it
-    // wants to, then hand back an 8-bit scale factor.
-    base_color.scale((brightness * 255.0) as u8)
+    // wants to, then hand back a 16-bit scale factor.
+    base_color.scale((brightness * 65535.0) as u16)
 }
 
 // Define timing function
@@ -279,7 +279,7 @@ fn fire_flicker(base: Rgb, elapsed: Duration) -> Rgb {
     let combined = (flicker1 + flicker2 + flicker3) / 1.75;
     let brightness = 0.7 + 0.3 * combined;
     
-    base.scale((brightness * 255.0) as u8)
+    base.scale((brightness * 65535.0) as u16)
 }
 
 let orange = Rgb::from_u8(255, 102, 0);
@@ -310,7 +310,7 @@ The `Rgb` type holds three `u16` channels running `0..=65535`. This is a normali
 use rgb_sequencer::Rgb;
 
 let orange = Rgb::from_u8(255, 128, 0);   // 255 maps to exactly 65535
-let dim    = orange.scale(64);            // 8-bit factor, 255 leaves it unchanged
+let dim    = orange.scale(16384);         // 25% - scale factor, 65535 leaves it unchanged
 let blend  = orange.lerp(BLACK, 16384);   // Q0.15 factor, 32768 = fully BLACK
 let (r, g, b) = orange.to_u8();           // for WS2812 and other 8-bit drivers
 ```
@@ -564,22 +564,24 @@ A global `brightness` can be set for each individual sequencer, which allows you
 let mut sequencer = RgbSequencer8::new(led, &timer);
 sequencer.load(sequence);
 
-// Set brightness to ~50%
-sequencer.set_brightness(128);
+// Set brightness to 50%
+sequencer.set_brightness(32768);
 
 sequencer.start()?;
 ```
 
 Brightness Range
-- `255` (default): Full brightness
+- `65535` (default, the `FULL` constant): Full brightness
 - `0`: LED off (black)
 
-The `u8` bounds the range, so there is nothing to clamp.
+The `u16` bounds the range, so there is nothing to clamp.
 
 ```rust
 // Query current brightness
-let current = sequencer.brightness();  // Returns 0..=255
+let current = sequencer.brightness();  // Returns 0..=65535
 ```
+
+The factor is 16-bit so that dimming stays smooth at the bottom of the range, where the eye is most sensitive: adjacent low factors differ by one channel count rather than jumping in steps of 257.
 
 Full brightness is skipped rather than multiplied through, so leaving it at the default costs nothing per `service()` call.
 
@@ -698,7 +700,7 @@ pub enum SequencerAction<D: TimeDuration, const N: usize> {
     Resume,
     Restart,
     Clear,
-    SetBrightness(u8),
+    SetBrightness(u16),
 }
 
 // Receive command and dispatch action to sequencer

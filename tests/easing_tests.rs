@@ -9,7 +9,7 @@ mod common;
 use common::{TestDuration, TestInstant};
 use rgb_sequencer::sequence::RgbSequence;
 use rgb_sequencer::types::TransitionStyle;
-use rgb_sequencer::{BLACK, WHITE};
+use rgb_sequencer::{BLACK, FULL, WHITE};
 
 /// 1.0 in the Q0.15 format the library uses for progress internally.
 const ONE: u32 = 32768;
@@ -264,17 +264,17 @@ fn zero_duration_step_reports_complete_rather_than_dividing() {
     assert_eq!(sequence.evaluate(TestDuration(0)).0, WHITE);
 }
 
-#[test]
-fn brightness_scaling_is_lossless_at_full() {
-    // Full brightness must be the exact identity; an approximate divide by 255 in
-    // the scaling path would silently dim it by one LSB.
-    use rgb_sequencer::{RgbSequencer, SequencerState};
-
-    let led = common::MockLed::new();
-    let timer = common::MockTimeSource::new();
-    let mut sequencer =
-        RgbSequencer::<TestInstant, common::MockLed, common::MockTimeSource, 4>::new(led, &timer);
-
+/// Loads a single Step to WHITE, so the color reaching the LED is the brightness
+/// factor's effect on its own - no easing or interpolation in play.
+fn white_at_brightness(
+    sequencer: &mut rgb_sequencer::RgbSequencer<
+        TestInstant,
+        common::MockLed,
+        common::MockTimeSource,
+        4,
+    >,
+    brightness: u16,
+) -> rgb_sequencer::Rgb {
     sequencer.load(
         RgbSequence::<TestDuration, 4>::builder()
             .step(WHITE, TestDuration(1000), TransitionStyle::Step)
@@ -282,10 +282,38 @@ fn brightness_scaling_is_lossless_at_full() {
             .build()
             .unwrap(),
     );
-    sequencer.set_brightness(255);
+    sequencer.set_brightness(brightness);
     sequencer.start().unwrap();
     sequencer.service().unwrap();
+    sequencer.current_color()
+}
 
+#[test]
+fn full_brightness_bypasses_scaling() {
+    // service() short-circuits at unity rather than multiplying, so this pins the
+    // bypass. The arithmetic path at unity is covered separately, in color_tests.
+    use rgb_sequencer::{RgbSequencer, SequencerState};
+
+    let led = common::MockLed::new();
+    let timer = common::MockTimeSource::new();
+    let mut sequencer =
+        RgbSequencer::<TestInstant, common::MockLed, common::MockTimeSource, 4>::new(led, &timer);
+
+    assert_eq!(white_at_brightness(&mut sequencer, FULL), WHITE);
     assert_eq!(sequencer.state(), SequencerState::Running);
-    assert_eq!(sequencer.current_color(), WHITE);
+}
+
+#[test]
+fn partial_brightness_scales_exactly() {
+    // Below unity the bypass does not apply, so this is the multiply path itself.
+    // Exact equality rather than a tolerance - the factor divides 65535 evenly here.
+    use rgb_sequencer::{Rgb, RgbSequencer};
+
+    let led = common::MockLed::new();
+    let timer = common::MockTimeSource::new();
+    let mut sequencer =
+        RgbSequencer::<TestInstant, common::MockLed, common::MockTimeSource, 4>::new(led, &timer);
+
+    let half = white_at_brightness(&mut sequencer, 32768);
+    assert_eq!(half, Rgb::new(32768, 32768, 32768));
 }

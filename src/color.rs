@@ -58,9 +58,11 @@ impl Rgb {
         }
     }
 
-    /// Scales every channel by an 8-bit factor, where 255 leaves the color unchanged.
+    /// Scales every channel by a 16-bit factor, where 65535 leaves the color unchanged.
+    ///
+    /// Note this is a different scale from [`lerp`](Self::lerp), which is Q0.15.
     #[inline]
-    pub const fn scale(self, factor: u8) -> Self {
+    pub const fn scale(self, factor: u16) -> Self {
         Self {
             r: scale_channel(self.r, factor),
             g: scale_channel(self.g, factor),

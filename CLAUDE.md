@@ -61,8 +61,8 @@ Points that are easy to get wrong and that the feature guide does not spell out:
 All color math is fixed-point integer arithmetic (Q0.15 for progress and easing, `u16` per channel). No soft-float emulation is linked in on any target.
 
 Flash footprint measured with `tools/binary-analyzer`:
-- **Non-FPU (thumbv6m, Cortex-M0/M0+)**: 2100 B
-- **FPU (thumbv7em, Cortex-M4F/M7)**: 1816 B
+- **Non-FPU (thumbv6m, Cortex-M0/M0+)**: 2104 B
+- **FPU (thumbv7em, Cortex-M4F/M7)**: 1828 B
 
 `service()` cycles measured with `tools/benchmark/` on RP2040 (Cortex-M0+) and RP2350 (Cortex-M33F); see the committed result files for the full tables.
 
@@ -85,7 +85,8 @@ Flash footprint measured with `tools/binary-analyzer`:
 - **Construction**: `Rgb::from_u8(255, 128, 0)` for 8-bit sources, `Rgb::new` for 16-bit. Both are `const`
 - **Hardware conversion**: Convert in `RgbLed::set_color()` to native format; `Rgb::to_u8()` for 8-bit drivers
 - **Interpolation**: Per-channel linear interpolation (perceptually incorrect but fast). Note it operates on gamma-encoded values, matching the previous behaviour - do not introduce gamma conversion
-- **Fixed-point helpers**: `src/fixed.rs` holds `ONE`/`HALF`/`mul_q15`/ `progress_q15`/`lerp_channel`/`scale_channel`. Keep every intermediate inside a `u32` - a 64-bit divide alone costs ~900 B of `compiler_builtins`
+- **Fixed-point helpers**: `src/fixed.rs` holds `ONE`/`HALF`/`mul_q15`/ `progress_q15`/`lerp_channel`/`scale_channel`/`div_65535`. Keep every intermediate inside a `u32` - a 64-bit divide alone costs ~900 B of `compiler_builtins`
+- **Two scales, not one**: channel values and `scale` factors run to 65535; interpolation and easing factors are Q0.15 and run to 32768. `FULL` is the former. Do not "unify" them - `ONE = 32768` is what keeps a squared easing term inside a `u32`
 
 ---
 
