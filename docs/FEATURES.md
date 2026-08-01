@@ -1,5 +1,11 @@
 # Features
 
+## Sequences and Sequencers
+
+An `RgbSequence` describes an animation: a list of color waypoints with durations and transition styles, or a function that computes color from elapsed time. It holds no state, touches no hardware, and can be built at compile time.
+
+An `RgbSequencer` runs one. It owns an LED and borrows a time source, holds the state machine and the global brightness, and evaluates the loaded sequence against the clock each time you call `service()`. A sequence is `Clone`, so the same description can be loaded into several sequencers driving different LEDs.
+
 ## Table of Contents
 
 - [Step-Based Sequences](#step-based-sequences)
@@ -35,6 +41,7 @@ let sequence = RgbSequence::builder()
 - `TransitionStyle::EaseIn`: Starts slowly and accelerates toward the target color using quadratic interpolation. Creates smooth, natural-looking entries into color transitions.
 - `TransitionStyle::EaseOut`: Starts quickly and decelerates toward the target color using quadratic interpolation. Creates smooth, natural-looking exits from color transitions.
 - `TransitionStyle::EaseInOut`: Starts slowly, accelerates in the middle, and decelerates at the end using quadratic interpolation. Creates the smoothest transitions with gentle starts and stops.
+- `TransitionStyle::EaseOutIn`: Starts and ends quickly, slowing through the middle using quadratic interpolation. Lingers on the blend between the two colors instead of on the endpoints.
 
 **Performance Note:** All transition styles use fixed-point integer math. Easing costs a couple of extra 32-bit multiplies over `Linear`, which is negligible even on Cortex-M0/M0+ - there is no need to avoid easing on non-FPU targets.
 
@@ -73,7 +80,7 @@ let sequence = RgbSequence::builder()
 
 Useful for creating smooth entry animations from current color into new looping sequence without affecting loop-to-loop transitions.
 
-**Validation:** The builder rejects sequences where `start_color` is set but the first step uses `TransitionStyle::Step`, since start_color only applies to interpolating transitions (Linear, EaseIn, EaseOut, EaseInOut).
+**Validation:** The builder rejects sequences where `start_color` is set but the first step uses `TransitionStyle::Step`, since `start_color` only applies to interpolating transitions (`Linear`, `EaseIn`, `EaseOut`, `EaseInOut`, `EaseOutIn`).
 
 ### Landing Color for Completion
 
@@ -141,13 +148,13 @@ SequencerCommand16<Id, D>    // Up to 16 steps
 - **4 steps**: Simple patterns (blink, pulse, 2-3 color cycles)
 - **8 steps**: Most animations (multi-color sequences, basic effects)
 - **16 steps**: Complex sequences (rainbow cycles, elaborate shows)
-- **32+ steps**: Use explicit `RgbSequence<D, N>` for data-driven animations
+- **17+ steps**: Use explicit `RgbSequence<D, N>` — e.g. for data-driven animations
 - **0 steps**: Function-based sequences (`RgbSequence<D, 0>`) - no step storage needed
 
 **Examples:**
 ```rust
 // Using type alias for step-based sequence
-let sequence = RgbSequence8::<Duration>::builder()
+let sequence = RgbSequence4::<Duration>::builder()
     .step(red, ms(500), TransitionStyle::Linear)?
     .step(blue, ms(500), TransitionStyle::Linear)?
     .build()?;
@@ -238,9 +245,9 @@ let blue_pulse = RgbSequence::from_function(
 Tells the sequencer when it needs to be serviced again:
 - **Parameter**: Time elapsed since sequence started
 - **Returns**: The duration until next service at this time
-- `Some(Duration::ZERO)` - Continuous animation, call `service()` at your desired frame rate
-- `Some(duration)` - Static color period - the LED needs updating after this duration
-- `None` - Animation complete - Sequence is done - No further service is needed
+  - `Some(Duration::ZERO)` - Continuous animation, call `service()` at your desired frame rate
+  - `Some(duration)` - Static color period - the LED needs updating after this duration
+  - `None` - Animation complete - Sequence is done - No further service is needed
 
 Example with completion:
 
@@ -276,9 +283,9 @@ fn fire_flicker(base: Rgb, elapsed: Duration) -> Rgb {
     base.scale((brightness * 255.0) as u8)
 }
 
-let red = RED
+let orange = Rgb::from_u8(255, 102, 0);
 
-let red_flame = RgbSequence::from_function(
+let flame = RgbSequence::from_function(
     orange,
     fire_flicker,
     continuous_timing,
@@ -298,7 +305,7 @@ Use function-based sequences when:
 
 ## Colors
 
-`Rgb` holds three `u16` channels running `0..=65535`. This is a normalized value rather than a hardware value — `RgbLed::set_color` scales it to whatever the hardware wants. Sixteen bits doubles as a natural PWM duty, and keeps interpolation fine enough that slow fades show no banding on 8-bit hardware.
+The `Rgb` type holds three `u16` channels running `0..=65535`. This is a normalized value rather than a hardware value — `RgbLed::set_color` must scale it to whatever the hardware wants. Sixteen bits doubles as a natural PWM duty, and keeps interpolation fine enough that slow fades show no banding on 8-bit hardware.
 
 ```rust
 use rgb_sequencer::Rgb;
