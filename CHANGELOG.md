@@ -6,8 +6,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-## [0.3.0] - 2026-07-31
-
 Replaces all floating-point color math with fixed-point integer arithmetic and drops the `palette` dependency. On Cortex-M0/M0+ this removes the software float emulation routines (`__divsf3`, `__addsf3`, `__mulsf3`) entirely.
 
 Measured with `tools/binary-analyzer` against a minimal reference binary:
@@ -56,13 +54,16 @@ RAM per sequence drops too — `SequenceStep<u32>` goes from 20 B to 12 B, and `
 - `Rgb` with `new`, `from_u8`, `to_u8`, `lerp`, `scale` and `approx_eq` — all `const`, so palettes can be built at compile time.
 - `colors::degrees()` for converting degrees to the `u16` hue wheel.
 - `FULL` (`u16::MAX`) constant, serving as both the full-scale channel value and the unity brightness factor.
-- Unit tests for the fixed-point primitives, including an exhaustive sweep of every easing curve across all 32769 progress values against its floating-point reference.
+- Coverage for the fixed-point path, including a sweep of every easing curve across the whole Q0.15 progress range against an `f32` reference. 117 integration tests, up from 88.
+- `fade_check` example for the RP Pico. It runs PWM at the full 16-bit range, so a channel value maps 1:1 onto a duty cycle and the LED shows exactly what the library computed, and reports the per-frame step size over RTT — the setup used to check the pipeline for banding.
 
 ### Changed
 
 - Progress, easing and interpolation use Q0.15 fixed point. Every intermediate fits in 32 bits, so no 64-bit multiply or divide helper is linked in.
 - HSV conversion is integer sector math and needs no `libm`.
-- CI now runs the integration test suite, which `cargo test --lib` had been skipping.
+- CI now runs the integration test suite, which `cargo test --lib` had been skipping, and lints `--all-targets` rather than `--lib` alone.
+- Example and tool dependencies updated. `stm32f0-embassy` moves to `embassy-stm32` 0.6.0, which brings `embassy-executor` 0.10.0 and `embassy-sync` 0.8.0 with it: the executor's arch features are renamed `platform-*`, `#[task]` returns a `Result` so `.unwrap()` sits on the token rather than the spawn call, and `ExtiInput` gained a mode parameter. Semver-compatible bumps elsewhere pick up `heapless` 0.9.3, `cortex-m-rt` 0.7.6, `defmt-rtt` 1.3.0 and `embassy-time` 0.5.1. The library's own dependency requirements are unchanged apart from dropping `palette`.
+- Lockfiles for the examples and tools are tracked, pinning the dependency set behind the size and cycle measurements and giving users a known-good combination to copy. The library's lockfile stays untracked so CI resolves dependencies the way a downstream consumer does.
 
 ### Removed
 
@@ -151,4 +152,9 @@ Initial release of rgb-sequencer, a `no_std` embedded RGB LED animation library.
 - Optional `defmt` logging support
 - Example projects for STM32F0 and RP Pico
 
-[Unreleased]: https://github.com/HybridChild/rgb-sequencer/compare/v0.2.1...HEAD [0.2.1]: https://github.com/HybridChild/rgb-sequencer/compare/v0.2.0...v0.2.1 [0.2.0]: https://github.com/HybridChild/rgb-sequencer/compare/v0.1.1...v0.2.0 [0.1.1]: https://github.com/HybridChild/rgb-sequencer/compare/v0.1.0...v0.1.1 [0.1.0]: https://github.com/HybridChild/rgb-sequencer/releases/tag/v0.1.0
+[Unreleased]: https://github.com/HybridChild/rgb-sequencer/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/HybridChild/rgb-sequencer/compare/v0.2.1...v0.3.0
+[0.2.1]: https://github.com/HybridChild/rgb-sequencer/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/HybridChild/rgb-sequencer/compare/v0.1.1...v0.2.0
+[0.1.1]: https://github.com/HybridChild/rgb-sequencer/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/HybridChild/rgb-sequencer/releases/tag/v0.1.0

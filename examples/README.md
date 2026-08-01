@@ -26,3 +26,5 @@ Bare-metal examples for Raspberry Pi Pico using `rp-pico` HAL and PWM-based RGB 
 
 **Examples:**
 - `blinky` - Simple RGB LED sequencing with color fading (yellow, cyan, purple)
+- `breathing` - Function-based sequence generating a white breathing effect from a sine wave
+- `fade_check` - Diagnostic for banding: full 16-bit PWM and per-frame step sizes over RTT
