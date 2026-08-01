@@ -1,0 +1,114 @@
+name: fugit Watch
+
+# Watches for rp2040-hal moving off fugit 0.3.x, which is what unblocks the
+# dependabot PR bumping fugit to 0.4.0 in examples/rp-pico. Until then, the
+# example cannot move alone: rp2040-hal, rp-pico and rp-hal-common all require
+# fugit ^0.3.x, so a direct bump would resolve two incompatible fugit versions
+# and break examples/rp-pico/src/time.rs at the HAL boundary.
+
+on:
+  schedule:
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+    inputs:
+      force_comment:
+        description: 'Post the comment regardless of the crates.io result (tests the write path)'
+        type: boolean
+        default: false
+
+permissions:
+  pull-requests: write
+
+jobs:
+  check:
+    name: rp2040-hal fugit requirement
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query crates.io
+        id: check
+        run: |
+          set -euo pipefail
+          UA="rgb-sequencer-fugit-watch (https://github.com/${{ github.repository }})"
+
+          version=$(curl -sS --fail --retry 3 --retry-delay 5 \
+            "https://crates.io/api/v1/crates/rp2040-hal" \
+            -H "User-Agent: $UA" | jq -r '.crate.max_version')
+
+          req=$(curl -sS --fail --retry 3 --retry-delay 5 \
+            "https://crates.io/api/v1/crates/rp2040-hal/$version/dependencies" \
+            -H "User-Agent: $UA" \
+            | jq -r '.dependencies[] | select(.crate_id == "fugit" and .kind == "normal") | .req')
+
+          echo "rp2040-hal $version requires fugit '${req:-<none>}'"
+          {
+            echo "version=$version"
+            echo "req=${req:-<none>}"
+          } >> "$GITHUB_OUTPUT"
+
+          # Heuristic: still blocked while the requirement mentions a 0.3 series.
+          # The comment quotes the raw requirement so a human can confirm.
+          if [ -z "$req" ] || ! printf '%s' "$req" | grep -qE '(^|[^0-9.])0\.3'; then
+            echo "unblocked=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "unblocked=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report result
+        run: |
+          echo "### fugit watch" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.check.outputs.unblocked }}" = "true" ]; then
+            echo "**UNBLOCKED** — rp2040-hal ${{ steps.check.outputs.version }} requires fugit \`${{ steps.check.outputs.req }}\`" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "**Still blocked** — rp2040-hal ${{ steps.check.outputs.version }} requires fugit \`${{ steps.check.outputs.req }}\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Comment on the fugit PR
+        if: steps.check.outputs.unblocked == 'true' || inputs.force_comment
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const marker = '<!-- fugit-watch -->';
+            const version = ${{ toJSON(steps.check.outputs.version) }};
+            const req = ${{ toJSON(steps.check.outputs.req) }};
+            const forced = ${{ toJSON(inputs.force_comment == true) }};
+            const unblocked = ${{ toJSON(steps.check.outputs.unblocked == 'true') }};
+
+            // Find the open dependabot PR bumping fugit in examples/rp-pico.
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100,
+            });
+
+            const pr = prs.find(p => /fugit/.test(p.head.ref) && /rp-pico/.test(p.head.ref));
+
+            if (!pr) {
+              core.notice('No open fugit PR for examples/rp-pico — nothing to comment on.');
+              return;
+            }
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+            });
+
+            if (comments.some(c => c.body.includes(marker))) {
+              core.notice(`#${pr.number} already carries the fugit-watch comment — not posting again.`);
+              return;
+            }
+
+            const body = forced && !unblocked
+              ? `${marker}\nWrite-path test from the \`fugit Watch\` workflow — triggered manually, safe to delete.\n\nNo change to report: rp2040-hal ${version} still requires fugit \`${req}\`, so this PR remains blocked.`
+              : `${marker}\n**rp2040-hal ${version} requires fugit \`${req}\`** — the 0.3.x pin is gone, so this PR is worth revisiting.\n\nThe original blocker was two incompatible \`fugit\` versions resolving side by side. Bumping \`fugit\` here also means bumping the example's own \`rp2040-hal\` dependency in the same change, then re-checking \`examples/rp-pico/src/time.rs\`: line 53 declares \`impl From<TimerInstantU64<1_000_000>> for Instant\`, and line 73 calls \`self.timer.get_counter()\`, which must return the matching \`fugit\` type.`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body,
+            });
+
+            core.notice(`Commented on #${pr.number}.`);
