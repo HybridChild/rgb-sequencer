@@ -35,107 +35,16 @@ This repository maintains **professional, lean documentation**:
 
 ---
 
-## Quick Reference
+## Usage Patterns
 
-### Creating a Step-Based Sequence
+[docs/FEATURES.md](docs/FEATURES.md) is the reference for how the API is used: step-based and function-based sequences, transition styles, capacity, colors, the state machine, servicing, brightness, multi-LED and command-based control. Read it before writing example code, and correct it there rather than restating it here.
 
-**Pattern:** Use `SequenceBuilder` to construct sequences with explicit color waypoints.
+Points that are easy to get wrong and that the feature guide does not spell out:
 
-```rust
-let sequence = RgbSequence::<_, 3>::builder()
-    .step(RED, ms(1000), TransitionStyle::Linear)?
-    .step(GREEN, ms(1000), TransitionStyle::Linear)?
-    .step(BLUE, ms(1000), TransitionStyle::Linear)?
-    .loop_count(LoopCount::Infinite)
-    .build()?;
-```
-
-**Key points:**
-- `N` (capacity) must match number of steps at compile time
-- Zero-duration steps only valid with `TransitionStyle::Step`
-- First loop uses `start_color` if set, subsequent loops use step 0
-- Landing color used only when finite loops complete
-
-### Easing Functions
-
-**Pattern:** Use easing functions for smoother, more natural-looking transitions.
-
-```rust
-let sequence = RgbSequence::<_, 3>::builder()
-    .start_color(BLACK)
-    .step(RED, ms(1000), TransitionStyle::EaseIn)?     // Slow start
-    .step(GREEN, ms(1000), TransitionStyle::EaseOut)?  // Slow end
-    .step(BLUE, ms(1000), TransitionStyle::EaseInOut)? // Slow both
-    .build()?;
-```
-
-**Available easing types:**
-- `TransitionStyle::Step` - Instant color change, hold for duration
-- `TransitionStyle::Linear` - Constant-speed interpolation
-- `TransitionStyle::EaseIn` - Slow start, accelerating (quadratic)
-- `TransitionStyle::EaseOut` - Fast start, decelerating (quadratic)
-- `TransitionStyle::EaseInOut` - Slow start and end, fast middle (quadratic)
-- `TransitionStyle::EaseOutIn` - Fast start and end, slow middle (quadratic)
-
-**Key points:**
-- All easing functions use quadratic interpolation (computationally efficient)
-- Easing requires non-zero duration (like Linear)
-- Returns `ServiceTiming::Continuous` (requires frequent updates)
-- All curves are integer Q0.15 math - no penalty on non-FPU targets
-
-### Creating a Function-Based Sequence
-
-**Pattern:** Use custom functions for algorithmic animations.
-
-```rust
-fn breathing_color(base: Rgb, t: Milliseconds) -> Rgb {
-    // Triangle wave over a 4 s cycle, integer only.
-    let phase = (t.as_millis() % 4000) as u32;
-    let level = if phase < 2000 { phase } else { 4000 - phase };
-    base.scale((level * 255 / 2000) as u8)
-}
-
-fn breathing_timing(_t: Milliseconds) -> Option<Milliseconds> {
-    Some(Milliseconds::from_millis(16)) // ~60 FPS
-}
-
-let sequence = RgbSequence::<Milliseconds, 0>::from_function(
-    WHITE,
-    breathing_color,
-    breathing_timing,
-);
-```
-
-**Key points:**
-- Use `N=0` for function-based sequences (no step storage needed)
-- Color function: `fn(base_color: Rgb, elapsed: D) -> Rgb`
-- Timing function: `fn(elapsed: D) -> Option<D>` (returns delay or None for complete)
-- The library itself is float-free; an effect function may use `f32` and `libm` if it wants, but integer math (or `Rgb::scale`) keeps non-FPU targets fast
-
-### Implementing Traits
-
-**`RgbLed`** - Abstract LED hardware control:
-```rust
-impl RgbLed for MyLed {
-    fn set_color(&mut self, color: Rgb) {
-        // Channels are 0..=65535. Convert to hardware format (PWM, SPI, etc.)
-        let duty = (color.r as u32 * max_duty as u32 / 65535) as u16;
-        let (r, g, b) = color.to_u8(); // ...or for 8-bit drivers
-    }
-}
-```
-
-**`TimeSource`** - Abstract time querying:
-```rust
-impl TimeSource for MyTimer {
-    type Instant = Milliseconds;
-    fn now(&self) -> Self::Instant { /* ... */ }
-}
-```
-
-**`TimeDuration` + `TimeInstant`** - Time arithmetic (see time.rs for full trait definitions)
-
-See README.md and examples for complete usage patterns.
+- `TimeSource` is generic over the instant type - `impl TimeSource<MyInstant> for MyTimer`, not an associated type.
+- Function-based sequences use `N = 0`; there is no step storage to size.
+- Capacity `N` is a maximum, not an exact count. `step()` returns `SequenceError::CapacityExceeded` once `N` steps have been added.
+- The library itself is float-free. A user-supplied effect function may use `f32` and `libm` - the constraint applies to `src/`.
 
 ---
 
@@ -182,94 +91,30 @@ Flash footprint measured with `tools/binary-analyzer`:
 
 ## Core Architecture
 
+The public shape of the state machine, the builder and the service timing hints is documented in [docs/FEATURES.md](docs/FEATURES.md). What follows is the reasoning behind it, which that guide does not carry.
+
 ### State Machine Pattern
 
-The `RgbSequencer` uses a state machine with explicit state transitions:
-
-```rust
-pub enum SequencerState {
-    Idle,       // No sequence loaded
-    Loaded,     // Sequence loaded but not started
-    Running,    // Active animation
-    Paused,     // Animation paused (timing compensation on resume)
-    Complete,   // Finite sequence finished
-}
-```
-
-**Valid Transitions:**
-- `Idle` → `Loaded` (via `load()`)
-- `Loaded` → `Running` (via `start()` - call `service()` to update LED)
-- `Running` → `Paused` (via `pause()`)
-- `Paused` → `Running` (via `resume()` - call `service()` to update LED)
-- `Running` → `Complete` (finite sequence finishes)
-- Any state → `Idle` (via `clear()`)
-- `Loaded/Running/Paused/Complete` → `Running` (via `restart()` - call `service()` to update LED)
-
-**Important:** State transition methods (`start()`, `resume()`, `restart()`) only change sequencer state. The LED updates when you call `service()`.
-
-**Invalid operations return `SequencerError::InvalidState`**
-
-### Builder Pattern for Sequences
-
-Use **method chaining** for fluent sequence construction:
-
-```rust
-RgbSequence::builder()
-    .step(color1, duration1, transition1)?  // Required: at least 1 step
-    .step(color2, duration2, transition2)?  // Add more steps
-    .loop_count(LoopCount::Finite(3))       // Optional: default is Finite(1)
-    .start_color(start)                     // Optional: smooth entry
-    .landing_color(landing)                 // Optional: smooth exit
-    .build()?                               // Validates and returns Result
-```
-
-**Validation rules:**
-- At least one step required
-- Zero-duration steps must use `TransitionStyle::Step`
-- Capacity `N` must match number of steps
+`RgbSequencer` moves between `Idle`, `Loaded`, `Running`, `Paused` and `Complete`, and rejects operations that do not apply to the current state with `SequencerError::InvalidState`. State transition methods (`start()`, `resume()`, `restart()`) change state only - the LED is written by `service()`, so several sequencers can be transitioned together and then serviced in one pass.
 
 ### Trait-Based Abstraction
 
-**Platform Independence via Traits:**
-
-1. **`RgbLed`** - Hardware abstraction (PWM, SPI, WS2812, etc.)
-2. **`TimeSource`** - Timing system (SysTick, HAL timers, Embassy, etc.)
-3. **`TimeInstant`** - Instant in time with arithmetic
-4. **`TimeDuration`** - Duration between instants
-
-**Zero-cost abstraction:**
-- Generics enable compile-time polymorphism
-- No vtables, no dynamic dispatch
-- Inline-friendly for embedded optimization
+`RgbLed`, `TimeSource`, `TimeInstant` and `TimeDuration` are generic parameters rather than trait objects. There are no vtables and no dynamic dispatch, so a `service()` call inlines down to the hardware write.
 
 ### Timing Compensation on Pause/Resume
 
-When pausing/resuming, the sequencer **compensates for elapsed time**:
+Color is derived from elapsed time rather than accumulated per-frame steps, so pausing has to move the origin rather than remember a position:
 
 ```rust
-// On pause: Record pause time
+// On pause: record pause time
 pause_time = time_source.now();
 
-// On resume: Adjust start time to skip paused duration
+// On resume: adjust start time to skip the paused duration
 let paused_duration = time_source.now().duration_since(pause_time);
 start_time = start_time.checked_add(paused_duration)?;
 ```
 
-This ensures animations continue smoothly without jumps or drift.
-
-### Service Timing Hints
-
-The `service()` method returns timing hints for power efficiency:
-
-```rust
-pub enum ServiceTiming<D: TimeDuration> {
-    Continuous,  // Call service() as frequently as possible (transitioning)
-    Delay(D),    // Can delay this duration before next service() (holding color)
-    Complete,    // Sequence finished, no more service() needed
-}
-```
-
-Allows applications to sleep/yield appropriately instead of busy-waiting.
+Animations then continue from where they stopped, and no drift accumulates across pauses.
 
 ---
 
@@ -295,7 +140,7 @@ let sequence = RgbSequence::<_, 3>::builder()
     .build()?;  // Previous step() call will error
 
 // RIGHT
-let sequence = RgbSequence::<_, 4>::builder()  // Capacity matches steps
+let sequence = RgbSequence::<_, 4>::builder()  // Capacity covers the steps added
     .step(color1, dur1, TransitionStyle::Step)?
     .step(color2, dur2, TransitionStyle::Step)?
     .step(color3, dur3, TransitionStyle::Step)?
@@ -491,7 +336,8 @@ examples/
 
 tools/
 ├── sizeof-calculator/  # Sizeof calculator for planning capacity/types
-└── binary-analyzer/    # Binary analyzer for embedded targets
+├── binary-analyzer/    # Binary analyzer for embedded targets
+└── benchmark/          # service() cycle counts on RP2040 and RP2350
 ```
 
 ---
