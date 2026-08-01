@@ -35,15 +35,24 @@ use rgb_sequencer::{
 
 pub const FRAME_RATE_MS: u64 = 16;
 
-/// Ten seconds keeps the per-frame step above the epsilon threshold. Past about 16
+/// Ten seconds keeps the per-frame step well above the epsilon threshold. Past about 16
 /// seconds a full-range fade moves less than [`DEFAULT_COLOR_EPSILON`] per frame, and
 /// the sequencer starts skipping LED writes - stepping that comes from the epsilon
 /// rather than from the color math.
 const FADE_MS: u64 = 10_000;
 
-/// Set to 0 to take the epsilon out of the chain, which distinguishes banding in the
-/// fixed-point math from writes the sequencer chose to suppress.
-const EPSILON: u16 = DEFAULT_COLOR_EPSILON;
+/// Zero rather than [`DEFAULT_COLOR_EPSILON`], so that every frame reaches the LED and
+/// the statistics below measure the color pipeline instead of the write-suppression
+/// policy layered over it.
+///
+/// With the default 64 the loop reports its own sampling as banding. Where the fade
+/// reverses direction, the color genuinely moves less than the threshold and the write
+/// is correctly suppressed - but `current_color()` then lags a frame, and the frame
+/// after the turnaround measures a span of `32 - 2y` ms rather than 16, where `y` is how
+/// far the boundary fell before the frame tick. That single parameter accounts for every
+/// anomaly observed on hardware, high and low, including the occasional zero when the
+/// following frame is suppressed as well.
+const EPSILON: u16 = 0;
 
 /// Print every frame as CSV for offline plotting. The summary below is computed on the
 /// device and survives dropped RTT output; this does not.
@@ -146,9 +155,14 @@ fn main() -> ! {
     // rtt-target's single-argument arm writes the string verbatim rather than
     // formatting it, so every placeholder below needs a positional argument.
     let expected = 65535 / (FADE_MS / FRAME_RATE_MS);
-    rprintln!("PWM top 65535, epsilon {}, {} ms ramps", EPSILON, FADE_MS);
     rprintln!(
-        "Expect ~{} counts per frame and a minimum well above zero.",
+        "PWM top 65535, epsilon {} (library default {}), {} ms ramps",
+        EPSILON,
+        DEFAULT_COLOR_EPSILON,
+        FADE_MS
+    );
+    rprintln!(
+        "Expect every step at ~{} counts, at both ends of every ramp.",
         expected
     );
     rprintln!("A minimum of 0 means a frame produced no change - that is banding.");

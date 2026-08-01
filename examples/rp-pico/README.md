@@ -104,16 +104,18 @@ The other two examples run PWM with `top = 1000`, which maps roughly 65 channel 
 
 **Expected output:**
 ```
-ramp 0: 625 frames, 624 updates, step 103..106
+ramp 0: 623 frames, 622 updates, step 104@3..112@20
 ```
 
-Roughly 625 frames at the 16 ms frame rate, each moving about 105 counts. Frame overhead makes the real count slightly lower and the steps slightly larger. **A minimum step of 0 means a frame produced no change, which is what banding is.**
+Roughly 625 frames at the 16 ms frame rate, each moving about 105 counts; frame overhead makes the real count slightly lower. `@n` is the frame the extreme landed on, which distinguishes an artifact at a ramp boundary from something inside the fade. **A minimum step of 0 means a frame produced no change, which is what banding is.**
 
 **What to look at:** PWM duty is linear in light while channel values are gamma-encoded, so a linear ramp appears to move fastest at the start. Watch the first second out of black — that is where the eye is most able to resolve individual steps.
 
-**Two things that produce stepping unrelated to the color math:**
+**Why `EPSILON` defaults to 0 here rather than to `DEFAULT_COLOR_EPSILON`:** the statistics are meant to measure the color pipeline, not the write-suppression policy layered over it. At the default 64 the loop reports its own sampling as banding. Where the fade reverses direction the color genuinely moves less than the threshold, so the write is correctly suppressed — but `current_color()` then lags a frame, and the frame after the turnaround measures a span of `32 - 2y` ms instead of 16, where `y` is how far the boundary fell before the frame tick. Sweeping `y` across its 16 ms range reproduces every value seen on hardware, from 169 counts down through 68 and occasionally to 0 when the following frame is suppressed as well. Set it back to 64 to watch that happen; it says nothing about the fade.
 
-- Raising `FADE_MS` past about 16 seconds. A full-range fade then moves less than `DEFAULT_COLOR_EPSILON` (64) per frame and the sequencer starts suppressing LED writes. At 30 s only half the frames reach the LED. Set `EPSILON` to 0 to take that out of the chain and confirm which one you are looking at.
+**Two things that produce genuine stepping unrelated to the color math:**
+
+- Raising `FADE_MS` past about 16 seconds with a non-zero `EPSILON`. A full-range fade then moves less than 64 counts per frame throughout, and the sequencer suppresses writes everywhere rather than only at turnarounds — at 30 s only half the frames reach the LED.
 - Reverting `top` to 1000, which reintroduces the 65-count duty granularity this binary exists to avoid.
 
 **Run:**
