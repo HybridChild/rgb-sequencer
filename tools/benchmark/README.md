@@ -22,7 +22,7 @@ Measures **absolute CPU cycles** on real ARM Cortex-M hardware to:
 - **Target**: `thumbv8m.main-none-eabihf`
 - **Shows**: A richer instruction set on the same integer code
 
-Since 0.3.0 the library contains no floating point, so neither target exercises an FPU. The pair is a core-and-clock comparison, not an FPU comparison.
+The library contains no floating point, so neither target exercises an FPU. The pair is a core-and-clock comparison, not an FPU comparison.
 
 ## Running Benchmarks
 
