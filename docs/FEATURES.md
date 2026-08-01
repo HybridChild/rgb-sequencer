@@ -132,15 +132,6 @@ RgbSequence16<D>  // Up to 16 steps
 RgbSequencer4<'t, I, L, T>   // Up to 4 steps
 RgbSequencer8<'t, I, L, T>   // Up to 8 steps
 RgbSequencer16<'t, I, L, T>  // Up to 16 steps
-
-// Commands (for command-based control)
-SequencerAction4<D>          // Up to 4 steps
-SequencerAction8<D>          // Up to 8 steps
-SequencerAction16<D>         // Up to 16 steps
-
-SequencerCommand4<Id, D>     // Up to 4 steps
-SequencerCommand8<Id, D>     // Up to 8 steps
-SequencerCommand16<Id, D>    // Up to 16 steps
 ```
 
 **Guidelines:**
@@ -476,49 +467,6 @@ loop {
 
 For function-based sequences, `service()` calls the [timing function](#2-timing-function-fnduration---optionduration) internally and forwards its return value.
 
-### Multi-LED Servicing
-
-When managing multiple LEDs, coordinate timing across all sequencers:
-
-```rust
-use rgb_sequencer::ServiceTiming;
-
-let mut has_continuous = false;
-let mut min_delay = None;
-let mut all_complete = true;
-
-for sequencer in sequencers.iter_mut() {
-    match sequencer.service() {
-        Ok(ServiceTiming::Continuous) => {
-            has_continuous = true;
-            all_complete = false;
-        }
-        Ok(ServiceTiming::Delay(delay)) => {
-            all_complete = false;
-            min_delay = Some(match min_delay {  // find shortest time to wait
-                None => delay,
-                Some(current) if delay < current => delay,
-                Some(current) => current,
-            });
-        }
-        Ok(ServiceTiming::Complete) => {
-            // This sequencer is done
-        }
-        Err(_) => {
-            // Handle error
-        }
-    }
-}
-
-if has_continuous {
-    sleep_ms(16);  // Sleep for desired frame rate
-} else if let Some(delay) = min_delay {
-    sleep_ms(delay.as_millis());  // Sleep until next step change
-} else if all_complete {
-    break;  // All sequences done
-}
-```
-
 ### Timing Accuracy and Drift Prevention
 
 Rather than accumulating delays or counting service calls, the sequencer calculates colors based on **absolute elapsed time** since `start()` was called. This means:
@@ -676,6 +624,49 @@ for (i, sequencer) in sequencers.iter_mut().enumerate() {
 
 See [Embassy Rainbow Capture example](../examples/stm32f0-embassy/README.md) for a complete implementation.
 
+### Multi-LED Servicing
+
+Pattern 1 matches on the timing of two sequencers by hand. Over a collection, fold the returned [`ServiceTiming`](#understanding-the-return-value) values instead:
+
+```rust
+use rgb_sequencer::ServiceTiming;
+
+let mut has_continuous = false;
+let mut min_delay = None;
+let mut all_complete = true;
+
+for sequencer in sequencers.iter_mut() {
+    match sequencer.service() {
+        Ok(ServiceTiming::Continuous) => {
+            has_continuous = true;
+            all_complete = false;
+        }
+        Ok(ServiceTiming::Delay(delay)) => {
+            all_complete = false;
+            min_delay = Some(match min_delay {  // find shortest time to wait
+                None => delay,
+                Some(current) if delay < current => delay,
+                Some(current) => current,
+            });
+        }
+        Ok(ServiceTiming::Complete) => {
+            // This sequencer is done
+        }
+        Err(_) => {
+            // Handle error
+        }
+    }
+}
+
+if has_continuous {
+    sleep_ms(16);  // Sleep for desired frame rate
+} else if let Some(delay) = min_delay {
+    sleep_ms(delay.as_millis());  // Sleep until next step change
+} else if all_complete {
+    break;  // All sequences done
+}
+```
+
 ## Command-Based Control
 
 For task-based systems (Embassy, RTOS, async runtimes), you can use the command-based control pattern to route commands to sequencers. This decouples control logic from LED servicing by using message passing.
@@ -710,7 +701,17 @@ if let Err(e) = sequencer.handle_action(command.action) {
 }
 ```
 
-For convenience use common capacity type aliases `SequencerCommand8<ID, D>`, `SequencerAction8<D>`.
+Both types carry the step capacity `N` of the sequence an action may load, and both have aliases for the [common capacities](#choosing-sequence-capacity):
+
+```rust
+SequencerAction4<D>          // Up to 4 steps
+SequencerAction8<D>          // Up to 8 steps
+SequencerAction16<D>         // Up to 16 steps
+
+SequencerCommand4<ID, D>     // Up to 4 steps
+SequencerCommand8<ID, D>     // Up to 8 steps
+SequencerCommand16<ID, D>    // Up to 16 steps
+```
 
 See [Embassy examples](../examples/stm32f0-embassy/README.md) for complete implementations.
 
