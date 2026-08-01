@@ -1,5 +1,4 @@
 # Build artifacts
 target/
-Cargo.lock
 
 # Each tool manages its own build artifacts
