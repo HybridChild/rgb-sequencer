@@ -31,6 +31,10 @@ path = "bin/blinky/main.rs"
 name = "breathing"
 path = "bin/breathing/main.rs"
 
+[[bin]]
+name = "fade_check"
+path = "bin/fade_check/main.rs"
+
 [profile.release]
 debug = true
 lto = true
