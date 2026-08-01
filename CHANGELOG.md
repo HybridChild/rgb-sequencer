@@ -10,8 +10,8 @@ Replaces all floating-point color math with fixed-point integer arithmetic and d
 
 Measured with `tools/binary-analyzer` against a minimal reference binary:
 
-| Target | 0.2.1 | 0.3.0 | Change |
-|--------|-------|-------|--------|
+| Target | 0.2.1 | Unreleased | Change |
+|--------|-------|------------|--------|
 | `thumbv6m-none-eabi` (Cortex-M0/M0+, no FPU) | 3784 B | 2104 B | **-44.4%** |
 | `thumbv7em-none-eabihf` (Cortex-M4F/M7, FPU) | 1996 B | 1828 B | **-8.4%** |
 
@@ -152,8 +152,7 @@ Initial release of rgb-sequencer, a `no_std` embedded RGB LED animation library.
 - Optional `defmt` logging support
 - Example projects for STM32F0 and RP Pico
 
-[Unreleased]: https://github.com/HybridChild/rgb-sequencer/compare/v0.3.0...HEAD
-[0.3.0]: https://github.com/HybridChild/rgb-sequencer/compare/v0.2.1...v0.3.0
+[Unreleased]: https://github.com/HybridChild/rgb-sequencer/compare/v0.2.1...HEAD
 [0.2.1]: https://github.com/HybridChild/rgb-sequencer/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/HybridChild/rgb-sequencer/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/HybridChild/rgb-sequencer/compare/v0.1.0...v0.1.1

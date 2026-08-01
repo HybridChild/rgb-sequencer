@@ -59,11 +59,11 @@ The analysis measures **rgb-sequencer's baseline overhead** using minimal stub i
 
 ## Floating Point
 
-Since 0.3.0 all color math is fixed-point integer arithmetic, so **no soft-float routines should appear in either binary**. Seeing `__divsf3`, `__addsf3`, `__mulsf3` or `__aeabi_f*` in the symbol lists means floating point has crept back into the library — treat that as a regression.
+All color math is fixed-point integer arithmetic, so **no soft-float routines should appear in either binary**. Seeing `__divsf3`, `__addsf3`, `__mulsf3` or `__aeabi_f*` in the symbol lists means floating point has crept back into the library — treat that as a regression.
 
 The two targets are still compared because ARMv6-M lacks instructions ARMv7E-M has (notably hardware divide), so the non-FPU build carries division support routines the other does not.
 
-For reference, dropping `f32` in 0.3.0 took the non-FPU build from 3784 B to 2156 B (-43%) and the FPU build from 1996 B to 1848 B (-7%).
+For reference, dropping `f32` took the non-FPU build from 3784 B to 2156 B (-43%) and the FPU build from 1996 B to 1848 B (-7%).
 
 To minimize overhead:
 - Keep sequences small — `N` dominates RAM, and the step search is linear
