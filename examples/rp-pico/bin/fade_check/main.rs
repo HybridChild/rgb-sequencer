@@ -164,6 +164,10 @@ fn main() -> ! {
     let mut updates = 0u32;
     let mut smallest = u16::MAX;
     let mut largest = 0u16;
+    // Which frame the extremes landed on. A ramp is roughly 625 frames, so an anomaly
+    // at either end came from the boundary and one in the middle did not.
+    let mut smallest_at = 0u32;
+    let mut largest_at = 0u32;
 
     loop {
         let timing = sequencer.service().unwrap();
@@ -177,18 +181,22 @@ fn main() -> ! {
             && position.step_index != step_index
         {
             rprintln!(
-                "ramp {}: {} frames, {} updates, step {}..{}",
+                "ramp {}: {} frames, {} updates, step {}@{}..{}@{}",
                 step_index,
                 frames,
                 updates,
                 smallest,
-                largest
+                smallest_at,
+                largest,
+                largest_at
             );
             step_index = position.step_index;
             frames = 0;
             updates = 0;
             smallest = u16::MAX;
             largest = 0;
+            smallest_at = 0;
+            largest_at = 0;
         }
 
         frames += 1;
@@ -199,8 +207,14 @@ fn main() -> ! {
             if moved > 0 {
                 updates += 1;
             }
-            smallest = smallest.min(moved);
-            largest = largest.max(moved);
+            if moved < smallest {
+                smallest = moved;
+                smallest_at = frames;
+            }
+            if moved > largest {
+                largest = moved;
+                largest_at = frames;
+            }
         }
         previous = color;
 
