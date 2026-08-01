@@ -6,6 +6,3 @@ rustflags = [
 
 [build]
 target = "thumbv6m-none-eabi"
-
-[env]
-DEFMT_LOG = "info"
