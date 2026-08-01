@@ -63,7 +63,7 @@ All color math is fixed-point integer arithmetic, so **no soft-float routines sh
 
 The two targets are still compared because ARMv6-M lacks instructions ARMv7E-M has (notably hardware divide), so the non-FPU build carries division support routines the other does not.
 
-For reference, dropping `f32` took the non-FPU build from 3784 B to 2156 B (-43%) and the FPU build from 1996 B to 1848 B (-7%).
+For reference, dropping `f32` took the non-FPU build from 3784 B to 2104 B (-44%) and the FPU build from 1996 B to 1828 B (-8%).
 
 To minimize overhead:
 - Keep sequences small — `N` dominates RAM, and the step search is linear
