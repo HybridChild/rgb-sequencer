@@ -812,45 +812,12 @@ fn ease_in_out_transition_symmetric() {
 }
 
 #[test]
-fn ease_out_in_transition_inverted_curve() {
-    // BEHAVIOR: EaseOutIn is fast at both ends, slow in middle (inverted S-curve)
-    let sequence = RgbSequence::<TestDuration, 8>::builder()
-        .start_color(BLACK)
-        .step(RED, TestDuration(1000), TransitionStyle::EaseOutIn)
-        .unwrap()
-        .build()
-        .unwrap();
-
-    // At 25% time: fast start phase (progress ≈ 0.375)
-    assert!(
-        sequence.evaluate(TestDuration(250)).0.r > channel(0.35)
-            && sequence.evaluate(TestDuration(250)).0.r < channel(0.40)
-    );
-
-    // At 50% time: midpoint (progress ≈ 0.5)
-    assert!(
-        sequence.evaluate(TestDuration(500)).0.r > channel(0.49)
-            && sequence.evaluate(TestDuration(500)).0.r < channel(0.51)
-    );
-
-    // At 75% time: slow middle transitioning to fast end (progress ≈ 0.625)
-    assert!(
-        sequence.evaluate(TestDuration(750)).0.r > channel(0.60)
-            && sequence.evaluate(TestDuration(750)).0.r < channel(0.65)
-    );
-
-    // At 100% time: reaches full color
-    assert!(colors_equal(sequence.evaluate(TestDuration(1000)).0, RED));
-}
-
-#[test]
 fn easing_transitions_return_continuous_timing() {
     let test_cases = [
         TransitionStyle::Linear,
         TransitionStyle::EaseIn,
         TransitionStyle::EaseOut,
         TransitionStyle::EaseInOut,
-        TransitionStyle::EaseOutIn,
     ];
 
     for transition in test_cases {
@@ -876,7 +843,6 @@ fn zero_duration_with_easing_is_rejected() {
         TransitionStyle::EaseIn,
         TransitionStyle::EaseOut,
         TransitionStyle::EaseInOut,
-        TransitionStyle::EaseOutIn,
     ];
 
     for transition in test_cases {

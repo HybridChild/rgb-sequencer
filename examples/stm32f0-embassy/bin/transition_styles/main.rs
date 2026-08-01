@@ -1,8 +1,8 @@
 //! Transition Styles Example
 //!
-//! Demonstrates all 6 TransitionStyle variants. Press the user button to cycle through modes.
+//! Demonstrates all five TransitionStyle variants. Press the user button to cycle through modes.
 //! The onboard LED blinks to indicate the current mode:
-//! - Solid ON: Step, 1 blink: Linear, 2 blinks: EaseIn, 3 blinks: EaseOut, 4 blinks: EaseInOut, 5 blinks: EaseOutIn
+//! - Solid ON: Step, 1 blink: Linear, 2 blinks: EaseIn, 3 blinks: EaseOut, 4 blinks: EaseInOut
 
 #![no_std]
 #![no_main]

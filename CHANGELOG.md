@@ -14,8 +14,8 @@ Measured with `tools/binary-analyzer` against a minimal reference binary:
 
 | Target | 0.2.1 | 0.3.0 | Change |
 |--------|-------|-------|--------|
-| `thumbv6m-none-eabi` (Cortex-M0/M0+, no FPU) | 3784 B | 2156 B | **-43.0%** |
-| `thumbv7em-none-eabihf` (Cortex-M4F/M7, FPU) | 1996 B | 1848 B | **-7.4%** |
+| `thumbv6m-none-eabi` (Cortex-M0/M0+, no FPU) | 3784 B | 2100 B | **-44.5%** |
+| `thumbv7em-none-eabihf` (Cortex-M4F/M7, FPU) | 1996 B | 1816 B | **-9.0%** |
 
 RAM per sequence drops too — `SequenceStep<u32>` goes from 20 B to 12 B, and `RgbSequence<u32, 32>` from 712 B to 440 B.
 
@@ -47,6 +47,8 @@ RAM per sequence drops too — `SequenceStep<u32>` goes from 20 B to 12 B, and `
 
 - **`colors::hsv` and `colors::hue`** take `u16` arguments. Hue spans the full color wheel across the whole `u16` range, so rotation wraps by plain addition. Use the new `colors::degrees()` helper to convert: `hue(60.0)` becomes `hue(degrees(60))`.
 
+- **`TransitionStyle::EaseOutIn`** is removed. The fast-slow-fast curve saw no use, and its match arm cost every build 56 B on Cortex-M0/M0+ and 32 B on Cortex-M4F/M7 whether or not the variant was named. `EaseInOut` is the nearest replacement; a function-based sequence can reproduce the original curve exactly.
+
 - **`DEFAULT_COLOR_EPSILON`**, `with_epsilon`, `color_epsilon()` and `set_color_epsilon()` use `u16` per-channel thresholds instead of `f32`. The default is 64 out of 65535 (~0.1%), matching the previous `0.001`.
 
 ### Added
@@ -70,7 +72,7 @@ RAM per sequence drops too — `SequenceStep<u32>` goes from 20 B to 12 B, and `
 
 Interpolation behaviour is unchanged. `palette::Srgb` was gamma-encoded and its `Mix` was a naive per-channel lerp, so the integer lerp is equivalent — no gamma conversion was introduced.
 
-Measured on hardware against 0.2.1, `service()` is 25-43% faster on RP2040 (Cortex-M0+) and 5-8% faster on RP2350 (Cortex-M33F) at `N=4`. The margin narrows as capacity grows, to 5-13% and around 1% at `N=32`, because the O(N) step search was already integer work. The gap between `Linear` and the most expensive easing curve on Cortex-M0+ fell from 582 cycles to about 20.
+Measured on hardware against 0.2.1, `service()` is 25-43% faster on RP2040 (Cortex-M0+) and 5-8% faster on RP2350 (Cortex-M33F) at `N=4`. The margin narrows as capacity grows, to 5-13% and around 1% at `N=32`, because the O(N) step search was already integer work. The gap between `Linear` and the most expensive easing curve on Cortex-M0+ fell from 582 cycles to about 15.
 
 ## [0.2.1] - 2026-03-11
 

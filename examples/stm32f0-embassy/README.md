@@ -4,7 +4,7 @@ Embassy async examples for STM32F NUCLEO-F072RB board.
 
 - **[mode_switcher](#mode_switcher)** - Example demonstrating single-LED control with mode switching using async tasks and channels. Features a **function-based breathing sequence** using sine wave animation.
 - **[rainbow_capture](#rainbow_capture)** - Example demonstrating smooth rainbow transitions with interactive color capture using async tasks, channels, and signals. Shows **individual LED control** with the enum wrapper pattern for managing heterogeneous LED types.
-- **[transition_styles](#transition_styles)** - Example demonstrating all 5 TransitionStyle variants (Step, Linear, EaseIn, EaseOut, EaseInOut) with visual mode indication using the onboard LED.
+- **[transition_styles](#transition_styles)** - Example demonstrating all five TransitionStyle variants (Step, Linear, EaseIn, EaseOut, EaseInOut) with visual mode indication using the onboard LED.
 - **[brightness_control](#brightness_control)** - Example demonstrating **global brightness control** with runtime adjustment. Button press cycles through brightness levels while maintaining the same rainbow sequence.
 
 ## Hardware Setup
@@ -96,9 +96,9 @@ cargo run --release --bin rainbow_capture
 Demonstrates all five TransitionStyle variants using a single RGB LED with visual mode indication.
 
 **Features:**
-- All 6 TransitionStyle variants: Step, Linear, EaseIn, EaseOut, EaseInOut, EaseOutIn
+- All five TransitionStyle variants: Step, Linear, EaseIn, EaseOut, EaseInOut
 - Same color sequence (red, green, blue, white, yellow, cyan, magenta) with different transitions
-- Onboard LED blink pattern indicates current mode (solid/1/2/3/4/5 blinks)
+- Onboard LED blink pattern indicates current mode (solid/1/2/3/4 blinks)
 - Button-controlled mode cycling
 - Four async tasks: button, blink pattern, app logic, RGB control
 - Embassy time driver for precise async timing
@@ -109,8 +109,7 @@ Demonstrates all five TransitionStyle variants using a single RGB LED with visua
 3. Press again → switches to EaseIn transitions (slow start), onboard LED blinks twice per cycle
 4. Press again → switches to EaseOut transitions (slow end), onboard LED blinks three times per cycle
 5. Press again → switches to EaseInOut transitions (slow ends, fast middle), onboard LED blinks four times per cycle
-6. Press again → switches to EaseOutIn transitions (fast ends, slow middle), onboard LED blinks five times per cycle
-7. Press again → back to Step mode (cycle repeats)
+6. Press again → back to Step mode (cycle repeats)
 
 **Run:**
 ```bash
