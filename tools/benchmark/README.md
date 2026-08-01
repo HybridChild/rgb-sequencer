@@ -8,21 +8,21 @@ Measures **absolute CPU cycles** on real ARM Cortex-M hardware to:
 - Compare transition style performance
 - Show O(N) capacity scaling behavior
 - Identify worst-case performance
-- **Compare FPU vs non-FPU** performance impact
+- Compare the same integer workload across ARM cores
 
 ## Target Hardware
 
 ### RP2040 (Raspberry Pi Pico)
 - **CPU**: Cortex-M0+ at 125 MHz
-- **FPU**: None - software f32 emulation
 - **Target**: `thumbv6m-none-eabi`
-- **Shows**: Software floating-point overhead
+- **Shows**: The floor - no hardware multiply-accumulate, no barrel shifter on every operand
 
 ### RP2350 (Raspberry Pi Pico 2)
 - **CPU**: Cortex-M33F at **150 MHz** (default, 20% faster than RP2040)
-- **FPU**: Hardware floating-point unit
 - **Target**: `thumbv8m.main-none-eabihf`
-- **Shows**: FPU performance benefit 
+- **Shows**: A richer instruction set on the same integer code
+
+Since 0.3.0 the library contains no floating point, so neither target exercises an FPU. The pair is a core-and-clock comparison, not an FPU comparison.
 
 ## Running Benchmarks
 
@@ -70,6 +70,12 @@ The benchmark measures **worst-case performance** for all transition styles by:
 3. Measuring `service()` execution time in CPU cycles
 
 This reveals the O(N) search cost in `find_step_at_time()`.
+
+### What the Current Results Show
+
+Capacity dominates. On Cortex-M0+ the whole spread between `Linear` and the most expensive easing curve is about 20 cycles, while raising `N` from 4 to 32 adds about 15,000 — nearly three orders of magnitude apart. Pick a transition style for its appearance and size `N` to the sequence you actually need.
+
+Run-to-run variation is a few cycles on Cortex-M0+ and up to ~30 on Cortex-M33F, which is wider than the gap between transition styles. Treat differences of that size as noise; only capacity moves the number meaningfully.
 
 ## License
 

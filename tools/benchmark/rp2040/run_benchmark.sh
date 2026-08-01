@@ -35,7 +35,13 @@ wait $CARGO_PID 2>/dev/null || true
     echo ""
     echo '```'
 
-    grep -v "Received SIGTERM" "$TEMP_FILE" | grep -v "Exited by user request" | grep -v "Benchmark complete"
+    # probe-rs colors its output even when redirected, so strip escape sequences.
+    sed $'s/\033\[[0-9;]*m//g' "$TEMP_FILE" |
+        grep -v "Received SIGTERM" |
+        grep -v "Exited by user request" |
+        grep -v "Benchmark complete" |
+        grep -v "future-incompat" |
+        grep -v "will be rejected by a future version"
 
     echo '```'
 } > "$OUTPUT_FILE"

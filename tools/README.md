@@ -26,7 +26,7 @@ cat report.md
 
 ## [benchmark](benchmark/)
 
-On-device performance benchmarking tool measuring absolute CPU cycles for `service()` method. Tests different transition styles (Step, Linear, EaseIn/Out/InOut) and capacities (N=4 to N=64) on real ARM Cortex-M hardware using DWT cycle counter.
+On-device performance benchmarking tool measuring absolute CPU cycles for `service()` method. Tests every transition style and capacities N=4, 8, 16 and 32 on real ARM Cortex-M hardware using DWT cycle counter.
 
 ```bash
 cd tools/benchmark
