@@ -212,7 +212,7 @@ Tests are organized as **integration tests** in the `tests/` directory:
 - `tests/easing_tests.rs`: Tests for transition curves and within-step progress
 - `tests/common/mod.rs`: Shared test infrastructure (mocks, helpers, constants)
 
-**Total: 114 integration tests**
+**Total: 117 integration tests**
 
 This organization keeps source files clean and provides true black-box testing of the public API. **`src/` contains no `#[cfg(test)]` blocks, and none should be added.**
 
