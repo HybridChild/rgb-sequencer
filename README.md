@@ -32,8 +32,8 @@ rgb-sequencer = "0.3"
 ### Minimal Example
 ```rust
 use rgb_sequencer::{
-    Rgb, RgbSequencer8, RgbSequence8, RgbLed, TimeSource, TransitionStyle,
-    LoopCount, WHITE, BLACK
+    Rgb, RgbSequencer8, RgbSequence8, RgbLed, ServiceTiming, TimeSource,
+    TransitionStyle, LoopCount, WHITE, BLACK
 };
 
 // 1. Implement the RgbLed trait for your hardware
@@ -49,7 +49,8 @@ impl RgbLed for MyLed {
     }
 }
 
-// 2. Implement the TimeSource trait for your timing system
+// 2. Implement the TimeSource trait for your timing system. MyInstant implements
+//    TimeInstant, and the duration type it reports implements TimeDuration.
 struct MyTimer;
 impl TimeSource<MyInstant> for MyTimer {
     fn now(&self) -> MyInstant {
@@ -57,17 +58,18 @@ impl TimeSource<MyInstant> for MyTimer {
     }
 }
 
-// 3. Create a blinking sequence
+// 3. Create a blinking sequence. The 8 is the step capacity, fixed at compile
+//    time - this sequence uses two of the eight slots.
 let sequence = RgbSequence8::builder()
-    .step(WHITE, Duration::from_millis(500), TransitionStyle::Step).unwrap()  // White
-    .step(BLACK, Duration::from_millis(500), TransitionStyle::Step).unwrap()  // Off
-    .loop_count(LoopCount::Infinite)                                          // Loop indefinitely
+    .step(WHITE, MyDuration::from_millis(500), TransitionStyle::Step).unwrap()  // White
+    .step(BLACK, MyDuration::from_millis(500), TransitionStyle::Step).unwrap()  // Off
+    .loop_count(LoopCount::Infinite)                                            // Loop indefinitely
     .build()
     .unwrap();
 
 // 4. Create sequencer and start
-let led = MyLed::new();
-let timer = MyTimer::new();
+let led = MyLed { /* ... */ };
+let timer = MyTimer;
 let mut sequencer = RgbSequencer8::new(led, &timer);
 
 sequencer.load_and_start(sequence).unwrap();
@@ -109,8 +111,8 @@ Colors are `Rgb`, three `u16` channels running `0..=65535`:
 use rgb_sequencer::{Rgb, RED};
 
 let orange = Rgb::from_u8(255, 128, 0);  // const-friendly, 255 maps to 65535 exactly
-let half    = RED.scale(128);            // 8-bit brightness factor, 255 = unchanged
-let blend   = RED.lerp(orange, 16384);   // Q0.15 factor, 32768 = fully `orange`
+let half    = RED.scale(128);            // ~50% brightness - 8-bit factor, 255 = unchanged
+let blend   = RED.lerp(orange, 16384);   // 50% toward orange - Q0.15 factor, 32768 = fully orange
 let (r, g, b) = orange.to_u8();          // for WS2812 and other 8-bit drivers
 ```
 
@@ -135,7 +137,7 @@ Dropping `f32` cut the non-FPU build by 43% — the `__divsf3`/`__addsf3`/`__mul
 
 ### Timing
 
-CPU cycles per `service()` call, measured with the [benchmark tool](tools/benchmark/) at 50% through the last step — the worst case for the O(N) step search:
+CPU cycles per `service()` call, measured with the [benchmark tool](tools/benchmark/) at 50% through the last step — the worst case for the O(N) step search, where `N` is the sequence's step capacity:
 
 | Transition | M0+ N=4 | M0+ N=32 | M33F N=4 | M33F N=32 |
 |------------|--------:|---------:|---------:|----------:|
