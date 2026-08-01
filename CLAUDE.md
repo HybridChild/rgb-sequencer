@@ -155,11 +155,13 @@ Flash footprint measured with `tools/binary-analyzer`:
 - **Non-FPU (thumbv6m, Cortex-M0/M0+)**: 2156 B
 - **FPU (thumbv7em, Cortex-M4F/M7)**: 1848 B
 
+`service()` cycles measured with `tools/benchmark/` on RP2040 (Cortex-M0+) and RP2350 (Cortex-M33F); see the committed result files for the full tables.
+
 **When providing guidance:**
-- Don't warn about easing costing more than Linear - the difference is a couple of 32-bit multiplies, invisible in practice
+- Don't warn about easing costing more than Linear - measured at ~20 cycles across all five curves, under 1% and inside run-to-run noise
 - Don't suggest Step transitions "for performance" on non-FPU targets; that advice belonged to the f32 implementation
-- Refer users to the benchmark tool (tools/benchmark/) for timing on their hardware. Note the committed result files predate 0.3.0 and are marked stale
-- Avoid speculative performance claims
+- Capacity dominates timing, not transition style - the step search is O(N), and N=32 costs roughly 5x N=4
+- Avoid speculative performance claims; the benchmark files hold real numbers, use them
 
 ### Static Allocation & Zero-Copy
 

@@ -70,7 +70,7 @@ RAM per sequence drops too — `SequenceStep<u32>` goes from 20 B to 12 B, and `
 
 Interpolation behaviour is unchanged. `palette::Srgb` was gamma-encoded and its `Mix` was a naive per-channel lerp, so the integer lerp is equivalent — no gamma conversion was introduced.
 
-The benchmark result files under `tools/benchmark/` predate this change and are marked stale; regenerating them needs RP2040 and RP2350 hardware.
+Measured on hardware against 0.2.1, `service()` is 25-43% faster on RP2040 (Cortex-M0+) and 5-8% faster on RP2350 (Cortex-M33F) at `N=4`. The margin narrows as capacity grows, to 5-13% and around 1% at `N=32`, because the O(N) step search was already integer work. The gap between `Linear` and the most expensive easing curve on Cortex-M0+ fell from 582 cycles to about 20.
 
 ## [0.2.1] - 2026-03-11
 
