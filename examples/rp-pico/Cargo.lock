@@ -313,6 +313,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fugit"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60ee0e9ed8a394868ee05cde8705cbd8dbfc95f88e14a57134323e799bd3912a"
+dependencies = [
+ "gcd",
+]
+
+[[package]]
 name = "gcd"
 version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -767,7 +776,7 @@ version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8288358786b1458fb2caac8c4b40fb529ef4200d6c46467e2695b7a8ba573ae8"
 dependencies = [
- "fugit",
+ "fugit 0.3.9",
 ]
 
 [[package]]
@@ -777,7 +786,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b9342d3ac7011ac688300979e9b52a81f0add1d05feb02868cf94bfee0705b28"
 dependencies = [
  "cortex-m-rt",
- "fugit",
+ "fugit 0.3.9",
  "rp2040-boot2",
  "rp2040-hal 0.10.2",
  "usb-device",
@@ -790,7 +799,7 @@ dependencies = [
  "cortex-m",
  "cortex-m-rt",
  "embedded-hal 1.0.0",
- "fugit",
+ "fugit 0.6.0",
  "libm",
  "panic-halt",
  "rgb-sequencer",
@@ -825,7 +834,7 @@ dependencies = [
  "embedded-hal-nb",
  "embedded-io 0.6.1",
  "frunk",
- "fugit",
+ "fugit 0.3.9",
  "itertools 0.10.5",
  "nb 1.1.0",
  "paste",
@@ -854,7 +863,7 @@ dependencies = [
  "embedded-hal-nb",
  "embedded-io 0.7.1",
  "frunk",
- "fugit",
+ "fugit 0.3.9",
  "itertools 0.10.5",
  "nb 1.1.0",
  "paste",
